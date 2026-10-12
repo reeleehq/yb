@@ -152,7 +152,7 @@ Privacy, and replacing a published video with a re-cut (YouTube cannot swap the 
 from yb.youtube import update_video_status, supersede
 
 update_video_status("VIDEO_ID", privacy_status="public")  # other status fields kept
-supersede("OLD_ID", "NEW_ID")  # new one takes the old one's playlists; old one goes private
+supersede("OLD_ID", "NEW_ID", new_privacy="public")  # new takes old's playlist spots; old goes private
 ```
 
 ### Read live stats & metadata

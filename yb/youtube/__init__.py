@@ -36,6 +36,7 @@ from yb.youtube.playlists import (
     add_to_playlist,
     add_video_to_playlist,
     playlist_item_ids,
+    first_position,
     playlists_containing,
     remove_from_playlist,
 )
@@ -116,6 +117,7 @@ __all__ = [
     "add_to_playlist",
     "add_video_to_playlist",
     "playlist_item_ids",
+    "first_position",
     "playlists_containing",
     "remove_from_playlist",
     "update_video_status",

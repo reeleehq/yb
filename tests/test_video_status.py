@@ -56,18 +56,32 @@ class _Items:
         return _Req(
             lambda: {
                 "items": [
-                    {"id": f"{playlistId}:{i}", "contentDetails": {"videoId": v}}
-                    for i, v in enumerate(rows)
-                    if v is not None
+                    {
+                        "id": f"{playlistId}:{n}",
+                        "snippet": {"position": pos},
+                        "contentDetails": {"videoId": v},
+                    }
+                    for pos, (n, v) in enumerate(
+                        (n, v) for n, v in enumerate(rows) if v is not None
+                    )
                 ]
             }
         )
 
     def insert(self, *, part, body):
         pid = body["snippet"]["playlistId"]
+        pos = body["snippet"].get("position")
 
         def run():
-            self.svc.items[pid].append(body["snippet"]["resourceId"]["videoId"])
+            vid = body["snippet"]["resourceId"]["videoId"]
+            if pos is None:
+                self.svc.items[pid].append(vid)
+                return {"id": "new"}
+            if pid in self.svc.auto_sorted:
+                raise RuntimeError("manualSortRequired")
+            live = [n for n, v in enumerate(self.svc.items[pid]) if v is not None]
+            at = live[pos] if pos < len(live) else len(self.svc.items[pid])
+            self.svc.items[pid].insert(at, vid)
             return {"id": "new"}
 
         return _Req(run)
@@ -91,8 +105,9 @@ class FakeService:
                 "license": "youtube",
                 "selfDeclaredMadeForKids": False,
             },
-            "new": {"privacyStatus": "unlisted"},
+            "new": {"privacyStatus": "unlisted", "uploadStatus": "processed"},
         }
+        self.auto_sorted: set[str] = set()
         self.items = {"PL1": ["a", "old"], "PL2": ["old", "old"], "PL3": ["b"]}
         self.updates = []
         self.fail_update = False
@@ -139,9 +154,10 @@ def test_supersede_moves_playlists_then_retires_the_old_upload():
     out = supersede("old", "new", service=svc)
 
     assert out["playlists"] == [
-        {"playlist_id": "PL1", "added_new": True, "removed_old": 1},
-        {"playlist_id": "PL2", "added_new": True, "removed_old": 2},
+        {"playlist_id": "PL1", "added_new": True, "position": 1, "removed_old": 1},
+        {"playlist_id": "PL2", "added_new": True, "position": 0, "removed_old": 2},
     ]
+    # the new video takes the old one's place, not the end of the list
     assert [v for v in svc.items["PL1"] if v] == ["a", "new"]
     assert [v for v in svc.items["PL2"] if v] == ["new"]
     assert svc.items["PL3"] == ["b"]
@@ -176,3 +192,65 @@ def test_a_failed_privacy_change_leaves_the_new_video_in_place():
 def test_supersede_refuses_the_same_video():
     with pytest.raises(ValueError):
         supersede("x", "x", service=FakeService())
+
+
+def test_the_new_video_takes_the_old_ones_position():
+    svc = FakeService()
+    svc.items = {"PL1": ["a", "old", "b"]}
+
+    out = supersede("old", "new", service=svc)
+
+    assert [v for v in svc.items["PL1"] if v] == ["a", "new", "b"]
+    assert out["playlists"][0]["position"] == 1
+
+
+def test_an_auto_sorted_playlist_falls_back_to_append():
+    svc = FakeService()
+    svc.items = {"PL1": ["a", "old", "b"]}
+    svc.auto_sorted = {"PL1"}
+
+    out = supersede("old", "new", service=svc)
+
+    assert [v for v in svc.items["PL1"] if v] == ["a", "b", "new"]
+    assert out["playlists"][0]["position"] is None
+
+
+def test_retiring_a_scheduled_video_clears_its_schedule():
+    """Review of #23: a private video with a future publishAt, made private
+    again, would still have gone public at that time."""
+    svc = FakeService()
+    svc.status["old"] = {
+        "privacyStatus": "private",
+        "publishAt": "2030-01-01T00:00:00Z",
+    }
+
+    supersede("old", "new", service=svc)
+
+    assert "publishAt" not in svc.status["old"]
+    update_video_status("new", privacy_status="private", service=svc)
+    svc.status["new"]["publishAt"] = "2030-01-01T00:00:00Z"
+    update_video_status(
+        "new", privacy_status="private", keep_schedule=True, service=svc
+    )
+    assert svc.status["new"]["publishAt"] == "2030-01-01T00:00:00Z"
+
+
+@pytest.mark.parametrize("upload_status", ["uploaded", "failed", "rejected", None])
+def test_nothing_changes_when_the_new_upload_is_not_processed(upload_status):
+    svc = FakeService()
+    svc.status["new"] = {"privacyStatus": "unlisted", "uploadStatus": upload_status}
+    before = {k: list(v) for k, v in svc.items.items()}
+
+    with pytest.raises(ValueError, match="not processed"):
+        supersede("old", "new", service=svc)
+
+    assert svc.items == before and not svc.updates
+
+
+def test_supersede_can_publish_the_new_video_first():
+    svc = FakeService()
+
+    supersede("old", "new", new_privacy="public", service=svc)
+
+    assert svc.status["new"]["privacyStatus"] == "public"
+    assert [b["id"] for b in svc.updates] == ["new", "old"]

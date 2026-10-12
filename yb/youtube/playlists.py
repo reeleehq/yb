@@ -124,16 +124,26 @@ def is_video_in_playlist(
 
 
 def add_to_playlist(
-    video_id: str, playlist_id: str, *, service=None, **cred_kwargs
+    video_id: str,
+    playlist_id: str,
+    *,
+    position: int | None = None,
+    service=None,
+    **cred_kwargs,
 ) -> dict:
-    """Append ``video_id`` to ``playlist_id`` (``playlistItems.insert``)."""
+    """Add ``video_id`` to ``playlist_id`` (``playlistItems.insert``).
+
+    Appended at the end, or inserted at the 0-based ``position`` when given
+    (YouTube refuses a position on a playlist not sorted manually).
+    """
     service = service or _service(**cred_kwargs)
-    body = {
-        "snippet": {
-            "playlistId": playlist_id,
-            "resourceId": {"kind": "youtube#video", "videoId": video_id},
-        }
+    snippet = {
+        "playlistId": playlist_id,
+        "resourceId": {"kind": "youtube#video", "videoId": video_id},
     }
+    if position is not None:
+        snippet["position"] = position
+    body = {"snippet": snippet}
     return service.playlistItems().insert(part="snippet", body=body).execute()
 
 
@@ -191,13 +201,19 @@ def playlist_item_ids(
     A list, because a video can sit in one playlist more than once.
     """
     service = service or _service(**cred_kwargs)
-    out: list[str] = []
+    return [item_id for item_id, _ in _items_of(video_id, playlist_id, service=service)]
+
+
+def _items_of(video_id, playlist_id, *, service) -> list[tuple[str, int | None]]:
+    """``(item id, position)`` of every occurrence of ``video_id``."""
+    service = service or _service()
+    out: list[tuple[str, int | None]] = []
     token = None
     while True:
         resp = (
             service.playlistItems()
             .list(
-                part="contentDetails",
+                part="snippet,contentDetails",
                 playlistId=playlist_id,
                 maxResults=_MAX_RESULTS,
                 pageToken=token,
@@ -205,7 +221,7 @@ def playlist_item_ids(
             .execute()
         )
         out += [
-            it["id"]
+            (it["id"], (it.get("snippet") or {}).get("position"))
             for it in resp.get("items", [])
             if it["contentDetails"]["videoId"] == video_id
         ]
@@ -214,11 +230,22 @@ def playlist_item_ids(
             return out
 
 
+def first_position(
+    video_id: str, playlist_id: str, *, service=None, **cred_kwargs
+) -> int | None:
+    """The 0-based position of ``video_id``'s first occurrence (``None`` if absent)."""
+    service = service or _service(**cred_kwargs)
+    found = [
+        p for _, p in _items_of(video_id, playlist_id, service=service) if p is not None
+    ]
+    return min(found) if found else None
+
+
 def playlists_containing(video_id: str, *, service=None, **cred_kwargs) -> list[str]:
     """Ids of the authenticated channel's playlists that hold ``video_id``.
 
-    One ``playlistItems.list`` sweep per playlist (1 quota unit per page), so
-    it costs as many units as the channel has playlist pages.
+    Reads every item page of every playlist you own (1 quota unit per page),
+    plus the ``playlists.list`` pages: on a large channel, budget for it.
     """
     service = service or _service(**cred_kwargs)
     return [
