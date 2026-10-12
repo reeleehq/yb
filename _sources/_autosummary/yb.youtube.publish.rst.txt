@@ -12,3 +12,9 @@ yb.youtube.publish
       publish_content
       publish_video
    
+   .. rubric:: Exceptions
+
+   .. autosummary::
+   
+      PartialPublish
+   

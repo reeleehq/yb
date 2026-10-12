@@ -1,4 +1,4 @@
-> built 2026-10-10 14:39 UTC from 51176fc (main) · yb 0.1.11. Details: build_info.json
+> built 2026-10-12 05:00 UTC from a45093a (main) · yb 0.1.12. Details: build_info.json
 
 # index.html.md
 
@@ -130,6 +130,8 @@ publish_video(
     thumbnail="thumb.jpg",
 )
 ```
+
+If captions, the thumbnail or the playlist fail after the upload (a 403 `quotaExceeded`, say), `PartialPublish` is raised with the new video’s id in `err.result`. Call again with `resume=err.result` to finish without uploading a second copy.
 
 **Chapters** are on by default: when the media is long enough to host them
 (YouTube requires ≥3 markers, each ≥10 s, first at `0:00`), they are detected
@@ -1508,7 +1510,7 @@ Build a podcast episode bundle from `media` into `output_dir`.
 * **Returns:**
   A `PodcastEpisode` with the asset paths.
 
-### yb.publish_content(content, \*, privacy_status=None, playlist=<object object>, category_id='28', with_chapters=True, attach_caption=True, set_thumb=True, config=None, client_secrets_file=None, token_file=None, progress=True, service=None, \*\*cred_kwargs)
+### yb.publish_content(content, \*, privacy_status=None, playlist=<object object>, category_id='28', with_chapters=True, attach_caption=True, set_thumb=True, config=None, client_secrets_file=None, token_file=None, progress=True, service=None, resume=None, \*\*cred_kwargs)
 
 Upload a prepared [`PublicationContent`](_autosummary/yb.html.md#yb.PublicationContent) to YouTube.
 
@@ -1534,6 +1536,10 @@ to override the target.
   actually set (an unaudited project may force `"private"`); `playlist`
   is the [`add_video_to_playlist()`](_autosummary/yb.youtube.playlists.html.md#yb.youtube.playlists.add_video_to_playlist) result or
   `None`.
+* **Raises:**
+  [**PartialPublish**](_autosummary/yb.youtube.html.md#yb.youtube.PartialPublish) – the upload succeeded and a later step failed;
+      `err.result` holds the video id and what was done. Pass
+      `resume=err.result` to finish without uploading again (yb#21).
 
 ### yb.set_chapters(video_id, chapters, , header='Chapters:', service=None, \*\*cred_kwargs)
 
@@ -2364,9 +2370,10 @@ Edit an existing video:
 
 ### Exceptions
 
-| [`ConsentRequired`](_autosummary/yb.youtube.html.md#yb.youtube.ConsentRequired)                       | Consent is needed and this process cannot obtain it.                        |
-|----------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|
-| [`ConsentPending`](_autosummary/yb.youtube.html.md#yb.youtube.ConsentPending)(url, \*, redirect_uri) | Consent was started, and now waits for the user to paste the redirect back. |
+| [`ConsentRequired`](_autosummary/yb.youtube.html.md#yb.youtube.ConsentRequired)                         | Consent is needed and this process cannot obtain it.                        |
+|------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|
+| [`ConsentPending`](_autosummary/yb.youtube.html.md#yb.youtube.ConsentPending)(url, \*, redirect_uri)   | Consent was started, and now waits for the user to paste the redirect back. |
+| [`PartialPublish`](_autosummary/yb.youtube.html.md#yb.youtube.PartialPublish)(result, \*, step, error) | The video was uploaded, then a later step failed (yb#21).                   |
 
 ### *class* yb.youtube.CaptionTrack(path, language, name='', is_draft=False)
 
@@ -2414,6 +2421,34 @@ stdout nobody is reading and waits on `localhost` for a redirect that will
 never arrive, so an automated caller *blocks* rather than failing. That has
 happened — an upload stopped dead mid-script and read as a slow network for
 hours, when the underlying cause was one line of `invalid_grant`.
+
+### *exception* yb.youtube.PartialPublish(result, , step, error)
+
+Bases: [`RuntimeError`](https://docs.python.org/3/builtins/exceptions.html#RuntimeError)
+
+The video was uploaded, then a later step failed (yb#21).
+
+The upload is the expensive step (1,600 quota units); captions, thumbnail
+and playlist can each fail afterwards on quota, auth or a transient error.
+Raising the bare error lost the new video’s id, and a re-run uploaded a
+second copy. This carries what was done instead:
+
+- `result`: the dict the publish call would have returned, as far as it
+  got (`video_id`, `url`, `captions` attached so far, `thumbnail`,
+  `playlist`). Persist it.
+- `step`: the step that failed, e.g. `"caption ja"`.
+- `__cause__`: the original error.
+
+Finish later without re-uploading: pass `resume=err.result` to the same
+call ([`publish_video()`](_autosummary/yb.youtube.html.md#yb.youtube.publish_video) or [`publish_content()`](_autosummary/yb.youtube.html.md#yb.youtube.publish_content); for
+[`prepare_and_publish()`](_autosummary/yb.youtube.html.md#yb.youtube.prepare_and_publish), call [`publish_content()`](_autosummary/yb.youtube.html.md#yb.youtube.publish_content) with the content
+it prepared, rather than preparing it again). Steps already done are
+skipped. A resume trusts the saved result: it does not upload, so new
+metadata, video path or privacy in the resuming call are ignored, and the
+remaining steps target the saved `video_id`.
+
+`result` is plain JSON-able data, and the exception pickles (so a worker
+process can hand it back); `__cause__` does not survive pickling.
 
 ### *class* yb.youtube.VideoMetadata(title, description, tags=<factory>, category_id='28', default_language=None, default_audio_language=None, contains_synthetic_media=None)
 
@@ -2704,7 +2739,7 @@ playlist. `privacy_status` and `playlist` default to your `yb` config
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
 
-### yb.youtube.publish_content(content, \*, privacy_status=None, playlist=<object object>, category_id='28', with_chapters=True, attach_caption=True, set_thumb=True, config=None, client_secrets_file=None, token_file=None, progress=True, service=None, \*\*cred_kwargs)
+### yb.youtube.publish_content(content, \*, privacy_status=None, playlist=<object object>, category_id='28', with_chapters=True, attach_caption=True, set_thumb=True, config=None, client_secrets_file=None, token_file=None, progress=True, service=None, resume=None, \*\*cred_kwargs)
 
 Upload a prepared `PublicationContent` to YouTube.
 
@@ -2730,13 +2765,21 @@ to override the target.
   actually set (an unaudited project may force `"private"`); `playlist`
   is the [`add_video_to_playlist()`](_autosummary/yb.youtube.playlists.html.md#yb.youtube.playlists.add_video_to_playlist) result or
   `None`.
+* **Raises:**
+  [**PartialPublish**](_autosummary/yb.youtube.html.md#yb.youtube.PartialPublish) – the upload succeeded and a later step failed;
+      `err.result` holds the video id and what was done. Pass
+      `resume=err.result` to finish without uploading again (yb#21).
 
-### yb.youtube.publish_video(video_path, metadata, \*, privacy_status=None, playlist=<object object>, captions=None, thumbnail=None, config=None, client_secrets_file=None, token_file=None, progress=True, service=None, \*\*cred_kwargs)
+### yb.youtube.publish_video(video_path, metadata, \*, privacy_status=None, playlist=<object object>, captions=None, thumbnail=None, config=None, client_secrets_file=None, token_file=None, progress=True, service=None, resume=None, \*\*cred_kwargs)
 
 Lower-level upload: explicit [`VideoMetadata`](_autosummary/yb.youtube.html.md#yb.youtube.VideoMetadata) + caption tracks.
 
 `privacy_status` and `playlist` default to your `yb` config (see
 [`publish_content()`](_autosummary/yb.youtube.html.md#yb.youtube.publish_content)).
+
+If a step after the upload fails, [`PartialPublish`](_autosummary/yb.youtube.html.md#yb.youtube.PartialPublish) is raised with
+the new video’s id and what was done so far (`err.result`). Pass
+`resume=err.result` to finish without uploading again (yb#21).
 
 `cred_kwargs` reach [`get_credentials()`](_autosummary/yb.youtube.auth.html.md#yb.youtube.auth.get_credentials) (e.g.
 `open_browser=False, port=8080` for headless consent).
@@ -3210,6 +3253,39 @@ Two entry points:
 | [`publish_content`](_autosummary/yb.youtube.publish.html.md#yb.youtube.publish.publish_content)(content, \*[, ...])               | Upload a prepared `PublicationContent` to YouTube.                  |
 | [`publish_video`](_autosummary/yb.youtube.publish.html.md#yb.youtube.publish.publish_video)(video_path, metadata, \*[, ...])    | Lower-level upload: explicit `VideoMetadata` + caption tracks.      |
 
+### Exceptions
+
+| [`PartialPublish`](_autosummary/yb.youtube.publish.html.md#yb.youtube.publish.PartialPublish)(result, \*, step, error)   | The video was uploaded, then a later step failed (yb#21).   |
+|--------------------------------------------------------------------------------------------|-------------------------------------------------------------|
+
+### *exception* yb.youtube.publish.PartialPublish(result, , step, error)
+
+Bases: [`RuntimeError`](https://docs.python.org/3/builtins/exceptions.html#RuntimeError)
+
+The video was uploaded, then a later step failed (yb#21).
+
+The upload is the expensive step (1,600 quota units); captions, thumbnail
+and playlist can each fail afterwards on quota, auth or a transient error.
+Raising the bare error lost the new video’s id, and a re-run uploaded a
+second copy. This carries what was done instead:
+
+- `result`: the dict the publish call would have returned, as far as it
+  got (`video_id`, `url`, `captions` attached so far, `thumbnail`,
+  `playlist`). Persist it.
+- `step`: the step that failed, e.g. `"caption ja"`.
+- `__cause__`: the original error.
+
+Finish later without re-uploading: pass `resume=err.result` to the same
+call ([`publish_video()`](_autosummary/yb.youtube.publish.html.md#yb.youtube.publish.publish_video) or [`publish_content()`](_autosummary/yb.youtube.publish.html.md#yb.youtube.publish.publish_content); for
+[`prepare_and_publish()`](_autosummary/yb.youtube.publish.html.md#yb.youtube.publish.prepare_and_publish), call [`publish_content()`](_autosummary/yb.youtube.publish.html.md#yb.youtube.publish.publish_content) with the content
+it prepared, rather than preparing it again). Steps already done are
+skipped. A resume trusts the saved result: it does not upload, so new
+metadata, video path or privacy in the resuming call are ignored, and the
+remaining steps target the saved `video_id`.
+
+`result` is plain JSON-able data, and the exception pickles (so a worker
+process can hand it back); `__cause__` does not survive pickling.
+
 ### yb.youtube.publish.prepare_and_publish(media, \*, language='English', language_code=None, audio_language_code=None, brand=None, extra_context=None, with_chapters=True, with_thumbnail=True, privacy_status=None, playlist=<object object>, category_id='28', config=None, client_secrets_file=None, token_file=None, progress=True, \*\*cred_kwargs)
 
 One call: prepare publication content from `media` and upload it.
@@ -3226,7 +3302,7 @@ playlist. `privacy_status` and `playlist` default to your `yb` config
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
 
-### yb.youtube.publish.publish_content(content, \*, privacy_status=None, playlist=<object object>, category_id='28', with_chapters=True, attach_caption=True, set_thumb=True, config=None, client_secrets_file=None, token_file=None, progress=True, service=None, \*\*cred_kwargs)
+### yb.youtube.publish.publish_content(content, \*, privacy_status=None, playlist=<object object>, category_id='28', with_chapters=True, attach_caption=True, set_thumb=True, config=None, client_secrets_file=None, token_file=None, progress=True, service=None, resume=None, \*\*cred_kwargs)
 
 Upload a prepared `PublicationContent` to YouTube.
 
@@ -3252,13 +3328,21 @@ to override the target.
   actually set (an unaudited project may force `"private"`); `playlist`
   is the [`add_video_to_playlist()`](_autosummary/yb.youtube.playlists.html.md#yb.youtube.playlists.add_video_to_playlist) result or
   `None`.
+* **Raises:**
+  [**PartialPublish**](_autosummary/yb.youtube.publish.html.md#yb.youtube.publish.PartialPublish) – the upload succeeded and a later step failed;
+      `err.result` holds the video id and what was done. Pass
+      `resume=err.result` to finish without uploading again (yb#21).
 
-### yb.youtube.publish.publish_video(video_path, metadata, \*, privacy_status=None, playlist=<object object>, captions=None, thumbnail=None, config=None, client_secrets_file=None, token_file=None, progress=True, service=None, \*\*cred_kwargs)
+### yb.youtube.publish.publish_video(video_path, metadata, \*, privacy_status=None, playlist=<object object>, captions=None, thumbnail=None, config=None, client_secrets_file=None, token_file=None, progress=True, service=None, resume=None, \*\*cred_kwargs)
 
 Lower-level upload: explicit `VideoMetadata` + caption tracks.
 
 `privacy_status` and `playlist` default to your `yb` config (see
 [`publish_content()`](_autosummary/yb.youtube.publish.html.md#yb.youtube.publish.publish_content)).
+
+If a step after the upload fails, [`PartialPublish`](_autosummary/yb.youtube.publish.html.md#yb.youtube.publish.PartialPublish) is raised with
+the new video’s id and what was done so far (`err.result`). Pass
+`resume=err.result` to finish without uploading again (yb#21).
 
 `cred_kwargs` reach [`get_credentials()`](_autosummary/yb.youtube.auth.html.md#yb.youtube.auth.get_credentials) (e.g.
 `open_browser=False, port=8080` for headless consent).
@@ -3526,18 +3610,18 @@ Fetch a video’s live metadata & engagement numbers.
 
 # About this build
 
-This documentation was built on **2026-10-10 14:39 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/51176fc3151df90fbb64d5d91020ec81d6be25f1"><code>51176fc</code></a> on branch <code>main</code>, for **yb 0.1.11** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-10-12 05:00 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/a45093a89442028327e39d039a60a7ed8ad73406"><code>a45093a</code></a> on branch <code>main</code>, for **yb 0.1.12** (from <code>pyproject.toml</code>).
 
 #### WARNING
 The documentation and the package may be misaligned:
 
-- The documented version (0.1.11) is behind the latest release on PyPI (0.1.12): `pip install yb` gives newer code than these docs describe.
+- The documented version (0.1.12) is behind the latest release on PyPI (0.1.13): `pip install yb` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                    |
 |---------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/yb/commit/51176fc3151df90fbb64d5d91020ec81d6be25f1"><code>51176fc3151df90fbb64d5d91020ec81d6be25f1</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/yb/commit/a45093a89442028327e39d039a60a7ed8ad73406"><code>a45093a89442028327e39d039a60a7ed8ad73406</code></a> |
 | Branch              | <code>main</code>                                                                                                                                  |
 | Tags at this commit | none                                                                                                                                               |
 | Working tree        | clean                                                                                                                                              |
@@ -3548,9 +3632,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/yb</code>                                                                   |
-| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/38060372297">38060372297</a>          |
+| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/38205983589">38205983589</a>          |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>51176fc3151df90fbb64d5d91020ec81d6be25f1</code> (in the history of the built commit) |
+| Event commit | <code>a45093a89442028327e39d039a60a7ed8ad73406</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -3575,13 +3659,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/yb/0.1.12/">0.1.12</a>, newer than the documented version (0.1.11).
+Latest release: <a href="https://pypi.org/project/yb/0.1.13/">0.1.13</a>, newer than the documented version (0.1.12).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/yb && cd yb
-git checkout 51176fc3151df90fbb64d5d91020ec81d6be25f1
+git checkout a45093a89442028327e39d039a60a7ed8ad73406
 pip install "epythet==0.2.12"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

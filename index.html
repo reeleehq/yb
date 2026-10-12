@@ -394,6 +394,7 @@ pass <code class="docutils literal notranslate"><span class="pre">on_error=&quot
 <span class="p">)</span>
 </pre></div>
 </div>
+<p>If captions, the thumbnail or the playlist fail after the upload (a 403 <code class="docutils literal notranslate"><span class="pre">quotaExceeded</span></code>, say), <code class="docutils literal notranslate"><span class="pre">PartialPublish</span></code> is raised with the new video’s id in <code class="docutils literal notranslate"><span class="pre">err.result</span></code>. Call again with <code class="docutils literal notranslate"><span class="pre">resume=err.result</span></code> to finish without uploading a second copy.</p>
 <p><strong>Chapters</strong> are on by default: when the media is long enough to host them
 (YouTube requires ≥3 markers, each ≥10 s, first at <code class="docutils literal notranslate"><span class="pre">0:00</span></code>), they are detected
 from the transcript and embedded in the description so YouTube renders
@@ -578,7 +579,7 @@ it, and the <code class="docutils literal notranslate"><span class="pre">music</
 </section>
 </section>
 
-<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-10-10 14:39 UTC from <a href="https://github.com/reeleehq/yb/commit/51176fc3151df90fbb64d5d91020ec81d6be25f1">51176fc</a> (main) · yb 0.1.11 · <a href="about-this-build.html">about this build</a></p>
+<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-10-12 05:00 UTC from <a href="https://github.com/reeleehq/yb/commit/a45093a89442028327e39d039a60a7ed8ad73406">a45093a</a> (main) · yb 0.1.12 · <a href="about-this-build.html">about this build</a></p>
         </article>
       </div>
       <footer>
@@ -645,7 +646,7 @@ it, and the <code class="docutils literal notranslate"><span class="pre">music</
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=932d0dab"></script>
+</div><script src="_static/documentation_options.js?v=b39c9740"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>

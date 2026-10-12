@@ -328,7 +328,7 @@ Build a podcast episode bundle from `media` into `output_dir`.
 * **Returns:**
   A `PodcastEpisode` with the asset paths.
 
-### yb.publish_content(content, \*, privacy_status=None, playlist=<object object>, category_id='28', with_chapters=True, attach_caption=True, set_thumb=True, config=None, client_secrets_file=None, token_file=None, progress=True, service=None, \*\*cred_kwargs)
+### yb.publish_content(content, \*, privacy_status=None, playlist=<object object>, category_id='28', with_chapters=True, attach_caption=True, set_thumb=True, config=None, client_secrets_file=None, token_file=None, progress=True, service=None, resume=None, \*\*cred_kwargs)
 
 Upload a prepared [`PublicationContent`](#yb.PublicationContent) to YouTube.
 
@@ -354,6 +354,10 @@ to override the target.
   actually set (an unaudited project may force `"private"`); `playlist`
   is the [`add_video_to_playlist()`](yb.youtube.playlists.html.md#yb.youtube.playlists.add_video_to_playlist) result or
   `None`.
+* **Raises:**
+  [**PartialPublish**](yb.youtube.html.md#yb.youtube.PartialPublish) – the upload succeeded and a later step failed;
+      `err.result` holds the video id and what was done. Pass
+      `resume=err.result` to finish without uploading again (yb#21).
 
 ### yb.set_chapters(video_id, chapters, , header='Chapters:', service=None, \*\*cred_kwargs)
 

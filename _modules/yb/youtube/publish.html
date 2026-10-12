@@ -280,7 +280,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Sequence</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Sequence</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">yb.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">YbConfig</span><span class="p">,</span> <span class="n">load_config</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">yb.content</span><span class="w"> </span><span class="kn">import</span> <span class="n">PublicationContent</span><span class="p">,</span> <span class="n">prepare_content</span>
@@ -296,6 +296,127 @@
 <span class="c1">#: Distinguishes an unset playlist (use config) from an explicit ``None``</span>
 <span class="c1">#: (publish without adding to any playlist).</span>
 <span class="n">_USE_CONFIG</span> <span class="o">=</span> <span class="nb">object</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="PartialPublish">
+<a class="viewcode-back" href="../../../_autosummary/yb.youtube.publish.html#yb.PartialPublish">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">PartialPublish</span><span class="p">(</span><span class="ne">RuntimeError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""The video was uploaded, then a later step failed (yb#21).</span>
+
+<span class="sd">    The upload is the expensive step (1,600 quota units); captions, thumbnail</span>
+<span class="sd">    and playlist can each fail afterwards on quota, auth or a transient error.</span>
+<span class="sd">    Raising the bare error lost the new video's id, and a re-run uploaded a</span>
+<span class="sd">    second copy. This carries what was done instead:</span>
+
+<span class="sd">    - ``result``: the dict the publish call would have returned, as far as it</span>
+<span class="sd">      got (``video_id``, ``url``, ``captions`` attached so far, ``thumbnail``,</span>
+<span class="sd">      ``playlist``). Persist it.</span>
+<span class="sd">    - ``step``: the step that failed, e.g. ``"caption ja"``.</span>
+<span class="sd">    - ``__cause__``: the original error.</span>
+
+<span class="sd">    Finish later without re-uploading: pass ``resume=err.result`` to the same</span>
+<span class="sd">    call (:func:`publish_video` or :func:`publish_content`; for</span>
+<span class="sd">    :func:`prepare_and_publish`, call :func:`publish_content` with the content</span>
+<span class="sd">    it prepared, rather than preparing it again). Steps already done are</span>
+<span class="sd">    skipped. A resume trusts the saved result: it does not upload, so new</span>
+<span class="sd">    metadata, video path or privacy in the resuming call are ignored, and the</span>
+<span class="sd">    remaining steps target the saved ``video_id``.</span>
+
+<span class="sd">    ``result`` is plain JSON-able data, and the exception pickles (so a worker</span>
+<span class="sd">    process can hand it back); ``__cause__`` does not survive pickling.</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">step</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">error</span><span class="p">:</span> <span class="ne">BaseException</span> <span class="o">|</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="n">result</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">step</span> <span class="o">=</span> <span class="n">step</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"Uploaded </span><span class="si">{</span><span class="n">result</span><span class="p">[</span><span class="s1">'video_id'</span><span class="p">]</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">result</span><span class="p">[</span><span class="s1">'url'</span><span class="p">]</span><span class="si">}</span><span class="s2">), then </span><span class="si">{</span><span class="n">step</span><span class="si">!r}</span><span class="s2"> "</span>
+            <span class="sa">f</span><span class="s2">"failed: </span><span class="si">{</span><span class="n">error</span><span class="si">!r}</span><span class="s2">. Nothing was lost: pass resume=err.result to "</span>
+            <span class="s2">"finish without uploading again."</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__reduce__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">_restore_partial</span><span class="p">,</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">step</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">)))</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_restore_partial</span><span class="p">(</span><span class="n">result</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">step</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PartialPublish</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Unpickle a :class:`PartialPublish` without re-running ``__init__``."""</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n">PartialPublish</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="n">PartialPublish</span><span class="p">)</span>
+    <span class="ne">RuntimeError</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">err</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span>
+    <span class="n">err</span><span class="o">.</span><span class="n">result</span><span class="p">,</span> <span class="n">err</span><span class="o">.</span><span class="n">step</span> <span class="o">=</span> <span class="n">result</span><span class="p">,</span> <span class="n">step</span>
+    <span class="k">return</span> <span class="n">err</span>
+
+
+<span class="c1">#: One post-upload step: ``(kind, key, run)``. ``kind`` is ``"caption"``,</span>
+<span class="c1">#: ``"thumbnail"`` or ``"playlist"``; ``key`` the caption language (else "").</span>
+<span class="n">_Step</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="n">Any</span><span class="p">]]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_step_done</span><span class="p">(</span><span class="n">result</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="s2">"caption"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">result</span><span class="p">[</span><span class="s2">"captions"</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="s2">"thumbnail"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s2">"thumbnail"</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">result</span><span class="p">[</span><span class="s2">"playlist"</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_after_upload</span><span class="p">(</span>
+    <span class="n">result</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">steps</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">_Step</span><span class="p">],</span> <span class="o">*</span><span class="p">,</span> <span class="n">resuming</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Run the post-upload steps in order, recording each as it succeeds.</span>
+
+<span class="sd">    A failing step raises :class:`PartialPublish` carrying ``result`` as far as</span>
+<span class="sd">    it got. When ``resuming``, a step the saved ``result`` already records is</span>
+<span class="sd">    skipped; a fresh run skips nothing (two tracks in one language both reach</span>
+<span class="sd">    YouTube, the last one winning, as before).</span>
+<span class="sd">    """</span>
+    <span class="n">done</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="p">{</span>
+            <span class="s2">"captions"</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s2">"captions"</span><span class="p">]),</span>
+            <span class="s2">"thumbnail"</span><span class="p">:</span> <span class="n">result</span><span class="p">[</span><span class="s2">"thumbnail"</span><span class="p">],</span>
+            <span class="s2">"playlist"</span><span class="p">:</span> <span class="n">result</span><span class="p">[</span><span class="s2">"playlist"</span><span class="p">],</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="n">resuming</span>
+        <span class="k">else</span> <span class="kc">None</span>
+    <span class="p">)</span>
+    <span class="k">for</span> <span class="n">kind</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">run</span> <span class="ow">in</span> <span class="n">steps</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">done</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">_step_done</span><span class="p">(</span><span class="n">done</span><span class="p">,</span> <span class="n">kind</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+            <span class="k">continue</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="n">run</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">PartialPublish</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">kind</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">"</span><span class="o">.</span><span class="n">strip</span><span class="p">(),</span> <span class="n">error</span><span class="o">=</span><span class="n">e</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
+        <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="s2">"caption"</span><span class="p">:</span>
+            <span class="n">result</span><span class="p">[</span><span class="s2">"captions"</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">kind</span> <span class="o">==</span> <span class="s2">"thumbnail"</span><span class="p">:</span>
+            <span class="n">result</span><span class="p">[</span><span class="s2">"thumbnail"</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">result</span><span class="p">[</span><span class="s2">"playlist"</span><span class="p">]</span> <span class="o">=</span> <span class="n">out</span>
+    <span class="k">return</span> <span class="n">result</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_upload_or_resume</span><span class="p">(</span>
+    <span class="n">resume</span><span class="p">:</span> <span class="n">Mapping</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">upload</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="nb">dict</span><span class="p">],</span> <span class="n">privacy_status</span><span class="p">:</span> <span class="nb">str</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The starting result: a fresh upload's, or a copy of ``resume``'s."""</span>
+    <span class="k">if</span> <span class="n">resume</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">resume</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"video_id"</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"resume= needs the result of an earlier publish call"</span><span class="p">)</span>
+        <span class="c1"># Rebuilt from the known fields, so a hand-built or partial dict gets</span>
+        <span class="c1"># defaults (not a KeyError after the fact) and extra keys a caller</span>
+        <span class="c1"># saved alongside do not leak into the return value.</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">_result</span><span class="p">(</span>
+            <span class="n">resume</span><span class="p">[</span><span class="s2">"video_id"</span><span class="p">],</span>
+            <span class="n">resume</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"privacy_status"</span><span class="p">,</span> <span class="n">privacy_status</span><span class="p">),</span>
+            <span class="nb">list</span><span class="p">(</span><span class="n">resume</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"captions"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]),</span>
+            <span class="nb">bool</span><span class="p">(</span><span class="n">resume</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"thumbnail"</span><span class="p">)),</span>
+            <span class="n">resume</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"playlist"</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">out</span>
+    <span class="n">resp</span> <span class="o">=</span> <span class="n">upload</span><span class="p">()</span>
+    <span class="n">actual_privacy</span> <span class="o">=</span> <span class="n">resp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"status"</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"privacyStatus"</span><span class="p">,</span> <span class="n">privacy_status</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_result</span><span class="p">(</span><span class="n">resp</span><span class="p">[</span><span class="s2">"id"</span><span class="p">],</span> <span class="n">actual_privacy</span><span class="p">,</span> <span class="p">[],</span> <span class="kc">False</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_maybe_add_to_playlist</span><span class="p">(</span>
@@ -332,6 +453,7 @@
     <span class="n">token_file</span><span class="p">:</span> <span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">service</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">resume</span><span class="p">:</span> <span class="n">Mapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="o">**</span><span class="n">cred_kwargs</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Upload a prepared :class:`PublicationContent` to YouTube.</span>
@@ -356,6 +478,11 @@
 <span class="sd">        actually set (an unaudited project may force ``"private"``); ``playlist``</span>
 <span class="sd">        is the :func:`~yb.youtube.playlists.add_video_to_playlist` result or</span>
 <span class="sd">        ``None``.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        PartialPublish: the upload succeeded and a later step failed;</span>
+<span class="sd">            ``err.result`` holds the video id and what was done. Pass</span>
+<span class="sd">            ``resume=err.result`` to finish without uploading again (yb#21).</span>
 <span class="sd">    """</span>
     <span class="n">cfg</span> <span class="o">=</span> <span class="n">config</span> <span class="ow">or</span> <span class="n">load_config</span><span class="p">(</span><span class="n">privacy_status</span><span class="o">=</span><span class="n">privacy_status</span><span class="p">)</span>
     <span class="n">privacy_status</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">privacy_status</span>
@@ -366,13 +493,16 @@
         <span class="n">content</span><span class="p">,</span> <span class="n">category_id</span><span class="o">=</span><span class="n">category_id</span><span class="p">,</span> <span class="n">with_chapters</span><span class="o">=</span><span class="n">with_chapters</span>
     <span class="p">)</span>
     <span class="n">body</span> <span class="o">=</span> <span class="n">meta</span><span class="o">.</span><span class="n">insert_body</span><span class="p">(</span><span class="n">privacy_status</span><span class="o">=</span><span class="n">privacy_status</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">progress</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Uploading </span><span class="si">{</span><span class="n">content</span><span class="o">.</span><span class="n">media</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> as </span><span class="si">{</span><span class="n">privacy_status</span><span class="si">}</span><span class="s2">..."</span><span class="p">)</span>
-    <span class="n">resp</span> <span class="o">=</span> <span class="n">upload_video</span><span class="p">(</span><span class="n">content</span><span class="o">.</span><span class="n">media</span><span class="p">,</span> <span class="n">body</span><span class="p">,</span> <span class="n">service</span><span class="o">=</span><span class="n">service</span><span class="p">,</span> <span class="n">progress</span><span class="o">=</span><span class="n">progress</span><span class="p">)</span>
-    <span class="n">video_id</span> <span class="o">=</span> <span class="n">resp</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]</span>
-    <span class="n">actual_privacy</span> <span class="o">=</span> <span class="n">resp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"status"</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"privacyStatus"</span><span class="p">,</span> <span class="n">privacy_status</span><span class="p">)</span>
 
-    <span class="n">captions</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">upload</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">progress</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Uploading </span><span class="si">{</span><span class="n">content</span><span class="o">.</span><span class="n">media</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> as </span><span class="si">{</span><span class="n">privacy_status</span><span class="si">}</span><span class="s2">..."</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">upload_video</span><span class="p">(</span><span class="n">content</span><span class="o">.</span><span class="n">media</span><span class="p">,</span> <span class="n">body</span><span class="p">,</span> <span class="n">service</span><span class="o">=</span><span class="n">service</span><span class="p">,</span> <span class="n">progress</span><span class="o">=</span><span class="n">progress</span><span class="p">)</span>
+
+    <span class="n">result</span> <span class="o">=</span> <span class="n">_upload_or_resume</span><span class="p">(</span><span class="n">resume</span><span class="p">,</span> <span class="n">upload</span><span class="p">,</span> <span class="n">privacy_status</span><span class="p">)</span>
+    <span class="n">video_id</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="s2">"video_id"</span><span class="p">]</span>
+
+    <span class="n">steps</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">_Step</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">cap_lang</span> <span class="o">=</span> <span class="n">content</span><span class="o">.</span><span class="n">audio_language</span> <span class="ow">or</span> <span class="n">content</span><span class="o">.</span><span class="n">language</span>
     <span class="k">if</span> <span class="p">(</span>
         <span class="n">attach_caption</span>
@@ -380,28 +510,39 @@
         <span class="ow">and</span> <span class="n">Path</span><span class="p">(</span><span class="n">content</span><span class="o">.</span><span class="n">srt_path</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
         <span class="ow">and</span> <span class="n">cap_lang</span>
     <span class="p">):</span>
-        <span class="k">if</span> <span class="n">progress</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  attaching caption: </span><span class="si">{</span><span class="n">cap_lang</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-        <span class="n">upsert_caption</span><span class="p">(</span>
-            <span class="n">video_id</span><span class="p">,</span>
-            <span class="n">content</span><span class="o">.</span><span class="n">srt_path</span><span class="p">,</span>
-            <span class="n">language</span><span class="o">=</span><span class="n">cap_lang</span><span class="p">,</span>
-            <span class="n">name</span><span class="o">=</span><span class="n">_lang_name</span><span class="p">(</span><span class="n">cap_lang</span><span class="p">),</span>
-            <span class="n">service</span><span class="o">=</span><span class="n">service</span><span class="p">,</span>
-        <span class="p">)</span>
-        <span class="n">captions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cap_lang</span><span class="p">)</span>
 
-    <span class="n">thumb_set</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">caption</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">progress</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  attaching caption: </span><span class="si">{</span><span class="n">cap_lang</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="n">upsert_caption</span><span class="p">(</span>
+                <span class="n">video_id</span><span class="p">,</span>
+                <span class="n">content</span><span class="o">.</span><span class="n">srt_path</span><span class="p">,</span>
+                <span class="n">language</span><span class="o">=</span><span class="n">cap_lang</span><span class="p">,</span>
+                <span class="n">name</span><span class="o">=</span><span class="n">_lang_name</span><span class="p">(</span><span class="n">cap_lang</span><span class="p">),</span>
+                <span class="n">service</span><span class="o">=</span><span class="n">service</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="n">steps</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s2">"caption"</span><span class="p">,</span> <span class="n">cap_lang</span><span class="p">,</span> <span class="n">caption</span><span class="p">))</span>
+
     <span class="k">if</span> <span class="n">set_thumb</span> <span class="ow">and</span> <span class="n">content</span><span class="o">.</span><span class="n">thumbnail</span> <span class="ow">and</span> <span class="n">Path</span><span class="p">(</span><span class="n">content</span><span class="o">.</span><span class="n">thumbnail</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
-        <span class="k">if</span> <span class="n">progress</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="s2">"  setting thumbnail"</span><span class="p">)</span>
-        <span class="n">set_thumbnail</span><span class="p">(</span><span class="n">video_id</span><span class="p">,</span> <span class="n">content</span><span class="o">.</span><span class="n">thumbnail</span><span class="p">,</span> <span class="n">service</span><span class="o">=</span><span class="n">service</span><span class="p">)</span>
-        <span class="n">thumb_set</span> <span class="o">=</span> <span class="kc">True</span>
 
-    <span class="n">playlist_result</span> <span class="o">=</span> <span class="n">_maybe_add_to_playlist</span><span class="p">(</span>
-        <span class="n">video_id</span><span class="p">,</span> <span class="n">playlist</span><span class="p">,</span> <span class="n">cfg</span><span class="p">,</span> <span class="n">service</span><span class="o">=</span><span class="n">service</span><span class="p">,</span> <span class="n">progress</span><span class="o">=</span><span class="n">progress</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">thumb</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">progress</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">"  setting thumbnail"</span><span class="p">)</span>
+            <span class="n">set_thumbnail</span><span class="p">(</span><span class="n">video_id</span><span class="p">,</span> <span class="n">content</span><span class="o">.</span><span class="n">thumbnail</span><span class="p">,</span> <span class="n">service</span><span class="o">=</span><span class="n">service</span><span class="p">)</span>
+
+        <span class="n">steps</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s2">"thumbnail"</span><span class="p">,</span> <span class="s2">""</span><span class="p">,</span> <span class="n">thumb</span><span class="p">))</span>
+
+    <span class="n">steps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+        <span class="p">(</span>
+            <span class="s2">"playlist"</span><span class="p">,</span>
+            <span class="s2">""</span><span class="p">,</span>
+            <span class="k">lambda</span><span class="p">:</span> <span class="n">_maybe_add_to_playlist</span><span class="p">(</span>
+                <span class="n">video_id</span><span class="p">,</span> <span class="n">playlist</span><span class="p">,</span> <span class="n">cfg</span><span class="p">,</span> <span class="n">service</span><span class="o">=</span><span class="n">service</span><span class="p">,</span> <span class="n">progress</span><span class="o">=</span><span class="n">progress</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
     <span class="p">)</span>
-    <span class="k">return</span> <span class="n">_result</span><span class="p">(</span><span class="n">video_id</span><span class="p">,</span> <span class="n">actual_privacy</span><span class="p">,</span> <span class="n">captions</span><span class="p">,</span> <span class="n">thumb_set</span><span class="p">,</span> <span class="n">playlist_result</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="n">_after_upload</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">steps</span><span class="p">,</span> <span class="n">resuming</span><span class="o">=</span><span class="n">resume</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span></div>
 
 
 
@@ -477,12 +618,17 @@
     <span class="n">token_file</span><span class="p">:</span> <span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">service</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">resume</span><span class="p">:</span> <span class="n">Mapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="o">**</span><span class="n">cred_kwargs</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Lower-level upload: explicit :class:`VideoMetadata` + caption tracks.</span>
 
 <span class="sd">    ``privacy_status`` and ``playlist`` default to your ``yb`` config (see</span>
 <span class="sd">    :func:`publish_content`).</span>
+
+<span class="sd">    If a step after the upload fails, :class:`PartialPublish` is raised with</span>
+<span class="sd">    the new video's id and what was done so far (``err.result``). Pass</span>
+<span class="sd">    ``resume=err.result`` to finish without uploading again (yb#21).</span>
 
 <span class="sd">    ``cred_kwargs`` reach :func:`~yb.youtube.auth.get_credentials` (e.g.</span>
 <span class="sd">    ``open_browser=False, port=8080`` for headless consent).</span>
@@ -493,28 +639,44 @@
         <span class="n">client_secrets_file</span><span class="o">=</span><span class="n">client_secrets_file</span><span class="p">,</span> <span class="n">token_file</span><span class="o">=</span><span class="n">token_file</span><span class="p">,</span> <span class="o">**</span><span class="n">cred_kwargs</span>
     <span class="p">)</span>
     <span class="n">body</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="n">insert_body</span><span class="p">(</span><span class="n">privacy_status</span><span class="o">=</span><span class="n">privacy_status</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">progress</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Uploading </span><span class="si">{</span><span class="n">Path</span><span class="p">(</span><span class="n">video_path</span><span class="p">)</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> as </span><span class="si">{</span><span class="n">privacy_status</span><span class="si">}</span><span class="s2">..."</span><span class="p">)</span>
-    <span class="n">resp</span> <span class="o">=</span> <span class="n">upload_video</span><span class="p">(</span><span class="n">video_path</span><span class="p">,</span> <span class="n">body</span><span class="p">,</span> <span class="n">service</span><span class="o">=</span><span class="n">service</span><span class="p">,</span> <span class="n">progress</span><span class="o">=</span><span class="n">progress</span><span class="p">)</span>
-    <span class="n">video_id</span> <span class="o">=</span> <span class="n">resp</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]</span>
-    <span class="n">actual_privacy</span> <span class="o">=</span> <span class="n">resp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"status"</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"privacyStatus"</span><span class="p">,</span> <span class="n">privacy_status</span><span class="p">)</span>
 
-    <span class="n">attached</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="k">for</span> <span class="n">cap</span> <span class="ow">in</span> <span class="n">captions</span> <span class="ow">or</span> <span class="p">[]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">upload</span><span class="p">():</span>
         <span class="k">if</span> <span class="n">progress</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  attaching caption: </span><span class="si">{</span><span class="n">cap</span><span class="o">.</span><span class="n">name</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">cap</span><span class="o">.</span><span class="n">language</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-        <span class="n">upsert_caption</span><span class="p">(</span><span class="n">video_id</span><span class="p">,</span> <span class="n">cap</span><span class="p">,</span> <span class="n">service</span><span class="o">=</span><span class="n">service</span><span class="p">)</span>
-        <span class="n">attached</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cap</span><span class="o">.</span><span class="n">language</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Uploading </span><span class="si">{</span><span class="n">Path</span><span class="p">(</span><span class="n">video_path</span><span class="p">)</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> as </span><span class="si">{</span><span class="n">privacy_status</span><span class="si">}</span><span class="s2">..."</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">upload_video</span><span class="p">(</span><span class="n">video_path</span><span class="p">,</span> <span class="n">body</span><span class="p">,</span> <span class="n">service</span><span class="o">=</span><span class="n">service</span><span class="p">,</span> <span class="n">progress</span><span class="o">=</span><span class="n">progress</span><span class="p">)</span>
 
-    <span class="n">thumb_set</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">_upload_or_resume</span><span class="p">(</span><span class="n">resume</span><span class="p">,</span> <span class="n">upload</span><span class="p">,</span> <span class="n">privacy_status</span><span class="p">)</span>
+    <span class="n">video_id</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="s2">"video_id"</span><span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">caption</span><span class="p">(</span><span class="n">cap</span><span class="p">:</span> <span class="n">CaptionTrack</span><span class="p">):</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">progress</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  attaching caption: </span><span class="si">{</span><span class="n">cap</span><span class="o">.</span><span class="n">name</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">cap</span><span class="o">.</span><span class="n">language</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="n">upsert_caption</span><span class="p">(</span><span class="n">video_id</span><span class="p">,</span> <span class="n">cap</span><span class="p">,</span> <span class="n">service</span><span class="o">=</span><span class="n">service</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">run</span>
+
+    <span class="n">steps</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">_Step</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">(</span><span class="s2">"caption"</span><span class="p">,</span> <span class="n">cap</span><span class="o">.</span><span class="n">language</span><span class="p">,</span> <span class="n">caption</span><span class="p">(</span><span class="n">cap</span><span class="p">))</span> <span class="k">for</span> <span class="n">cap</span> <span class="ow">in</span> <span class="n">captions</span> <span class="ow">or</span> <span class="p">[]</span>
+    <span class="p">]</span>
     <span class="k">if</span> <span class="n">thumbnail</span> <span class="ow">and</span> <span class="n">Path</span><span class="p">(</span><span class="n">thumbnail</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
-        <span class="n">set_thumbnail</span><span class="p">(</span><span class="n">video_id</span><span class="p">,</span> <span class="n">thumbnail</span><span class="p">,</span> <span class="n">service</span><span class="o">=</span><span class="n">service</span><span class="p">)</span>
-        <span class="n">thumb_set</span> <span class="o">=</span> <span class="kc">True</span>
-
-    <span class="n">playlist_result</span> <span class="o">=</span> <span class="n">_maybe_add_to_playlist</span><span class="p">(</span>
-        <span class="n">video_id</span><span class="p">,</span> <span class="n">playlist</span><span class="p">,</span> <span class="n">cfg</span><span class="p">,</span> <span class="n">service</span><span class="o">=</span><span class="n">service</span><span class="p">,</span> <span class="n">progress</span><span class="o">=</span><span class="n">progress</span>
+        <span class="n">steps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="p">(</span>
+                <span class="s2">"thumbnail"</span><span class="p">,</span>
+                <span class="s2">""</span><span class="p">,</span>
+                <span class="k">lambda</span><span class="p">:</span> <span class="n">set_thumbnail</span><span class="p">(</span><span class="n">video_id</span><span class="p">,</span> <span class="n">thumbnail</span><span class="p">,</span> <span class="n">service</span><span class="o">=</span><span class="n">service</span><span class="p">),</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+    <span class="n">steps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+        <span class="p">(</span>
+            <span class="s2">"playlist"</span><span class="p">,</span>
+            <span class="s2">""</span><span class="p">,</span>
+            <span class="k">lambda</span><span class="p">:</span> <span class="n">_maybe_add_to_playlist</span><span class="p">(</span>
+                <span class="n">video_id</span><span class="p">,</span> <span class="n">playlist</span><span class="p">,</span> <span class="n">cfg</span><span class="p">,</span> <span class="n">service</span><span class="o">=</span><span class="n">service</span><span class="p">,</span> <span class="n">progress</span><span class="o">=</span><span class="n">progress</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
     <span class="p">)</span>
-    <span class="k">return</span> <span class="n">_result</span><span class="p">(</span><span class="n">video_id</span><span class="p">,</span> <span class="n">actual_privacy</span><span class="p">,</span> <span class="n">attached</span><span class="p">,</span> <span class="n">thumb_set</span><span class="p">,</span> <span class="n">playlist_result</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="n">_after_upload</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">steps</span><span class="p">,</span> <span class="n">resuming</span><span class="o">=</span><span class="n">resume</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span></div>
 
 
 
@@ -569,7 +731,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=932d0dab"></script>
+</div><script src="../../../_static/documentation_options.js?v=b39c9740"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>
