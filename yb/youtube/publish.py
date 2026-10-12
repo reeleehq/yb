@@ -12,7 +12,7 @@ Two entry points:
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Sequence
+from typing import Any, Callable, Mapping, Sequence
 
 from yb.config import YbConfig, load_config
 from yb.content import PublicationContent, prepare_content
@@ -28,6 +28,124 @@ PathLike = str | Path
 #: Distinguishes an unset playlist (use config) from an explicit ``None``
 #: (publish without adding to any playlist).
 _USE_CONFIG = object()
+
+
+class PartialPublish(RuntimeError):
+    """The video was uploaded, then a later step failed (yb#21).
+
+    The upload is the expensive step (1,600 quota units); captions, thumbnail
+    and playlist can each fail afterwards on quota, auth or a transient error.
+    Raising the bare error lost the new video's id, and a re-run uploaded a
+    second copy. This carries what was done instead:
+
+    - ``result``: the dict the publish call would have returned, as far as it
+      got (``video_id``, ``url``, ``captions`` attached so far, ``thumbnail``,
+      ``playlist``). Persist it.
+    - ``step``: the step that failed, e.g. ``"caption ja"``.
+    - ``__cause__``: the original error.
+
+    Finish later without re-uploading: pass ``resume=err.result`` to the same
+    call (:func:`publish_video` or :func:`publish_content`; for
+    :func:`prepare_and_publish`, call :func:`publish_content` with the content
+    it prepared, rather than preparing it again). Steps already done are
+    skipped. A resume trusts the saved result: it does not upload, so new
+    metadata, video path or privacy in the resuming call are ignored, and the
+    remaining steps target the saved ``video_id``.
+
+    ``result`` is plain JSON-able data, and the exception pickles (so a worker
+    process can hand it back); ``__cause__`` does not survive pickling.
+    """
+
+    def __init__(self, result: dict, *, step: str, error: BaseException | None):
+        self.result = result
+        self.step = step
+        super().__init__(
+            f"Uploaded {result['video_id']} ({result['url']}), then {step!r} "
+            f"failed: {error!r}. Nothing was lost: pass resume=err.result to "
+            "finish without uploading again."
+        )
+
+    def __reduce__(self):
+        return (_restore_partial, (self.result, self.step, str(self)))
+
+
+def _restore_partial(result: dict, step: str, message: str) -> PartialPublish:
+    """Unpickle a :class:`PartialPublish` without re-running ``__init__``."""
+    err = PartialPublish.__new__(PartialPublish)
+    RuntimeError.__init__(err, message)
+    err.result, err.step = result, step
+    return err
+
+
+#: One post-upload step: ``(kind, key, run)``. ``kind`` is ``"caption"``,
+#: ``"thumbnail"`` or ``"playlist"``; ``key`` the caption language (else "").
+_Step = tuple[str, str, Callable[[], Any]]
+
+
+def _step_done(result: Mapping, kind: str, key: str) -> bool:
+    if kind == "caption":
+        return key in result["captions"]
+    if kind == "thumbnail":
+        return bool(result["thumbnail"])
+    return result["playlist"] is not None
+
+
+def _after_upload(
+    result: dict, steps: Sequence[_Step], *, resuming: bool = False
+) -> dict:
+    """Run the post-upload steps in order, recording each as it succeeds.
+
+    A failing step raises :class:`PartialPublish` carrying ``result`` as far as
+    it got. When ``resuming``, a step the saved ``result`` already records is
+    skipped; a fresh run skips nothing (two tracks in one language both reach
+    YouTube, the last one winning, as before).
+    """
+    done = (
+        {
+            "captions": list(result["captions"]),
+            "thumbnail": result["thumbnail"],
+            "playlist": result["playlist"],
+        }
+        if resuming
+        else None
+    )
+    for kind, key, run in steps:
+        if done is not None and _step_done(done, kind, key):
+            continue
+        try:
+            out = run()
+        except Exception as e:
+            raise PartialPublish(result, step=f"{kind} {key}".strip(), error=e) from e
+        if kind == "caption":
+            result["captions"].append(key)
+        elif kind == "thumbnail":
+            result["thumbnail"] = True
+        else:
+            result["playlist"] = out
+    return result
+
+
+def _upload_or_resume(
+    resume: Mapping | None, upload: Callable[[], dict], privacy_status: str
+) -> dict:
+    """The starting result: a fresh upload's, or a copy of ``resume``'s."""
+    if resume is not None:
+        if not resume.get("video_id"):
+            raise ValueError("resume= needs the result of an earlier publish call")
+        # Rebuilt from the known fields, so a hand-built or partial dict gets
+        # defaults (not a KeyError after the fact) and extra keys a caller
+        # saved alongside do not leak into the return value.
+        out = _result(
+            resume["video_id"],
+            resume.get("privacy_status", privacy_status),
+            list(resume.get("captions") or []),
+            bool(resume.get("thumbnail")),
+            resume.get("playlist"),
+        )
+        return out
+    resp = upload()
+    actual_privacy = resp.get("status", {}).get("privacyStatus", privacy_status)
+    return _result(resp["id"], actual_privacy, [], False)
 
 
 def _maybe_add_to_playlist(
@@ -62,6 +180,7 @@ def publish_content(
     token_file: PathLike | None = None,
     progress: bool = True,
     service=None,
+    resume: Mapping | None = None,
     **cred_kwargs,
 ) -> dict:
     """Upload a prepared :class:`PublicationContent` to YouTube.
@@ -86,6 +205,11 @@ def publish_content(
         actually set (an unaudited project may force ``"private"``); ``playlist``
         is the :func:`~yb.youtube.playlists.add_video_to_playlist` result or
         ``None``.
+
+    Raises:
+        PartialPublish: the upload succeeded and a later step failed;
+            ``err.result`` holds the video id and what was done. Pass
+            ``resume=err.result`` to finish without uploading again (yb#21).
     """
     cfg = config or load_config(privacy_status=privacy_status)
     privacy_status = cfg.privacy_status
@@ -96,13 +220,16 @@ def publish_content(
         content, category_id=category_id, with_chapters=with_chapters
     )
     body = meta.insert_body(privacy_status=privacy_status)
-    if progress:
-        print(f"Uploading {content.media.name!r} as {privacy_status}...")
-    resp = upload_video(content.media, body, service=service, progress=progress)
-    video_id = resp["id"]
-    actual_privacy = resp.get("status", {}).get("privacyStatus", privacy_status)
 
-    captions: list[str] = []
+    def upload():
+        if progress:
+            print(f"Uploading {content.media.name!r} as {privacy_status}...")
+        return upload_video(content.media, body, service=service, progress=progress)
+
+    result = _upload_or_resume(resume, upload, privacy_status)
+    video_id = result["video_id"]
+
+    steps: list[_Step] = []
     cap_lang = content.audio_language or content.language
     if (
         attach_caption
@@ -110,28 +237,39 @@ def publish_content(
         and Path(content.srt_path).exists()
         and cap_lang
     ):
-        if progress:
-            print(f"  attaching caption: {cap_lang}")
-        upsert_caption(
-            video_id,
-            content.srt_path,
-            language=cap_lang,
-            name=_lang_name(cap_lang),
-            service=service,
-        )
-        captions.append(cap_lang)
 
-    thumb_set = False
+        def caption():
+            if progress:
+                print(f"  attaching caption: {cap_lang}")
+            upsert_caption(
+                video_id,
+                content.srt_path,
+                language=cap_lang,
+                name=_lang_name(cap_lang),
+                service=service,
+            )
+
+        steps.append(("caption", cap_lang, caption))
+
     if set_thumb and content.thumbnail and Path(content.thumbnail).exists():
-        if progress:
-            print("  setting thumbnail")
-        set_thumbnail(video_id, content.thumbnail, service=service)
-        thumb_set = True
 
-    playlist_result = _maybe_add_to_playlist(
-        video_id, playlist, cfg, service=service, progress=progress
+        def thumb():
+            if progress:
+                print("  setting thumbnail")
+            set_thumbnail(video_id, content.thumbnail, service=service)
+
+        steps.append(("thumbnail", "", thumb))
+
+    steps.append(
+        (
+            "playlist",
+            "",
+            lambda: _maybe_add_to_playlist(
+                video_id, playlist, cfg, service=service, progress=progress
+            ),
+        )
     )
-    return _result(video_id, actual_privacy, captions, thumb_set, playlist_result)
+    return _after_upload(result, steps, resuming=resume is not None)
 
 
 def prepare_and_publish(
@@ -201,12 +339,17 @@ def publish_video(
     token_file: PathLike | None = None,
     progress: bool = True,
     service=None,
+    resume: Mapping | None = None,
     **cred_kwargs,
 ) -> dict:
     """Lower-level upload: explicit :class:`VideoMetadata` + caption tracks.
 
     ``privacy_status`` and ``playlist`` default to your ``yb`` config (see
     :func:`publish_content`).
+
+    If a step after the upload fails, :class:`PartialPublish` is raised with
+    the new video's id and what was done so far (``err.result``). Pass
+    ``resume=err.result`` to finish without uploading again (yb#21).
 
     ``cred_kwargs`` reach :func:`~yb.youtube.auth.get_credentials` (e.g.
     ``open_browser=False, port=8080`` for headless consent).
@@ -217,28 +360,44 @@ def publish_video(
         client_secrets_file=client_secrets_file, token_file=token_file, **cred_kwargs
     )
     body = metadata.insert_body(privacy_status=privacy_status)
-    if progress:
-        print(f"Uploading {Path(video_path).name!r} as {privacy_status}...")
-    resp = upload_video(video_path, body, service=service, progress=progress)
-    video_id = resp["id"]
-    actual_privacy = resp.get("status", {}).get("privacyStatus", privacy_status)
 
-    attached: list[str] = []
-    for cap in captions or []:
+    def upload():
         if progress:
-            print(f"  attaching caption: {cap.name or cap.language}")
-        upsert_caption(video_id, cap, service=service)
-        attached.append(cap.language)
+            print(f"Uploading {Path(video_path).name!r} as {privacy_status}...")
+        return upload_video(video_path, body, service=service, progress=progress)
 
-    thumb_set = False
+    result = _upload_or_resume(resume, upload, privacy_status)
+    video_id = result["video_id"]
+
+    def caption(cap: CaptionTrack):
+        def run():
+            if progress:
+                print(f"  attaching caption: {cap.name or cap.language}")
+            upsert_caption(video_id, cap, service=service)
+
+        return run
+
+    steps: list[_Step] = [
+        ("caption", cap.language, caption(cap)) for cap in captions or []
+    ]
     if thumbnail and Path(thumbnail).exists():
-        set_thumbnail(video_id, thumbnail, service=service)
-        thumb_set = True
-
-    playlist_result = _maybe_add_to_playlist(
-        video_id, playlist, cfg, service=service, progress=progress
+        steps.append(
+            (
+                "thumbnail",
+                "",
+                lambda: set_thumbnail(video_id, thumbnail, service=service),
+            )
+        )
+    steps.append(
+        (
+            "playlist",
+            "",
+            lambda: _maybe_add_to_playlist(
+                video_id, playlist, cfg, service=service, progress=progress
+            ),
+        )
     )
-    return _result(video_id, actual_privacy, attached, thumb_set, playlist_result)
+    return _after_upload(result, steps, resuming=resume is not None)
 
 
 def _result(video_id, privacy, captions, thumb, playlist=None) -> dict:

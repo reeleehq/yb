@@ -79,6 +79,15 @@ uploaded under it.
 For full control, build `VideoMetadata` + `CaptionTrack` and call
 `yb.youtube.publish_video(...)`.
 
+**If a step after the upload fails** (captions, thumbnail or playlist, e.g. a
+403 `quotaExceeded`), the call raises `yb.youtube.PartialPublish`. Its `.result`
+holds the new `video_id`, the URL and what was already done. **Save
+`err.result` at once, and never re-run the upload**, which would publish a
+duplicate. Finish later by calling the same function again with
+`resume=err.result`: the upload and the steps already done are skipped. For
+`prepare_and_publish`, resume through `publish_content` with the content it
+prepared, so the content is not prepared a second time.
+
 ## Chapters (default on)
 
 Chapters come from the transcript and are embedded in the description so YouTube
