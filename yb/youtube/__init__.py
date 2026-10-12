@@ -35,6 +35,10 @@ from yb.youtube.playlists import (
     is_video_in_playlist,
     add_to_playlist,
     add_video_to_playlist,
+    playlist_item_ids,
+    first_position,
+    playlists_containing,
+    remove_from_playlist,
 )
 from yb.youtube.metadata import (
     VideoMetadata,
@@ -51,6 +55,9 @@ from yb.youtube.api import (
     update_video_fields,
     set_thumbnail,
     set_chapters,
+    update_video_status,
+    supersede,
+    PRIVACY_STATUSES,
 )
 from yb.youtube.stats import (
     video_metadata,
@@ -109,6 +116,13 @@ __all__ = [
     "is_video_in_playlist",
     "add_to_playlist",
     "add_video_to_playlist",
+    "playlist_item_ids",
+    "first_position",
+    "playlists_containing",
+    "remove_from_playlist",
+    "update_video_status",
+    "supersede",
+    "PRIVACY_STATUSES",
     "VideoMetadata",
     "CATEGORY_SCIENCE_TECH",
     "CATEGORY_EDUCATION",
