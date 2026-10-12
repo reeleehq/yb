@@ -71,6 +71,7 @@ from yb.youtube.captions import (
     delete_caption,
 )
 from yb.youtube.publish import (
+    PartialPublish,
     publish_content,
     prepare_and_publish,
     publish_video,
@@ -134,6 +135,7 @@ __all__ = [
     "upsert_caption",
     "download_caption",
     "delete_caption",
+    "PartialPublish",
     "publish_content",
     "prepare_and_publish",
     "publish_video",
