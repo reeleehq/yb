@@ -181,3 +181,62 @@ def add_video_to_playlist(
         "added": added,
         "created": created,
     }
+
+
+def playlist_item_ids(
+    video_id: str, playlist_id: str, *, service=None, **cred_kwargs
+) -> list[str]:
+    """The ``playlistItems`` ids holding ``video_id`` in ``playlist_id``.
+
+    A list, because a video can sit in one playlist more than once.
+    """
+    service = service or _service(**cred_kwargs)
+    out: list[str] = []
+    token = None
+    while True:
+        resp = (
+            service.playlistItems()
+            .list(
+                part="contentDetails",
+                playlistId=playlist_id,
+                maxResults=_MAX_RESULTS,
+                pageToken=token,
+            )
+            .execute()
+        )
+        out += [
+            it["id"]
+            for it in resp.get("items", [])
+            if it["contentDetails"]["videoId"] == video_id
+        ]
+        token = resp.get("nextPageToken")
+        if not token:
+            return out
+
+
+def playlists_containing(video_id: str, *, service=None, **cred_kwargs) -> list[str]:
+    """Ids of the authenticated channel's playlists that hold ``video_id``.
+
+    One ``playlistItems.list`` sweep per playlist (1 quota unit per page), so
+    it costs as many units as the channel has playlist pages.
+    """
+    service = service or _service(**cred_kwargs)
+    return [
+        pl["id"]
+        for pl in list_my_playlists(service=service)
+        if is_video_in_playlist(video_id, pl["id"], service=service)
+    ]
+
+
+def remove_from_playlist(
+    video_id: str, playlist_id: str, *, service=None, **cred_kwargs
+) -> int:
+    """Remove every occurrence of ``video_id`` from ``playlist_id``.
+
+    Returns how many items were removed (0 when it was not there).
+    """
+    service = service or _service(**cred_kwargs)
+    ids = playlist_item_ids(video_id, playlist_id, service=service)
+    for item_id in ids:
+        service.playlistItems().delete(id=item_id).execute()
+    return len(ids)

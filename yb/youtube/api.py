@@ -114,6 +114,119 @@ def update_video_fields(
     return update_video(video_id, writable, service=service)
 
 
+#: Privacy values ``videos.update(part="status")`` accepts.
+PRIVACY_STATUSES = ("private", "unlisted", "public")
+
+#: The ``status`` keys a ``videos.update`` may write. The part is replaced
+#: wholesale, so everything else read back (``uploadStatus``, ``rejectionReason``,
+#: ...) must be left out of the body, and these must be carried over.
+_WRITABLE_STATUS_KEYS = (
+    "privacyStatus",
+    "embeddable",
+    "license",
+    "publicStatsViewable",
+    "publishAt",
+    "selfDeclaredMadeForKids",
+    "containsSyntheticMedia",
+)
+
+
+def update_video_status(
+    video_id: str,
+    *,
+    privacy_status: str | None = None,
+    contains_synthetic_media: bool | None = None,
+    service=None,
+    **cred_kwargs,
+) -> dict:
+    """Change a video's privacy (or synthetic-media flag), keeping the rest.
+
+    Read-modify-write of the ``status`` part (yb#19): ``videos.update`` replaces
+    the part wholesale, so the current writable fields are carried over and
+    only the ones given change. Making a video private never deletes it.
+
+    Raises:
+        ValueError: ``privacy_status`` is not one of :data:`PRIVACY_STATUSES`.
+    """
+    if privacy_status is not None and privacy_status not in PRIVACY_STATUSES:
+        raise ValueError(
+            f"privacy_status must be one of {PRIVACY_STATUSES}, not {privacy_status!r}"
+        )
+    service = service or _service(**cred_kwargs)
+    current = get_video(video_id, part="status", service=service).get("status", {})
+    status = {k: current[k] for k in _WRITABLE_STATUS_KEYS if k in current}
+    if privacy_status is not None:
+        status["privacyStatus"] = privacy_status
+        if privacy_status != "private":
+            # a scheduled publish only applies to a private video
+            status.pop("publishAt", None)
+    if contains_synthetic_media is not None:
+        status["containsSyntheticMedia"] = contains_synthetic_media
+    body = {"id": video_id, "status": status}
+    return service.videos().update(part="status", body=body).execute()
+
+
+def supersede(
+    old_id: str,
+    new_id: str,
+    *,
+    old_privacy: str = "private",
+    move_playlists: bool = True,
+    service=None,
+    **cred_kwargs,
+) -> dict:
+    """Retire an upload that ``new_id`` replaces (yb#19).
+
+    YouTube cannot replace a video's file, so a re-cut is a new upload. This
+    puts the new one where the old one was and takes the old one out of view:
+
+    1. for every playlist of yours that holds ``old_id`` (when
+       ``move_playlists``): add ``new_id`` if it is not there yet, THEN remove
+       ``old_id``, so a failure part-way never leaves a playlist with neither;
+    2. set ``old_id`` to ``old_privacy`` (default ``"private"``; it is never
+       deleted).
+
+    Captions and thumbnails are not copied: upload them with the new video
+    (:func:`yb.youtube.publish_video`). Safe to re-run: every step checks
+    before it acts.
+
+    Returns:
+        ``{"old_id", "new_id", "playlists", "old_privacy"}`` where
+        ``playlists`` lists ``{"playlist_id", "added_new", "removed_old"}``.
+    """
+    from yb.youtube.playlists import (
+        add_to_playlist,
+        is_video_in_playlist,
+        playlists_containing,
+        remove_from_playlist,
+    )
+
+    if old_id == new_id:
+        raise ValueError("supersede needs two different videos")
+    if old_privacy not in PRIVACY_STATUSES:
+        raise ValueError(
+            f"old_privacy must be one of {PRIVACY_STATUSES}, not {old_privacy!r}"
+        )
+    service = service or _service(**cred_kwargs)
+    moved = []
+    if move_playlists:
+        for pid in playlists_containing(old_id, service=service):
+            added = not is_video_in_playlist(new_id, pid, service=service)
+            if added:
+                add_to_playlist(new_id, pid, service=service)
+            removed = remove_from_playlist(old_id, pid, service=service)
+            moved.append(
+                {"playlist_id": pid, "added_new": added, "removed_old": removed}
+            )
+    update_video_status(old_id, privacy_status=old_privacy, service=service)
+    return {
+        "old_id": old_id,
+        "new_id": new_id,
+        "playlists": moved,
+        "old_privacy": old_privacy,
+    }
+
+
 def set_thumbnail(
     video_id: str, image_path: PathLike, *, service=None, **cred_kwargs
 ) -> dict:

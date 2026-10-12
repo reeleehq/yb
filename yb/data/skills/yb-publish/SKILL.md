@@ -120,6 +120,14 @@ set_thumbnail("VIDEO_ID", "thumb.jpg")
 `upsert_caption` updates an existing uploaded (`standard`) track in the same
 language, else inserts one. (YouTube's own auto `asr` tracks are left alone.)
 
+**Change privacy, or replace a published video.** YouTube cannot replace a
+video's file, so a re-cut is a new upload. `update_video_status(id,
+privacy_status="public")` changes privacy and keeps the other status fields.
+`supersede(old_id, new_id)` puts the new upload into every playlist of yours
+that held the old one, removes the old one from them, and makes the old one
+private. It never deletes anything, and it is safe to re-run.
+
+
 ## Read live stats & metadata
 
 `video_metadata` fetches a flattened, typed view of a video's live numbers

@@ -146,6 +146,15 @@ set_chapters("VIDEO_ID", [Chapter(0, "Intro"), Chapter(45, "Demo")])
 set_thumbnail("VIDEO_ID", "thumb.jpg")
 ```
 
+Privacy, and replacing a published video with a re-cut (YouTube cannot swap the file):
+
+```python
+from yb.youtube import update_video_status, supersede
+
+update_video_status("VIDEO_ID", privacy_status="public")  # other status fields kept
+supersede("OLD_ID", "NEW_ID")  # new one takes the old one's playlists; old one goes private
+```
+
 ### Read live stats & metadata
 
 ```python
