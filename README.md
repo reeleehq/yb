@@ -125,6 +125,8 @@ publish_video(
 )
 ```
 
+If captions, the thumbnail or the playlist fail after the upload (a 403 `quotaExceeded`, say), `PartialPublish` is raised with the new video's id in `err.result`. Call again with `resume=err.result` to finish without uploading a second copy.
+
 **Chapters** are on by default: when the media is long enough to host them
 (YouTube requires ≥3 markers, each ≥10 s, first at `0:00`), they are detected
 from the transcript and embedded in the description so YouTube renders

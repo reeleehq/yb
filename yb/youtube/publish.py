@@ -45,11 +45,18 @@ class PartialPublish(RuntimeError):
     - ``__cause__``: the original error.
 
     Finish later without re-uploading: pass ``resume=err.result`` to the same
-    call (:func:`publish_video` or :func:`publish_content`). Steps already done
-    are skipped.
+    call (:func:`publish_video` or :func:`publish_content`; for
+    :func:`prepare_and_publish`, call :func:`publish_content` with the content
+    it prepared, rather than preparing it again). Steps already done are
+    skipped. A resume trusts the saved result: it does not upload, so new
+    metadata, video path or privacy in the resuming call are ignored, and the
+    remaining steps target the saved ``video_id``.
+
+    ``result`` is plain JSON-able data, and the exception pickles (so a worker
+    process can hand it back); ``__cause__`` does not survive pickling.
     """
 
-    def __init__(self, result: dict, *, step: str, error: BaseException):
+    def __init__(self, result: dict, *, step: str, error: BaseException | None):
         self.result = result
         self.step = step
         super().__init__(
@@ -57,6 +64,17 @@ class PartialPublish(RuntimeError):
             f"failed: {error!r}. Nothing was lost: pass resume=err.result to "
             "finish without uploading again."
         )
+
+    def __reduce__(self):
+        return (_restore_partial, (self.result, self.step, str(self)))
+
+
+def _restore_partial(result: dict, step: str, message: str) -> PartialPublish:
+    """Unpickle a :class:`PartialPublish` without re-running ``__init__``."""
+    err = PartialPublish.__new__(PartialPublish)
+    RuntimeError.__init__(err, message)
+    err.result, err.step = result, step
+    return err
 
 
 #: One post-upload step: ``(kind, key, run)``. ``kind`` is ``"caption"``,
@@ -72,21 +90,32 @@ def _step_done(result: Mapping, kind: str, key: str) -> bool:
     return result["playlist"] is not None
 
 
-def _after_upload(result: dict, steps: Sequence[_Step]) -> dict:
+def _after_upload(
+    result: dict, steps: Sequence[_Step], *, resuming: bool = False
+) -> dict:
     """Run the post-upload steps in order, recording each as it succeeds.
 
     A failing step raises :class:`PartialPublish` carrying ``result`` as far as
-    it got; a step ``result`` already records (a resume) is skipped.
+    it got. When ``resuming``, a step the saved ``result`` already records is
+    skipped; a fresh run skips nothing (two tracks in one language both reach
+    YouTube, the last one winning, as before).
     """
+    done = (
+        {
+            "captions": list(result["captions"]),
+            "thumbnail": result["thumbnail"],
+            "playlist": result["playlist"],
+        }
+        if resuming
+        else None
+    )
     for kind, key, run in steps:
-        if _step_done(result, kind, key):
+        if done is not None and _step_done(done, kind, key):
             continue
         try:
             out = run()
         except Exception as e:
-            raise PartialPublish(
-                result, step=f"{kind} {key}".strip(), error=e
-            ) from e
+            raise PartialPublish(result, step=f"{kind} {key}".strip(), error=e) from e
         if kind == "caption":
             result["captions"].append(key)
         elif kind == "thumbnail":
@@ -103,7 +132,16 @@ def _upload_or_resume(
     if resume is not None:
         if not resume.get("video_id"):
             raise ValueError("resume= needs the result of an earlier publish call")
-        out = {**resume, "captions": list(resume.get("captions") or [])}
+        # Rebuilt from the known fields, so a hand-built or partial dict gets
+        # defaults (not a KeyError after the fact) and extra keys a caller
+        # saved alongside do not leak into the return value.
+        out = _result(
+            resume["video_id"],
+            resume.get("privacy_status", privacy_status),
+            list(resume.get("captions") or []),
+            bool(resume.get("thumbnail")),
+            resume.get("playlist"),
+        )
         return out
     resp = upload()
     actual_privacy = resp.get("status", {}).get("privacyStatus", privacy_status)
@@ -231,7 +269,7 @@ def publish_content(
             ),
         )
     )
-    return _after_upload(result, steps)
+    return _after_upload(result, steps, resuming=resume is not None)
 
 
 def prepare_and_publish(
@@ -344,7 +382,11 @@ def publish_video(
     ]
     if thumbnail and Path(thumbnail).exists():
         steps.append(
-            ("thumbnail", "", lambda: set_thumbnail(video_id, thumbnail, service=service))
+            (
+                "thumbnail",
+                "",
+                lambda: set_thumbnail(video_id, thumbnail, service=service),
+            )
         )
     steps.append(
         (
@@ -355,7 +397,7 @@ def publish_video(
             ),
         )
     )
-    return _after_upload(result, steps)
+    return _after_upload(result, steps, resuming=resume is not None)
 
 
 def _result(video_id, privacy, captions, thumb, playlist=None) -> dict:
