@@ -280,6 +280,16 @@
 <p>These wrap the YouTube Data API v3 <code class="docutils literal notranslate"><span class="pre">videos</span></code>/<code class="docutils literal notranslate"><span class="pre">thumbnails</span></code> resources for both
 creating videos and <em>editing already-published ones</em> (titles, descriptions,
 tags, languages, and chapter blocks in the description).</p>
+<p class="rubric">Module Attributes</p>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.youtube.api.PRIVACY_STATUSES" title="yb.youtube.api.PRIVACY_STATUSES"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PRIVACY_STATUSES</span></code></a></p></td>
+<td><p>Privacy values <code class="docutils literal notranslate"><span class="pre">videos.update(part=&quot;status&quot;)</span></code> accepts.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
 <p class="rubric">Functions</p>
 <div class="table-wrapper autosummary longtable docutils container">
 <table class="autosummary longtable docutils align-default">
@@ -293,11 +303,17 @@ tags, languages, and chapter blocks in the description).</p>
 <tr class="row-odd"><td><p><a class="reference internal" href="#yb.youtube.api.set_thumbnail" title="yb.youtube.api.set_thumbnail"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_thumbnail</span></code></a>(video_id, image_path, *[, service])</p></td>
 <td><p>Set a custom thumbnail (<code class="docutils literal notranslate"><span class="pre">thumbnails.set</span></code>).</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#yb.youtube.api.update_video" title="yb.youtube.api.update_video"><code class="xref py py-obj docutils literal notranslate"><span class="pre">update_video</span></code></a>(video_id, snippet, *[, service])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#yb.youtube.api.supersede" title="yb.youtube.api.supersede"><code class="xref py py-obj docutils literal notranslate"><span class="pre">supersede</span></code></a>(old_id, new_id, *[, old_privacy, ...])</p></td>
+<td><p>Retire an upload that <code class="docutils literal notranslate"><span class="pre">new_id</span></code> replaces (yb#19).</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.youtube.api.update_video" title="yb.youtube.api.update_video"><code class="xref py py-obj docutils literal notranslate"><span class="pre">update_video</span></code></a>(video_id, snippet, *[, service])</p></td>
 <td><p>Update a video's snippet (<code class="docutils literal notranslate"><span class="pre">videos.update</span></code>).</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#yb.youtube.api.update_video_fields" title="yb.youtube.api.update_video_fields"><code class="xref py py-obj docutils literal notranslate"><span class="pre">update_video_fields</span></code></a>(video_id, *[, title, ...])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#yb.youtube.api.update_video_fields" title="yb.youtube.api.update_video_fields"><code class="xref py py-obj docutils literal notranslate"><span class="pre">update_video_fields</span></code></a>(video_id, *[, title, ...])</p></td>
 <td><p>Patch selected snippet fields, preserving the rest.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.youtube.api.update_video_status" title="yb.youtube.api.update_video_status"><code class="xref py py-obj docutils literal notranslate"><span class="pre">update_video_status</span></code></a>(video_id, *[, ...])</p></td>
+<td><p>Change a video's privacy (or synthetic-media flag), keeping the rest.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#yb.youtube.api.upload_video" title="yb.youtube.api.upload_video"><code class="xref py py-obj docutils literal notranslate"><span class="pre">upload_video</span></code></a>(video_path, body, *[, service, ...])</p></td>
 <td><p>Resumably upload a video with the given <code class="docutils literal notranslate"><span class="pre">videos.insert</span></code> <code class="docutils literal notranslate"><span class="pre">body</span></code>.</p></td>
@@ -305,6 +321,12 @@ tags, languages, and chapter blocks in the description).</p>
 </tbody>
 </table>
 </div>
+<dl class="py data">
+<dt class="sig sig-object py" id="yb.youtube.api.PRIVACY_STATUSES">
+<span class="sig-prename descclassname"><span class="pre">yb.youtube.api.</span></span><span class="sig-name descname"><span class="pre">PRIVACY_STATUSES</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">('private',</span> <span class="pre">'unlisted',</span> <span class="pre">'public')</span></span><a class="headerlink" href="#yb.youtube.api.PRIVACY_STATUSES" title="Link to this definition">¶</a></dt>
+<dd><p>Privacy values <code class="docutils literal notranslate"><span class="pre">videos.update(part=&quot;status&quot;)</span></code> accepts.</p>
+</dd></dl>
+
 <dl class="py function">
 <dt class="sig sig-object py" id="yb.youtube.api.get_video">
 <span class="sig-prename descclassname"><span class="pre">yb.youtube.api.</span></span><span class="sig-name descname"><span class="pre">get_video</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">video_id</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">part</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'snippet,status'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">service</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">cred_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/youtube/api.html#get_video"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.youtube.api.get_video" title="Link to this definition">¶</a></dt>
@@ -341,6 +363,40 @@ renders interactive chapters when the first timestamp is <code class="docutils l
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="yb.youtube.api.supersede">
+<span class="sig-prename descclassname"><span class="pre">yb.youtube.api.</span></span><span class="sig-name descname"><span class="pre">supersede</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">old_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">new_id</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">old_privacy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'private'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">new_privacy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">move_playlists</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">service</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">cred_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/youtube/api.html#supersede"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.youtube.api.supersede" title="Link to this definition">¶</a></dt>
+<dd><p>Retire an upload that <code class="docutils literal notranslate"><span class="pre">new_id</span></code> replaces (yb#19).</p>
+<p>YouTube cannot replace a video’s file, so a re-cut is a new upload. This
+puts the new one where the old one was and takes the old one out of view:</p>
+<ol class="arabic simple" start="0">
+<li><p>refuses, before changing anything, unless <code class="docutils literal notranslate"><span class="pre">new_id</span></code> has finished
+processing (<code class="docutils literal notranslate"><span class="pre">uploadStatus</span> <span class="pre">==</span> <span class="pre">&quot;processed&quot;</span></code>): retiring the old video for
+a failed or rejected upload would leave the public neither;</p></li>
+<li><p>sets <code class="docutils literal notranslate"><span class="pre">new_id</span></code> to <code class="docutils literal notranslate"><span class="pre">new_privacy</span></code> when given (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;public&quot;</span></code>);</p></li>
+<li><p>for every playlist of yours that holds <code class="docutils literal notranslate"><span class="pre">old_id</span></code> (when
+<code class="docutils literal notranslate"><span class="pre">move_playlists</span></code>): inserts <code class="docutils literal notranslate"><span class="pre">new_id</span></code> at the old one’s position (or
+appends, if the playlist is not sorted manually), THEN removes
+<code class="docutils literal notranslate"><span class="pre">old_id</span></code>, so a failure part-way never leaves a playlist with neither;</p></li>
+<li><p>sets <code class="docutils literal notranslate"><span class="pre">old_id</span></code> to <code class="docutils literal notranslate"><span class="pre">old_privacy</span></code> (default <code class="docutils literal notranslate"><span class="pre">&quot;private&quot;</span></code>), clearing any
+scheduled publish. It is never deleted.</p></li>
+</ol>
+<p>Captions and thumbnails are not copied: upload them with the new video
+(<a class="reference internal" href="yb.youtube.html#yb.youtube.publish_video" title="yb.youtube.publish_video"><code class="xref py py-func docutils literal notranslate"><span class="pre">yb.youtube.publish_video()</span></code></a>). Safe to re-run: every step checks
+before it acts. Quota: see <a class="reference internal" href="yb.youtube.html#yb.youtube.playlists_containing" title="yb.youtube.playlists_containing"><code class="xref py py-func docutils literal notranslate"><span class="pre">yb.youtube.playlists_containing()</span></code></a>; each
+write (insert, delete, update) is 50 units.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></span></p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">{&quot;old_id&quot;,</span> <span class="pre">&quot;new_id&quot;,</span> <span class="pre">&quot;playlists&quot;,</span> <span class="pre">&quot;old_privacy&quot;,</span> <span class="pre">&quot;new_privacy&quot;}</span></code>
+where <code class="docutils literal notranslate"><span class="pre">playlists</span></code> lists <code class="docutils literal notranslate"><span class="pre">{&quot;playlist_id&quot;,</span> <span class="pre">&quot;added_new&quot;,</span> <span class="pre">&quot;position&quot;,</span>
+<span class="pre">&quot;removed_old&quot;}</span></code>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="yb.youtube.api.update_video">
 <span class="sig-prename descclassname"><span class="pre">yb.youtube.api.</span></span><span class="sig-name descname"><span class="pre">update_video</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">video_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">snippet</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">service</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">cred_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/youtube/api.html#update_video"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.youtube.api.update_video" title="Link to this definition">¶</a></dt>
 <dd><p>Update a video’s snippet (<code class="docutils literal notranslate"><span class="pre">videos.update</span></code>). <code class="docutils literal notranslate"><span class="pre">categoryId</span></code> is required.</p>
@@ -360,6 +416,27 @@ renders interactive chapters when the first timestamp is <code class="docutils l
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="yb.youtube.api.update_video_status">
+<span class="sig-prename descclassname"><span class="pre">yb.youtube.api.</span></span><span class="sig-name descname"><span class="pre">update_video_status</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">video_id</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">privacy_status</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">contains_synthetic_media</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keep_schedule</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">service</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">cred_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/youtube/api.html#update_video_status"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.youtube.api.update_video_status" title="Link to this definition">¶</a></dt>
+<dd><p>Change a video’s privacy (or synthetic-media flag), keeping the rest.</p>
+<p>Read-modify-write of the <code class="docutils literal notranslate"><span class="pre">status</span></code> part (yb#19): <code class="docutils literal notranslate"><span class="pre">videos.update</span></code> replaces
+the part wholesale, so the current writable fields are carried over and
+only the ones given change. Making a video private never deletes it.</p>
+<p>Setting <code class="docutils literal notranslate"><span class="pre">privacy_status</span></code> clears a scheduled publish (<code class="docutils literal notranslate"><span class="pre">publishAt</span></code>):
+otherwise a video made private while scheduled would still go public at
+that time, and a past <code class="docutils literal notranslate"><span class="pre">publishAt</span></code> read back is refused by the API. Pass
+<code class="docutils literal notranslate"><span class="pre">keep_schedule=True</span></code> to keep it (only meaningful with <code class="docutils literal notranslate"><span class="pre">&quot;private&quot;</span></code>).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – <code class="docutils literal notranslate"><span class="pre">privacy_status</span></code> is not one of <a class="reference internal" href="#yb.youtube.api.PRIVACY_STATUSES" title="yb.youtube.api.PRIVACY_STATUSES"><code class="xref py py-data docutils literal notranslate"><span class="pre">PRIVACY_STATUSES</span></code></a>.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -430,11 +507,14 @@ renders interactive chapters when the first timestamp is <code class="docutils l
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">yb.youtube.api</a><ul>
+<li><a class="reference internal" href="#yb.youtube.api.PRIVACY_STATUSES"><code class="docutils literal notranslate"><span class="pre">PRIVACY_STATUSES</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.api.get_video"><code class="docutils literal notranslate"><span class="pre">get_video()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.api.set_chapters"><code class="docutils literal notranslate"><span class="pre">set_chapters()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.api.set_thumbnail"><code class="docutils literal notranslate"><span class="pre">set_thumbnail()</span></code></a></li>
+<li><a class="reference internal" href="#yb.youtube.api.supersede"><code class="docutils literal notranslate"><span class="pre">supersede()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.api.update_video"><code class="docutils literal notranslate"><span class="pre">update_video()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.api.update_video_fields"><code class="docutils literal notranslate"><span class="pre">update_video_fields()</span></code></a></li>
+<li><a class="reference internal" href="#yb.youtube.api.update_video_status"><code class="docutils literal notranslate"><span class="pre">update_video_status()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.api.upload_video"><code class="docutils literal notranslate"><span class="pre">upload_video()</span></code></a></li>
 </ul>
 </li>
@@ -447,7 +527,7 @@ renders interactive chapters when the first timestamp is <code class="docutils l
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=b39c9740"></script>
+</div><script src="../_static/documentation_options.js?v=1adce326"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>

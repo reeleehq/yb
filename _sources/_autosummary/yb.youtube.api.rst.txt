@@ -4,6 +4,12 @@ yb.youtube.api
 .. automodule:: yb.youtube.api
 
    
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      PRIVACY_STATUSES
+   
    .. rubric:: Functions
 
    .. autosummary::
@@ -11,7 +17,9 @@ yb.youtube.api
       get_video
       set_chapters
       set_thumbnail
+      supersede
       update_video
       update_video_fields
+      update_video_status
       upload_video
    

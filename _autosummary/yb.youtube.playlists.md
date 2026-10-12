@@ -11,18 +11,25 @@ re-running is idempotent.
 
 ### Functions
 
-| [`add_to_playlist`](#yb.youtube.playlists.add_to_playlist)(video_id, playlist_id, \*[, ...])   | Append `video_id` to `playlist_id` (`playlistItems.insert`).          |
-|------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------|
-| [`add_video_to_playlist`](#yb.youtube.playlists.add_video_to_playlist)(video_id, title, \*[, ...])   | Find-or-create the playlist named `title` and append `video_id`.      |
-| [`create_playlist`](#yb.youtube.playlists.create_playlist)(title, \*[, description, ...])      | Create a playlist and return its id.                                  |
-| [`ensure_playlist`](#yb.youtube.playlists.ensure_playlist)(title, \*[, create, ...])           | Return the id of the playlist titled `title`, creating it if missing. |
-| [`find_playlist`](#yb.youtube.playlists.find_playlist)(title, \*[, service])                 | Return the id of the caller's playlist titled `title` (or `None`).    |
-| [`is_video_in_playlist`](#yb.youtube.playlists.is_video_in_playlist)(video_id, playlist_id, \*)     | Whether `video_id` is already an item of `playlist_id` (paginated).   |
-| [`list_my_playlists`](#yb.youtube.playlists.list_my_playlists)(\*[, service])                    | Return all playlists owned by the authenticated channel (paginated).  |
+| [`add_to_playlist`](#yb.youtube.playlists.add_to_playlist)(video_id, playlist_id, \*[, ...])   | Add `video_id` to `playlist_id` (`playlistItems.insert`).                 |
+|------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------|
+| [`add_video_to_playlist`](#yb.youtube.playlists.add_video_to_playlist)(video_id, title, \*[, ...])   | Find-or-create the playlist named `title` and append `video_id`.          |
+| [`create_playlist`](#yb.youtube.playlists.create_playlist)(title, \*[, description, ...])      | Create a playlist and return its id.                                      |
+| [`ensure_playlist`](#yb.youtube.playlists.ensure_playlist)(title, \*[, create, ...])           | Return the id of the playlist titled `title`, creating it if missing.     |
+| [`find_playlist`](#yb.youtube.playlists.find_playlist)(title, \*[, service])                 | Return the id of the caller's playlist titled `title` (or `None`).        |
+| [`first_position`](#yb.youtube.playlists.first_position)(video_id, playlist_id, \*[, ...])    | The 0-based position of `video_id`'s first occurrence (`None` if absent). |
+| [`is_video_in_playlist`](#yb.youtube.playlists.is_video_in_playlist)(video_id, playlist_id, \*)     | Whether `video_id` is already an item of `playlist_id` (paginated).       |
+| [`list_my_playlists`](#yb.youtube.playlists.list_my_playlists)(\*[, service])                    | Return all playlists owned by the authenticated channel (paginated).      |
+| [`playlist_item_ids`](#yb.youtube.playlists.playlist_item_ids)(video_id, playlist_id, \*)        | The `playlistItems` ids holding `video_id` in `playlist_id`.              |
+| [`playlists_containing`](#yb.youtube.playlists.playlists_containing)(video_id, \*[, service])       | Ids of the authenticated channel's playlists that hold `video_id`.        |
+| [`remove_from_playlist`](#yb.youtube.playlists.remove_from_playlist)(video_id, playlist_id, \*)     | Remove every occurrence of `video_id` from `playlist_id`.                 |
 
-### yb.youtube.playlists.add_to_playlist(video_id, playlist_id, , service=None, \*\*cred_kwargs)
+### yb.youtube.playlists.add_to_playlist(video_id, playlist_id, , position=None, service=None, \*\*cred_kwargs)
 
-Append `video_id` to `playlist_id` (`playlistItems.insert`).
+Add `video_id` to `playlist_id` (`playlistItems.insert`).
+
+Appended at the end, or inserted at the 0-based `position` when given
+(YouTube refuses a position on a playlist not sorted manually).
 
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
@@ -69,6 +76,13 @@ titles, so prefer unique playlist names.
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
+### yb.youtube.playlists.first_position(video_id, playlist_id, , service=None, \*\*cred_kwargs)
+
+The 0-based position of `video_id`’s first occurrence (`None` if absent).
+
+* **Return type:**
+  [`int`](https://docs.python.org/3/builtins/functions.html#int) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
 ### yb.youtube.playlists.is_video_in_playlist(video_id, playlist_id, , service=None, \*\*cred_kwargs)
 
 Whether `video_id` is already an item of `playlist_id` (paginated).
@@ -82,3 +96,31 @@ Return all playlists owned by the authenticated channel (paginated).
 
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]
+
+### yb.youtube.playlists.playlist_item_ids(video_id, playlist_id, , service=None, \*\*cred_kwargs)
+
+The `playlistItems` ids holding `video_id` in `playlist_id`.
+
+A list, because a video can sit in one playlist more than once.
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
+
+### yb.youtube.playlists.playlists_containing(video_id, , service=None, \*\*cred_kwargs)
+
+Ids of the authenticated channel’s playlists that hold `video_id`.
+
+Reads every item page of every playlist you own (1 quota unit per page),
+plus the `playlists.list` pages: on a large channel, budget for it.
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
+
+### yb.youtube.playlists.remove_from_playlist(video_id, playlist_id, , service=None, \*\*cred_kwargs)
+
+Remove every occurrence of `video_id` from `playlist_id`.
+
+Returns how many items were removed (0 when it was not there).
+
+* **Return type:**
+  [`int`](https://docs.python.org/3/builtins/functions.html#int)

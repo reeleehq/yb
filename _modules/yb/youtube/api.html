@@ -394,6 +394,160 @@
 
 
 
+<span class="c1">#: Privacy values ``videos.update(part="status")`` accepts.</span>
+<span class="n">PRIVACY_STATUSES</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"private"</span><span class="p">,</span> <span class="s2">"unlisted"</span><span class="p">,</span> <span class="s2">"public"</span><span class="p">)</span>
+
+<span class="c1">#: The ``status`` keys a ``videos.update`` may write. The part is replaced</span>
+<span class="c1">#: wholesale, so everything else read back (``uploadStatus``, ``rejectionReason``,</span>
+<span class="c1">#: ...) must be left out of the body, and these must be carried over.</span>
+<span class="n">_WRITABLE_STATUS_KEYS</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s2">"privacyStatus"</span><span class="p">,</span>
+    <span class="s2">"embeddable"</span><span class="p">,</span>
+    <span class="s2">"license"</span><span class="p">,</span>
+    <span class="s2">"publicStatsViewable"</span><span class="p">,</span>
+    <span class="s2">"publishAt"</span><span class="p">,</span>
+    <span class="s2">"selfDeclaredMadeForKids"</span><span class="p">,</span>
+    <span class="s2">"containsSyntheticMedia"</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<div class="viewcode-block" id="update_video_status">
+<a class="viewcode-back" href="../../../_autosummary/yb.youtube.api.html#yb.update_video_status">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">update_video_status</span><span class="p">(</span>
+    <span class="n">video_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">privacy_status</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">contains_synthetic_media</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">keep_schedule</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">service</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="o">**</span><span class="n">cred_kwargs</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Change a video's privacy (or synthetic-media flag), keeping the rest.</span>
+
+<span class="sd">    Read-modify-write of the ``status`` part (yb#19): ``videos.update`` replaces</span>
+<span class="sd">    the part wholesale, so the current writable fields are carried over and</span>
+<span class="sd">    only the ones given change. Making a video private never deletes it.</span>
+
+<span class="sd">    Setting ``privacy_status`` clears a scheduled publish (``publishAt``):</span>
+<span class="sd">    otherwise a video made private while scheduled would still go public at</span>
+<span class="sd">    that time, and a past ``publishAt`` read back is refused by the API. Pass</span>
+<span class="sd">    ``keep_schedule=True`` to keep it (only meaningful with ``"private"``).</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: ``privacy_status`` is not one of :data:`PRIVACY_STATUSES`.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">privacy_status</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">privacy_status</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">PRIVACY_STATUSES</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"privacy_status must be one of </span><span class="si">{</span><span class="n">PRIVACY_STATUSES</span><span class="si">}</span><span class="s2">, not </span><span class="si">{</span><span class="n">privacy_status</span><span class="si">!r}</span><span class="s2">"</span>
+        <span class="p">)</span>
+    <span class="n">service</span> <span class="o">=</span> <span class="n">service</span> <span class="ow">or</span> <span class="n">_service</span><span class="p">(</span><span class="o">**</span><span class="n">cred_kwargs</span><span class="p">)</span>
+    <span class="n">current</span> <span class="o">=</span> <span class="n">get_video</span><span class="p">(</span><span class="n">video_id</span><span class="p">,</span> <span class="n">part</span><span class="o">=</span><span class="s2">"status"</span><span class="p">,</span> <span class="n">service</span><span class="o">=</span><span class="n">service</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"status"</span><span class="p">,</span> <span class="p">{})</span>
+    <span class="n">status</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">current</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">_WRITABLE_STATUS_KEYS</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">current</span><span class="p">}</span>
+    <span class="k">if</span> <span class="n">privacy_status</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">status</span><span class="p">[</span><span class="s2">"privacyStatus"</span><span class="p">]</span> <span class="o">=</span> <span class="n">privacy_status</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">keep_schedule</span> <span class="ow">and</span> <span class="n">privacy_status</span> <span class="o">==</span> <span class="s2">"private"</span><span class="p">):</span>
+            <span class="n">status</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"publishAt"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">contains_synthetic_media</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">status</span><span class="p">[</span><span class="s2">"containsSyntheticMedia"</span><span class="p">]</span> <span class="o">=</span> <span class="n">contains_synthetic_media</span>
+    <span class="n">body</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"id"</span><span class="p">:</span> <span class="n">video_id</span><span class="p">,</span> <span class="s2">"status"</span><span class="p">:</span> <span class="n">status</span><span class="p">}</span>
+    <span class="k">return</span> <span class="n">service</span><span class="o">.</span><span class="n">videos</span><span class="p">()</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">part</span><span class="o">=</span><span class="s2">"status"</span><span class="p">,</span> <span class="n">body</span><span class="o">=</span><span class="n">body</span><span class="p">)</span><span class="o">.</span><span class="n">execute</span><span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="supersede">
+<a class="viewcode-back" href="../../../_autosummary/yb.youtube.api.html#yb.supersede">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">supersede</span><span class="p">(</span>
+    <span class="n">old_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">new_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">old_privacy</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"private"</span><span class="p">,</span>
+    <span class="n">new_privacy</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">move_playlists</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">service</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="o">**</span><span class="n">cred_kwargs</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Retire an upload that ``new_id`` replaces (yb#19).</span>
+
+<span class="sd">    YouTube cannot replace a video's file, so a re-cut is a new upload. This</span>
+<span class="sd">    puts the new one where the old one was and takes the old one out of view:</span>
+
+<span class="sd">    0. refuses, before changing anything, unless ``new_id`` has finished</span>
+<span class="sd">       processing (``uploadStatus == "processed"``): retiring the old video for</span>
+<span class="sd">       a failed or rejected upload would leave the public neither;</span>
+<span class="sd">    1. sets ``new_id`` to ``new_privacy`` when given (e.g. ``"public"``);</span>
+<span class="sd">    2. for every playlist of yours that holds ``old_id`` (when</span>
+<span class="sd">       ``move_playlists``): inserts ``new_id`` at the old one's position (or</span>
+<span class="sd">       appends, if the playlist is not sorted manually), THEN removes</span>
+<span class="sd">       ``old_id``, so a failure part-way never leaves a playlist with neither;</span>
+<span class="sd">    3. sets ``old_id`` to ``old_privacy`` (default ``"private"``), clearing any</span>
+<span class="sd">       scheduled publish. It is never deleted.</span>
+
+<span class="sd">    Captions and thumbnails are not copied: upload them with the new video</span>
+<span class="sd">    (:func:`yb.youtube.publish_video`). Safe to re-run: every step checks</span>
+<span class="sd">    before it acts. Quota: see :func:`yb.youtube.playlists_containing`; each</span>
+<span class="sd">    write (insert, delete, update) is 50 units.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        ``{"old_id", "new_id", "playlists", "old_privacy", "new_privacy"}``</span>
+<span class="sd">        where ``playlists`` lists ``{"playlist_id", "added_new", "position",</span>
+<span class="sd">        "removed_old"}``.</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">yb.youtube.playlists</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+        <span class="n">add_to_playlist</span><span class="p">,</span>
+        <span class="n">first_position</span><span class="p">,</span>
+        <span class="n">is_video_in_playlist</span><span class="p">,</span>
+        <span class="n">playlists_containing</span><span class="p">,</span>
+        <span class="n">remove_from_playlist</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">old_id</span> <span class="o">==</span> <span class="n">new_id</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"supersede needs two different videos"</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="p">((</span><span class="s2">"old_privacy"</span><span class="p">,</span> <span class="n">old_privacy</span><span class="p">),</span> <span class="p">(</span><span class="s2">"new_privacy"</span><span class="p">,</span> <span class="n">new_privacy</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">value</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">PRIVACY_STATUSES</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> must be one of </span><span class="si">{</span><span class="n">PRIVACY_STATUSES</span><span class="si">}</span><span class="s2">, not </span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="n">service</span> <span class="o">=</span> <span class="n">service</span> <span class="ow">or</span> <span class="n">_service</span><span class="p">(</span><span class="o">**</span><span class="n">cred_kwargs</span><span class="p">)</span>
+    <span class="n">new_status</span> <span class="o">=</span> <span class="n">get_video</span><span class="p">(</span><span class="n">new_id</span><span class="p">,</span> <span class="n">part</span><span class="o">=</span><span class="s2">"status"</span><span class="p">,</span> <span class="n">service</span><span class="o">=</span><span class="n">service</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"status"</span><span class="p">,</span> <span class="p">{})</span>
+    <span class="k">if</span> <span class="n">new_status</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"uploadStatus"</span><span class="p">)</span> <span class="o">!=</span> <span class="s2">"processed"</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"new video </span><span class="si">{</span><span class="n">new_id</span><span class="si">}</span><span class="s2"> is not processed yet "</span>
+            <span class="sa">f</span><span class="s2">"(uploadStatus=</span><span class="si">{</span><span class="n">new_status</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'uploadStatus'</span><span class="p">)</span><span class="si">!r}</span><span class="s2">); nothing was changed"</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="n">new_privacy</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">update_video_status</span><span class="p">(</span><span class="n">new_id</span><span class="p">,</span> <span class="n">privacy_status</span><span class="o">=</span><span class="n">new_privacy</span><span class="p">,</span> <span class="n">service</span><span class="o">=</span><span class="n">service</span><span class="p">)</span>
+    <span class="n">moved</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="n">move_playlists</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">pid</span> <span class="ow">in</span> <span class="n">playlists_containing</span><span class="p">(</span><span class="n">old_id</span><span class="p">,</span> <span class="n">service</span><span class="o">=</span><span class="n">service</span><span class="p">):</span>
+            <span class="n">added</span><span class="p">,</span> <span class="n">position</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">None</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">is_video_in_playlist</span><span class="p">(</span><span class="n">new_id</span><span class="p">,</span> <span class="n">pid</span><span class="p">,</span> <span class="n">service</span><span class="o">=</span><span class="n">service</span><span class="p">):</span>
+                <span class="n">position</span> <span class="o">=</span> <span class="n">first_position</span><span class="p">(</span><span class="n">old_id</span><span class="p">,</span> <span class="n">pid</span><span class="p">,</span> <span class="n">service</span><span class="o">=</span><span class="n">service</span><span class="p">)</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">add_to_playlist</span><span class="p">(</span><span class="n">new_id</span><span class="p">,</span> <span class="n">pid</span><span class="p">,</span> <span class="n">position</span><span class="o">=</span><span class="n">position</span><span class="p">,</span> <span class="n">service</span><span class="o">=</span><span class="n">service</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - e.g. manualSortRequired</span>
+                    <span class="k">if</span> <span class="n">position</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="k">raise</span>
+                    <span class="n">position</span> <span class="o">=</span> <span class="kc">None</span>
+                    <span class="n">add_to_playlist</span><span class="p">(</span><span class="n">new_id</span><span class="p">,</span> <span class="n">pid</span><span class="p">,</span> <span class="n">service</span><span class="o">=</span><span class="n">service</span><span class="p">)</span>
+                <span class="n">added</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="n">removed</span> <span class="o">=</span> <span class="n">remove_from_playlist</span><span class="p">(</span><span class="n">old_id</span><span class="p">,</span> <span class="n">pid</span><span class="p">,</span> <span class="n">service</span><span class="o">=</span><span class="n">service</span><span class="p">)</span>
+            <span class="n">moved</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="p">{</span>
+                    <span class="s2">"playlist_id"</span><span class="p">:</span> <span class="n">pid</span><span class="p">,</span>
+                    <span class="s2">"added_new"</span><span class="p">:</span> <span class="n">added</span><span class="p">,</span>
+                    <span class="s2">"position"</span><span class="p">:</span> <span class="n">position</span><span class="p">,</span>
+                    <span class="s2">"removed_old"</span><span class="p">:</span> <span class="n">removed</span><span class="p">,</span>
+                <span class="p">}</span>
+            <span class="p">)</span>
+    <span class="n">update_video_status</span><span class="p">(</span><span class="n">old_id</span><span class="p">,</span> <span class="n">privacy_status</span><span class="o">=</span><span class="n">old_privacy</span><span class="p">,</span> <span class="n">service</span><span class="o">=</span><span class="n">service</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">"old_id"</span><span class="p">:</span> <span class="n">old_id</span><span class="p">,</span>
+        <span class="s2">"new_id"</span><span class="p">:</span> <span class="n">new_id</span><span class="p">,</span>
+        <span class="s2">"playlists"</span><span class="p">:</span> <span class="n">moved</span><span class="p">,</span>
+        <span class="s2">"old_privacy"</span><span class="p">:</span> <span class="n">old_privacy</span><span class="p">,</span>
+        <span class="s2">"new_privacy"</span><span class="p">:</span> <span class="n">new_privacy</span><span class="p">,</span>
+    <span class="p">}</span></div>
+
+
+
 <div class="viewcode-block" id="set_thumbnail">
 <a class="viewcode-back" href="../../../_autosummary/yb.youtube.api.html#yb.set_thumbnail">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">set_thumbnail</span><span class="p">(</span>
@@ -478,7 +632,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=b39c9740"></script>
+</div><script src="../../../_static/documentation_options.js?v=1adce326"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

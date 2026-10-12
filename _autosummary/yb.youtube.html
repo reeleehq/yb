@@ -347,10 +347,28 @@ client (see the <code class="docutils literal notranslate"><span class="pre">yb-
 <td><p>Whether <code class="docutils literal notranslate"><span class="pre">video_id</span></code> is already an item of <code class="docutils literal notranslate"><span class="pre">playlist_id</span></code> (paginated).</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#yb.youtube.add_to_playlist" title="yb.youtube.add_to_playlist"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_to_playlist</span></code></a>(video_id, playlist_id, *[, ...])</p></td>
-<td><p>Append <code class="docutils literal notranslate"><span class="pre">video_id</span></code> to <code class="docutils literal notranslate"><span class="pre">playlist_id</span></code> (<code class="docutils literal notranslate"><span class="pre">playlistItems.insert</span></code>).</p></td>
+<td><p>Add <code class="docutils literal notranslate"><span class="pre">video_id</span></code> to <code class="docutils literal notranslate"><span class="pre">playlist_id</span></code> (<code class="docutils literal notranslate"><span class="pre">playlistItems.insert</span></code>).</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#yb.youtube.add_video_to_playlist" title="yb.youtube.add_video_to_playlist"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_video_to_playlist</span></code></a>(video_id, title, *[, ...])</p></td>
 <td><p>Find-or-create the playlist named <code class="docutils literal notranslate"><span class="pre">title</span></code> and append <code class="docutils literal notranslate"><span class="pre">video_id</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#yb.youtube.playlist_item_ids" title="yb.youtube.playlist_item_ids"><code class="xref py py-obj docutils literal notranslate"><span class="pre">playlist_item_ids</span></code></a>(video_id, playlist_id, *)</p></td>
+<td><p>The <code class="docutils literal notranslate"><span class="pre">playlistItems</span></code> ids holding <code class="docutils literal notranslate"><span class="pre">video_id</span></code> in <code class="docutils literal notranslate"><span class="pre">playlist_id</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.youtube.first_position" title="yb.youtube.first_position"><code class="xref py py-obj docutils literal notranslate"><span class="pre">first_position</span></code></a>(video_id, playlist_id, *[, ...])</p></td>
+<td><p>The 0-based position of <code class="docutils literal notranslate"><span class="pre">video_id</span></code>'s first occurrence (<code class="docutils literal notranslate"><span class="pre">None</span></code> if absent).</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#yb.youtube.playlists_containing" title="yb.youtube.playlists_containing"><code class="xref py py-obj docutils literal notranslate"><span class="pre">playlists_containing</span></code></a>(video_id, *[, service])</p></td>
+<td><p>Ids of the authenticated channel's playlists that hold <code class="docutils literal notranslate"><span class="pre">video_id</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.youtube.remove_from_playlist" title="yb.youtube.remove_from_playlist"><code class="xref py py-obj docutils literal notranslate"><span class="pre">remove_from_playlist</span></code></a>(video_id, playlist_id, *)</p></td>
+<td><p>Remove every occurrence of <code class="docutils literal notranslate"><span class="pre">video_id</span></code> from <code class="docutils literal notranslate"><span class="pre">playlist_id</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#yb.youtube.update_video_status" title="yb.youtube.update_video_status"><code class="xref py py-obj docutils literal notranslate"><span class="pre">update_video_status</span></code></a>(video_id, *[, ...])</p></td>
+<td><p>Change a video's privacy (or synthetic-media flag), keeping the rest.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.youtube.supersede" title="yb.youtube.supersede"><code class="xref py py-obj docutils literal notranslate"><span class="pre">supersede</span></code></a>(old_id, new_id, *[, old_privacy, ...])</p></td>
+<td><p>Retire an upload that <code class="docutils literal notranslate"><span class="pre">new_id</span></code> replaces (yb#19).</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#yb.youtube.get_video" title="yb.youtube.get_video"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_video</span></code></a>(video_id, *[, part, service])</p></td>
 <td><p>Fetch a video resource (raises <code class="docutils literal notranslate"><span class="pre">KeyError</span></code> if not found/visible).</p></td>
@@ -636,8 +654,10 @@ not to stylised artwork or a visualizer. Left unset when <code class="docutils l
 
 <dl class="py function">
 <dt class="sig sig-object py" id="yb.youtube.add_to_playlist">
-<span class="sig-prename descclassname"><span class="pre">yb.youtube.</span></span><span class="sig-name descname"><span class="pre">add_to_playlist</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">video_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">playlist_id</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">service</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">cred_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/youtube/playlists.html#add_to_playlist"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.youtube.add_to_playlist" title="Link to this definition">¶</a></dt>
-<dd><p>Append <code class="docutils literal notranslate"><span class="pre">video_id</span></code> to <code class="docutils literal notranslate"><span class="pre">playlist_id</span></code> (<code class="docutils literal notranslate"><span class="pre">playlistItems.insert</span></code>).</p>
+<span class="sig-prename descclassname"><span class="pre">yb.youtube.</span></span><span class="sig-name descname"><span class="pre">add_to_playlist</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">video_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">playlist_id</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">position</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">service</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">cred_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/youtube/playlists.html#add_to_playlist"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.youtube.add_to_playlist" title="Link to this definition">¶</a></dt>
+<dd><p>Add <code class="docutils literal notranslate"><span class="pre">video_id</span></code> to <code class="docutils literal notranslate"><span class="pre">playlist_id</span></code> (<code class="docutils literal notranslate"><span class="pre">playlistItems.insert</span></code>).</p>
+<p>Appended at the end, or inserted at the 0-based <code class="docutils literal notranslate"><span class="pre">position</span></code> when given
+(YouTube refuses a position on a playlist not sorted manually).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></span></p>
@@ -774,6 +794,17 @@ failure, so a mistyped paste can simply be retried.</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="yb.youtube.first_position">
+<span class="sig-prename descclassname"><span class="pre">yb.youtube.</span></span><span class="sig-name descname"><span class="pre">first_position</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">video_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">playlist_id</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">service</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">cred_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/youtube/playlists.html#first_position"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.youtube.first_position" title="Link to this definition">¶</a></dt>
+<dd><p>The 0-based position of <code class="docutils literal notranslate"><span class="pre">video_id</span></code>’s first occurrence (<code class="docutils literal notranslate"><span class="pre">None</span></code> if absent).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a> | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="yb.youtube.flatten_video">
 <span class="sig-prename descclassname"><span class="pre">yb.youtube.</span></span><span class="sig-name descname"><span class="pre">flatten_video</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">resource</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/youtube/stats.html#flatten_video"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.youtube.flatten_video" title="Link to this definition">¶</a></dt>
 <dd><p>Flatten a raw <code class="docutils literal notranslate"><span class="pre">videos.list</span></code> item into a friendly, typed, ordered dict.</p>
@@ -899,6 +930,31 @@ once to mint the token, after which nothing prompts again.</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="yb.youtube.playlist_item_ids">
+<span class="sig-prename descclassname"><span class="pre">yb.youtube.</span></span><span class="sig-name descname"><span class="pre">playlist_item_ids</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">video_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">playlist_id</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">service</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">cred_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/youtube/playlists.html#playlist_item_ids"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.youtube.playlist_item_ids" title="Link to this definition">¶</a></dt>
+<dd><p>The <code class="docutils literal notranslate"><span class="pre">playlistItems</span></code> ids holding <code class="docutils literal notranslate"><span class="pre">video_id</span></code> in <code class="docutils literal notranslate"><span class="pre">playlist_id</span></code>.</p>
+<p>A list, because a video can sit in one playlist more than once.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="yb.youtube.playlists_containing">
+<span class="sig-prename descclassname"><span class="pre">yb.youtube.</span></span><span class="sig-name descname"><span class="pre">playlists_containing</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">video_id</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">service</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">cred_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/youtube/playlists.html#playlists_containing"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.youtube.playlists_containing" title="Link to this definition">¶</a></dt>
+<dd><p>Ids of the authenticated channel’s playlists that hold <code class="docutils literal notranslate"><span class="pre">video_id</span></code>.</p>
+<p>Reads every item page of every playlist you own (1 quota unit per page),
+plus the <code class="docutils literal notranslate"><span class="pre">playlists.list</span></code> pages: on a large channel, budget for it.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="yb.youtube.prepare_and_publish">
 <span class="sig-prename descclassname"><span class="pre">yb.youtube.</span></span><span class="sig-name descname"><span class="pre">prepare_and_publish</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">media</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">language</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'English'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">language_code</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">audio_language_code</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">brand</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">with_chapters</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">with_thumbnail</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">privacy_status</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">playlist</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;object</span> <span class="pre">object&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">category_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'28'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">client_secrets_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">token_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**cred_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/youtube/publish.html#prepare_and_publish"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.youtube.prepare_and_publish" title="Link to this definition">¶</a></dt>
 <dd><p>One call: prepare publication content from <code class="docutils literal notranslate"><span class="pre">media</span></code> and upload it.</p>
@@ -981,6 +1037,18 @@ same as bad.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="yb.youtube.remove_from_playlist">
+<span class="sig-prename descclassname"><span class="pre">yb.youtube.</span></span><span class="sig-name descname"><span class="pre">remove_from_playlist</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">video_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">playlist_id</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">service</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">cred_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/youtube/playlists.html#remove_from_playlist"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.youtube.remove_from_playlist" title="Link to this definition">¶</a></dt>
+<dd><p>Remove every occurrence of <code class="docutils literal notranslate"><span class="pre">video_id</span></code> from <code class="docutils literal notranslate"><span class="pre">playlist_id</span></code>.</p>
+<p>Returns how many items were removed (0 when it was not there).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a></span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -1076,6 +1144,40 @@ user already has open on their phone.</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="yb.youtube.supersede">
+<span class="sig-prename descclassname"><span class="pre">yb.youtube.</span></span><span class="sig-name descname"><span class="pre">supersede</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">old_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">new_id</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">old_privacy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'private'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">new_privacy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">move_playlists</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">service</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">cred_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/youtube/api.html#supersede"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.youtube.supersede" title="Link to this definition">¶</a></dt>
+<dd><p>Retire an upload that <code class="docutils literal notranslate"><span class="pre">new_id</span></code> replaces (yb#19).</p>
+<p>YouTube cannot replace a video’s file, so a re-cut is a new upload. This
+puts the new one where the old one was and takes the old one out of view:</p>
+<ol class="arabic simple" start="0">
+<li><p>refuses, before changing anything, unless <code class="docutils literal notranslate"><span class="pre">new_id</span></code> has finished
+processing (<code class="docutils literal notranslate"><span class="pre">uploadStatus</span> <span class="pre">==</span> <span class="pre">&quot;processed&quot;</span></code>): retiring the old video for
+a failed or rejected upload would leave the public neither;</p></li>
+<li><p>sets <code class="docutils literal notranslate"><span class="pre">new_id</span></code> to <code class="docutils literal notranslate"><span class="pre">new_privacy</span></code> when given (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;public&quot;</span></code>);</p></li>
+<li><p>for every playlist of yours that holds <code class="docutils literal notranslate"><span class="pre">old_id</span></code> (when
+<code class="docutils literal notranslate"><span class="pre">move_playlists</span></code>): inserts <code class="docutils literal notranslate"><span class="pre">new_id</span></code> at the old one’s position (or
+appends, if the playlist is not sorted manually), THEN removes
+<code class="docutils literal notranslate"><span class="pre">old_id</span></code>, so a failure part-way never leaves a playlist with neither;</p></li>
+<li><p>sets <code class="docutils literal notranslate"><span class="pre">old_id</span></code> to <code class="docutils literal notranslate"><span class="pre">old_privacy</span></code> (default <code class="docutils literal notranslate"><span class="pre">&quot;private&quot;</span></code>), clearing any
+scheduled publish. It is never deleted.</p></li>
+</ol>
+<p>Captions and thumbnails are not copied: upload them with the new video
+(<a class="reference internal" href="#yb.youtube.publish_video" title="yb.youtube.publish_video"><code class="xref py py-func docutils literal notranslate"><span class="pre">yb.youtube.publish_video()</span></code></a>). Safe to re-run: every step checks
+before it acts. Quota: see <a class="reference internal" href="#yb.youtube.playlists_containing" title="yb.youtube.playlists_containing"><code class="xref py py-func docutils literal notranslate"><span class="pre">yb.youtube.playlists_containing()</span></code></a>; each
+write (insert, delete, update) is 50 units.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></span></p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">{&quot;old_id&quot;,</span> <span class="pre">&quot;new_id&quot;,</span> <span class="pre">&quot;playlists&quot;,</span> <span class="pre">&quot;old_privacy&quot;,</span> <span class="pre">&quot;new_privacy&quot;}</span></code>
+where <code class="docutils literal notranslate"><span class="pre">playlists</span></code> lists <code class="docutils literal notranslate"><span class="pre">{&quot;playlist_id&quot;,</span> <span class="pre">&quot;added_new&quot;,</span> <span class="pre">&quot;position&quot;,</span>
+<span class="pre">&quot;removed_old&quot;}</span></code>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="yb.youtube.thumbnail_url">
 <span class="sig-prename descclassname"><span class="pre">yb.youtube.</span></span><span class="sig-name descname"><span class="pre">thumbnail_url</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">video_id</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">quality</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'mqdefault'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/youtube/search.html#thumbnail_url"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.youtube.thumbnail_url" title="Link to this definition">¶</a></dt>
 <dd><p>Thumbnail URL for a video. Always available, no API call, no key.</p>
@@ -1117,6 +1219,27 @@ user already has open on their phone.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="yb.youtube.update_video_status">
+<span class="sig-prename descclassname"><span class="pre">yb.youtube.</span></span><span class="sig-name descname"><span class="pre">update_video_status</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">video_id</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">privacy_status</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">contains_synthetic_media</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keep_schedule</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">service</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">cred_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/youtube/api.html#update_video_status"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.youtube.update_video_status" title="Link to this definition">¶</a></dt>
+<dd><p>Change a video’s privacy (or synthetic-media flag), keeping the rest.</p>
+<p>Read-modify-write of the <code class="docutils literal notranslate"><span class="pre">status</span></code> part (yb#19): <code class="docutils literal notranslate"><span class="pre">videos.update</span></code> replaces
+the part wholesale, so the current writable fields are carried over and
+only the ones given change. Making a video private never deletes it.</p>
+<p>Setting <code class="docutils literal notranslate"><span class="pre">privacy_status</span></code> clears a scheduled publish (<code class="docutils literal notranslate"><span class="pre">publishAt</span></code>):
+otherwise a video made private while scheduled would still go public at
+that time, and a past <code class="docutils literal notranslate"><span class="pre">publishAt</span></code> read back is refused by the API. Pass
+<code class="docutils literal notranslate"><span class="pre">keep_schedule=True</span></code> to keep it (only meaningful with <code class="docutils literal notranslate"><span class="pre">&quot;private&quot;</span></code>).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – <code class="docutils literal notranslate"><span class="pre">privacy_status</span></code> is not one of <code class="xref py py-data docutils literal notranslate"><span class="pre">PRIVACY_STATUSES</span></code>.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -1307,6 +1430,7 @@ table <code class="docutils literal notranslate"><span class="pre">str</span></c
 <li><a class="reference internal" href="#yb.youtube.ensure_playlist"><code class="docutils literal notranslate"><span class="pre">ensure_playlist()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.find_playlist"><code class="docutils literal notranslate"><span class="pre">find_playlist()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.finish_paste_consent"><code class="docutils literal notranslate"><span class="pre">finish_paste_consent()</span></code></a></li>
+<li><a class="reference internal" href="#yb.youtube.first_position"><code class="docutils literal notranslate"><span class="pre">first_position()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.flatten_video"><code class="docutils literal notranslate"><span class="pre">flatten_video()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.get_credentials"><code class="docutils literal notranslate"><span class="pre">get_credentials()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.get_service"><code class="docutils literal notranslate"><span class="pre">get_service()</span></code></a></li>
@@ -1315,10 +1439,13 @@ table <code class="docutils literal notranslate"><span class="pre">str</span></c
 <li><a class="reference internal" href="#yb.youtube.is_video_in_playlist"><code class="docutils literal notranslate"><span class="pre">is_video_in_playlist()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.list_captions"><code class="docutils literal notranslate"><span class="pre">list_captions()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.list_my_playlists"><code class="docutils literal notranslate"><span class="pre">list_my_playlists()</span></code></a></li>
+<li><a class="reference internal" href="#yb.youtube.playlist_item_ids"><code class="docutils literal notranslate"><span class="pre">playlist_item_ids()</span></code></a></li>
+<li><a class="reference internal" href="#yb.youtube.playlists_containing"><code class="docutils literal notranslate"><span class="pre">playlists_containing()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.prepare_and_publish"><code class="docutils literal notranslate"><span class="pre">prepare_and_publish()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.publish_content"><code class="docutils literal notranslate"><span class="pre">publish_content()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.publish_video"><code class="docutils literal notranslate"><span class="pre">publish_video()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.rank_by_engagement"><code class="docutils literal notranslate"><span class="pre">rank_by_engagement()</span></code></a></li>
+<li><a class="reference internal" href="#yb.youtube.remove_from_playlist"><code class="docutils literal notranslate"><span class="pre">remove_from_playlist()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.render_table"><code class="docutils literal notranslate"><span class="pre">render_table()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.resolve_fields"><code class="docutils literal notranslate"><span class="pre">resolve_fields()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.search_videos"><code class="docutils literal notranslate"><span class="pre">search_videos()</span></code></a></li>
@@ -1326,10 +1453,12 @@ table <code class="docutils literal notranslate"><span class="pre">str</span></c
 <li><a class="reference internal" href="#yb.youtube.set_chapters"><code class="docutils literal notranslate"><span class="pre">set_chapters()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.set_thumbnail"><code class="docutils literal notranslate"><span class="pre">set_thumbnail()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.start_paste_consent"><code class="docutils literal notranslate"><span class="pre">start_paste_consent()</span></code></a></li>
+<li><a class="reference internal" href="#yb.youtube.supersede"><code class="docutils literal notranslate"><span class="pre">supersede()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.thumbnail_url"><code class="docutils literal notranslate"><span class="pre">thumbnail_url()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.update_caption"><code class="docutils literal notranslate"><span class="pre">update_caption()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.update_video"><code class="docutils literal notranslate"><span class="pre">update_video()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.update_video_fields"><code class="docutils literal notranslate"><span class="pre">update_video_fields()</span></code></a></li>
+<li><a class="reference internal" href="#yb.youtube.update_video_status"><code class="docutils literal notranslate"><span class="pre">update_video_status()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.upload_video"><code class="docutils literal notranslate"><span class="pre">upload_video()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.upsert_caption"><code class="docutils literal notranslate"><span class="pre">upsert_caption()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.video_metadata"><code class="docutils literal notranslate"><span class="pre">video_metadata()</span></code></a></li>
@@ -1344,7 +1473,7 @@ table <code class="docutils literal notranslate"><span class="pre">str</span></c
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=b39c9740"></script>
+</div><script src="../_static/documentation_options.js?v=1adce326"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>

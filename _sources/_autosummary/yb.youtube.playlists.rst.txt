@@ -13,6 +13,10 @@ yb.youtube.playlists
       create_playlist
       ensure_playlist
       find_playlist
+      first_position
       is_video_in_playlist
       list_my_playlists
+      playlist_item_ids
+      playlists_containing
+      remove_from_playlist
    

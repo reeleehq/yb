@@ -288,7 +288,7 @@ re-running is idempotent.</p>
 <table class="autosummary longtable docutils align-default">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="#yb.youtube.playlists.add_to_playlist" title="yb.youtube.playlists.add_to_playlist"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_to_playlist</span></code></a>(video_id, playlist_id, *[, ...])</p></td>
-<td><p>Append <code class="docutils literal notranslate"><span class="pre">video_id</span></code> to <code class="docutils literal notranslate"><span class="pre">playlist_id</span></code> (<code class="docutils literal notranslate"><span class="pre">playlistItems.insert</span></code>).</p></td>
+<td><p>Add <code class="docutils literal notranslate"><span class="pre">video_id</span></code> to <code class="docutils literal notranslate"><span class="pre">playlist_id</span></code> (<code class="docutils literal notranslate"><span class="pre">playlistItems.insert</span></code>).</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#yb.youtube.playlists.add_video_to_playlist" title="yb.youtube.playlists.add_video_to_playlist"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_video_to_playlist</span></code></a>(video_id, title, *[, ...])</p></td>
 <td><p>Find-or-create the playlist named <code class="docutils literal notranslate"><span class="pre">title</span></code> and append <code class="docutils literal notranslate"><span class="pre">video_id</span></code>.</p></td>
@@ -302,19 +302,33 @@ re-running is idempotent.</p>
 <tr class="row-odd"><td><p><a class="reference internal" href="#yb.youtube.playlists.find_playlist" title="yb.youtube.playlists.find_playlist"><code class="xref py py-obj docutils literal notranslate"><span class="pre">find_playlist</span></code></a>(title, *[, service])</p></td>
 <td><p>Return the id of the caller's playlist titled <code class="docutils literal notranslate"><span class="pre">title</span></code> (or <code class="docutils literal notranslate"><span class="pre">None</span></code>).</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#yb.youtube.playlists.is_video_in_playlist" title="yb.youtube.playlists.is_video_in_playlist"><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_video_in_playlist</span></code></a>(video_id, playlist_id, *)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#yb.youtube.playlists.first_position" title="yb.youtube.playlists.first_position"><code class="xref py py-obj docutils literal notranslate"><span class="pre">first_position</span></code></a>(video_id, playlist_id, *[, ...])</p></td>
+<td><p>The 0-based position of <code class="docutils literal notranslate"><span class="pre">video_id</span></code>'s first occurrence (<code class="docutils literal notranslate"><span class="pre">None</span></code> if absent).</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.youtube.playlists.is_video_in_playlist" title="yb.youtube.playlists.is_video_in_playlist"><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_video_in_playlist</span></code></a>(video_id, playlist_id, *)</p></td>
 <td><p>Whether <code class="docutils literal notranslate"><span class="pre">video_id</span></code> is already an item of <code class="docutils literal notranslate"><span class="pre">playlist_id</span></code> (paginated).</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#yb.youtube.playlists.list_my_playlists" title="yb.youtube.playlists.list_my_playlists"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list_my_playlists</span></code></a>(*[, service])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#yb.youtube.playlists.list_my_playlists" title="yb.youtube.playlists.list_my_playlists"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list_my_playlists</span></code></a>(*[, service])</p></td>
 <td><p>Return all playlists owned by the authenticated channel (paginated).</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.youtube.playlists.playlist_item_ids" title="yb.youtube.playlists.playlist_item_ids"><code class="xref py py-obj docutils literal notranslate"><span class="pre">playlist_item_ids</span></code></a>(video_id, playlist_id, *)</p></td>
+<td><p>The <code class="docutils literal notranslate"><span class="pre">playlistItems</span></code> ids holding <code class="docutils literal notranslate"><span class="pre">video_id</span></code> in <code class="docutils literal notranslate"><span class="pre">playlist_id</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#yb.youtube.playlists.playlists_containing" title="yb.youtube.playlists.playlists_containing"><code class="xref py py-obj docutils literal notranslate"><span class="pre">playlists_containing</span></code></a>(video_id, *[, service])</p></td>
+<td><p>Ids of the authenticated channel's playlists that hold <code class="docutils literal notranslate"><span class="pre">video_id</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.youtube.playlists.remove_from_playlist" title="yb.youtube.playlists.remove_from_playlist"><code class="xref py py-obj docutils literal notranslate"><span class="pre">remove_from_playlist</span></code></a>(video_id, playlist_id, *)</p></td>
+<td><p>Remove every occurrence of <code class="docutils literal notranslate"><span class="pre">video_id</span></code> from <code class="docutils literal notranslate"><span class="pre">playlist_id</span></code>.</p></td>
 </tr>
 </tbody>
 </table>
 </div>
 <dl class="py function">
 <dt class="sig sig-object py" id="yb.youtube.playlists.add_to_playlist">
-<span class="sig-prename descclassname"><span class="pre">yb.youtube.playlists.</span></span><span class="sig-name descname"><span class="pre">add_to_playlist</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">video_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">playlist_id</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">service</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">cred_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/youtube/playlists.html#add_to_playlist"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.youtube.playlists.add_to_playlist" title="Link to this definition">¶</a></dt>
-<dd><p>Append <code class="docutils literal notranslate"><span class="pre">video_id</span></code> to <code class="docutils literal notranslate"><span class="pre">playlist_id</span></code> (<code class="docutils literal notranslate"><span class="pre">playlistItems.insert</span></code>).</p>
+<span class="sig-prename descclassname"><span class="pre">yb.youtube.playlists.</span></span><span class="sig-name descname"><span class="pre">add_to_playlist</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">video_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">playlist_id</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">position</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">service</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">cred_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/youtube/playlists.html#add_to_playlist"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.youtube.playlists.add_to_playlist" title="Link to this definition">¶</a></dt>
+<dd><p>Add <code class="docutils literal notranslate"><span class="pre">video_id</span></code> to <code class="docutils literal notranslate"><span class="pre">playlist_id</span></code> (<code class="docutils literal notranslate"><span class="pre">playlistItems.insert</span></code>).</p>
+<p>Appended at the end, or inserted at the 0-based <code class="docutils literal notranslate"><span class="pre">position</span></code> when given
+(YouTube refuses a position on a playlist not sorted manually).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></span></p>
@@ -380,6 +394,17 @@ titles, so prefer unique playlist names.</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="yb.youtube.playlists.first_position">
+<span class="sig-prename descclassname"><span class="pre">yb.youtube.playlists.</span></span><span class="sig-name descname"><span class="pre">first_position</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">video_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">playlist_id</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">service</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">cred_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/youtube/playlists.html#first_position"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.youtube.playlists.first_position" title="Link to this definition">¶</a></dt>
+<dd><p>The 0-based position of <code class="docutils literal notranslate"><span class="pre">video_id</span></code>’s first occurrence (<code class="docutils literal notranslate"><span class="pre">None</span></code> if absent).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a> | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="yb.youtube.playlists.is_video_in_playlist">
 <span class="sig-prename descclassname"><span class="pre">yb.youtube.playlists.</span></span><span class="sig-name descname"><span class="pre">is_video_in_playlist</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">video_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">playlist_id</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">service</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">cred_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/youtube/playlists.html#is_video_in_playlist"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.youtube.playlists.is_video_in_playlist" title="Link to this definition">¶</a></dt>
 <dd><p>Whether <code class="docutils literal notranslate"><span class="pre">video_id</span></code> is already an item of <code class="docutils literal notranslate"><span class="pre">playlist_id</span></code> (paginated).</p>
@@ -397,6 +422,43 @@ titles, so prefer unique playlist names.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="yb.youtube.playlists.playlist_item_ids">
+<span class="sig-prename descclassname"><span class="pre">yb.youtube.playlists.</span></span><span class="sig-name descname"><span class="pre">playlist_item_ids</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">video_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">playlist_id</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">service</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">cred_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/youtube/playlists.html#playlist_item_ids"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.youtube.playlists.playlist_item_ids" title="Link to this definition">¶</a></dt>
+<dd><p>The <code class="docutils literal notranslate"><span class="pre">playlistItems</span></code> ids holding <code class="docutils literal notranslate"><span class="pre">video_id</span></code> in <code class="docutils literal notranslate"><span class="pre">playlist_id</span></code>.</p>
+<p>A list, because a video can sit in one playlist more than once.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="yb.youtube.playlists.playlists_containing">
+<span class="sig-prename descclassname"><span class="pre">yb.youtube.playlists.</span></span><span class="sig-name descname"><span class="pre">playlists_containing</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">video_id</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">service</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">cred_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/youtube/playlists.html#playlists_containing"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.youtube.playlists.playlists_containing" title="Link to this definition">¶</a></dt>
+<dd><p>Ids of the authenticated channel’s playlists that hold <code class="docutils literal notranslate"><span class="pre">video_id</span></code>.</p>
+<p>Reads every item page of every playlist you own (1 quota unit per page),
+plus the <code class="docutils literal notranslate"><span class="pre">playlists.list</span></code> pages: on a large channel, budget for it.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="yb.youtube.playlists.remove_from_playlist">
+<span class="sig-prename descclassname"><span class="pre">yb.youtube.playlists.</span></span><span class="sig-name descname"><span class="pre">remove_from_playlist</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">video_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">playlist_id</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">service</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">cred_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/youtube/playlists.html#remove_from_playlist"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.youtube.playlists.remove_from_playlist" title="Link to this definition">¶</a></dt>
+<dd><p>Remove every occurrence of <code class="docutils literal notranslate"><span class="pre">video_id</span></code> from <code class="docutils literal notranslate"><span class="pre">playlist_id</span></code>.</p>
+<p>Returns how many items were removed (0 when it was not there).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a></span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -460,8 +522,12 @@ titles, so prefer unique playlist names.</p>
 <li><a class="reference internal" href="#yb.youtube.playlists.create_playlist"><code class="docutils literal notranslate"><span class="pre">create_playlist()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.playlists.ensure_playlist"><code class="docutils literal notranslate"><span class="pre">ensure_playlist()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.playlists.find_playlist"><code class="docutils literal notranslate"><span class="pre">find_playlist()</span></code></a></li>
+<li><a class="reference internal" href="#yb.youtube.playlists.first_position"><code class="docutils literal notranslate"><span class="pre">first_position()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.playlists.is_video_in_playlist"><code class="docutils literal notranslate"><span class="pre">is_video_in_playlist()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.playlists.list_my_playlists"><code class="docutils literal notranslate"><span class="pre">list_my_playlists()</span></code></a></li>
+<li><a class="reference internal" href="#yb.youtube.playlists.playlist_item_ids"><code class="docutils literal notranslate"><span class="pre">playlist_item_ids()</span></code></a></li>
+<li><a class="reference internal" href="#yb.youtube.playlists.playlists_containing"><code class="docutils literal notranslate"><span class="pre">playlists_containing()</span></code></a></li>
+<li><a class="reference internal" href="#yb.youtube.playlists.remove_from_playlist"><code class="docutils literal notranslate"><span class="pre">remove_from_playlist()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -473,7 +539,7 @@ titles, so prefer unique playlist names.</p>
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=b39c9740"></script>
+</div><script src="../_static/documentation_options.js?v=1adce326"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>

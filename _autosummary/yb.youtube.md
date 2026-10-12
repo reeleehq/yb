@@ -41,8 +41,14 @@ Edit an existing video:
 | [`create_playlist`](#yb.youtube.create_playlist)(title, \*[, description, ...])     | Create a playlist and return its id.                                                                                    |
 | [`ensure_playlist`](#yb.youtube.ensure_playlist)(title, \*[, create, ...])          | Return the id of the playlist titled `title`, creating it if missing.                                                   |
 | [`is_video_in_playlist`](#yb.youtube.is_video_in_playlist)(video_id, playlist_id, \*)    | Whether `video_id` is already an item of `playlist_id` (paginated).                                                     |
-| [`add_to_playlist`](#yb.youtube.add_to_playlist)(video_id, playlist_id, \*[, ...])  | Append `video_id` to `playlist_id` (`playlistItems.insert`).                                                            |
+| [`add_to_playlist`](#yb.youtube.add_to_playlist)(video_id, playlist_id, \*[, ...])  | Add `video_id` to `playlist_id` (`playlistItems.insert`).                                                               |
 | [`add_video_to_playlist`](#yb.youtube.add_video_to_playlist)(video_id, title, \*[, ...])  | Find-or-create the playlist named `title` and append `video_id`.                                                        |
+| [`playlist_item_ids`](#yb.youtube.playlist_item_ids)(video_id, playlist_id, \*)       | The `playlistItems` ids holding `video_id` in `playlist_id`.                                                            |
+| [`first_position`](#yb.youtube.first_position)(video_id, playlist_id, \*[, ...])   | The 0-based position of `video_id`'s first occurrence (`None` if absent).                                               |
+| [`playlists_containing`](#yb.youtube.playlists_containing)(video_id, \*[, service])      | Ids of the authenticated channel's playlists that hold `video_id`.                                                      |
+| [`remove_from_playlist`](#yb.youtube.remove_from_playlist)(video_id, playlist_id, \*)    | Remove every occurrence of `video_id` from `playlist_id`.                                                               |
+| [`update_video_status`](#yb.youtube.update_video_status)(video_id, \*[, ...])           | Change a video's privacy (or synthetic-media flag), keeping the rest.                                                   |
+| [`supersede`](#yb.youtube.supersede)(old_id, new_id, \*[, old_privacy, ...])  | Retire an upload that `new_id` replaces (yb#19).                                                                        |
 | [`get_video`](#yb.youtube.get_video)(video_id, \*[, part, service])           | Fetch a video resource (raises `KeyError` if not found/visible).                                                        |
 | [`upload_video`](#yb.youtube.upload_video)(video_path, body, \*[, service, ...]) | Resumably upload a video with the given `videos.insert` `body`.                                                         |
 | [`update_video`](#yb.youtube.update_video)(video_id, snippet, \*[, service])     | Update a video's snippet (`videos.update`).                                                                             |
@@ -221,9 +227,12 @@ Fill in engagement numbers on search results, in place-ish (returns them).
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)
 
-### yb.youtube.add_to_playlist(video_id, playlist_id, , service=None, \*\*cred_kwargs)
+### yb.youtube.add_to_playlist(video_id, playlist_id, , position=None, service=None, \*\*cred_kwargs)
 
-Append `video_id` to `playlist_id` (`playlistItems.insert`).
+Add `video_id` to `playlist_id` (`playlistItems.insert`).
+
+Appended at the end, or inserted at the 0-based `position` when given
+(YouTube refuses a position on a playlist not sorted manually).
 
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
@@ -319,6 +328,13 @@ Complete a consent begun by [`start_paste_consent()`](#yb.youtube.start_paste_co
 `authorization_response` is the redirected URL, its query string, or the
 bare `code`. The pending file is removed on success and left in place on
 failure, so a mistyped paste can simply be retried.
+
+### yb.youtube.first_position(video_id, playlist_id, , service=None, \*\*cred_kwargs)
+
+The 0-based position of `video_id`’s first occurrence (`None` if absent).
+
+* **Return type:**
+  [`int`](https://docs.python.org/3/builtins/functions.html#int) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 ### yb.youtube.flatten_video(resource)
 
@@ -425,6 +441,25 @@ Return all playlists owned by the authenticated channel (paginated).
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]
 
+### yb.youtube.playlist_item_ids(video_id, playlist_id, , service=None, \*\*cred_kwargs)
+
+The `playlistItems` ids holding `video_id` in `playlist_id`.
+
+A list, because a video can sit in one playlist more than once.
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
+
+### yb.youtube.playlists_containing(video_id, , service=None, \*\*cred_kwargs)
+
+Ids of the authenticated channel’s playlists that hold `video_id`.
+
+Reads every item page of every playlist you own (1 quota unit per page),
+plus the `playlists.list` pages: on a large channel, budget for it.
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
+
 ### yb.youtube.prepare_and_publish(media, \*, language='English', language_code=None, audio_language_code=None, brand=None, extra_context=None, with_chapters=True, with_thumbnail=True, privacy_status=None, playlist=<object object>, category_id='28', config=None, client_secrets_file=None, token_file=None, progress=True, \*\*cred_kwargs)
 
 One call: prepare publication content from `media` and upload it.
@@ -503,6 +538,15 @@ same as bad.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)
 
+### yb.youtube.remove_from_playlist(video_id, playlist_id, , service=None, \*\*cred_kwargs)
+
+Remove every occurrence of `video_id` from `playlist_id`.
+
+Returns how many items were removed (0 when it was not there).
+
+* **Return type:**
+  [`int`](https://docs.python.org/3/builtins/functions.html#int)
+
 ### yb.youtube.render_table(data, , fields=None)
 
 Render metadata as an ASCII table.
@@ -570,6 +614,36 @@ user already has open on their phone.
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
+### yb.youtube.supersede(old_id, new_id, , old_privacy='private', new_privacy=None, move_playlists=True, service=None, \*\*cred_kwargs)
+
+Retire an upload that `new_id` replaces (yb#19).
+
+YouTube cannot replace a video’s file, so a re-cut is a new upload. This
+puts the new one where the old one was and takes the old one out of view:
+
+1. refuses, before changing anything, unless `new_id` has finished
+   processing (`uploadStatus == "processed"`): retiring the old video for
+   a failed or rejected upload would leave the public neither;
+2. sets `new_id` to `new_privacy` when given (e.g. `"public"`);
+3. for every playlist of yours that holds `old_id` (when
+   `move_playlists`): inserts `new_id` at the old one’s position (or
+   appends, if the playlist is not sorted manually), THEN removes
+   `old_id`, so a failure part-way never leaves a playlist with neither;
+4. sets `old_id` to `old_privacy` (default `"private"`), clearing any
+   scheduled publish. It is never deleted.
+
+Captions and thumbnails are not copied: upload them with the new video
+([`yb.youtube.publish_video()`](#yb.youtube.publish_video)). Safe to re-run: every step checks
+before it acts. Quota: see [`yb.youtube.playlists_containing()`](#yb.youtube.playlists_containing); each
+write (insert, delete, update) is 50 units.
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
+* **Returns:**
+  `{"old_id", "new_id", "playlists", "old_privacy", "new_privacy"}`
+  where `playlists` lists `{"playlist_id", "added_new", "position",
+  "removed_old"}`.
+
 ### yb.youtube.thumbnail_url(video_id, , quality='mqdefault')
 
 Thumbnail URL for a video. Always available, no API call, no key.
@@ -598,6 +672,24 @@ Patch selected snippet fields, preserving the rest.
 Fetches the current snippet, overlays the provided fields, and updates.
 `categoryId` must be present (kept from the existing snippet if not given).
 
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
+
+### yb.youtube.update_video_status(video_id, , privacy_status=None, contains_synthetic_media=None, keep_schedule=False, service=None, \*\*cred_kwargs)
+
+Change a video’s privacy (or synthetic-media flag), keeping the rest.
+
+Read-modify-write of the `status` part (yb#19): `videos.update` replaces
+the part wholesale, so the current writable fields are carried over and
+only the ones given change. Making a video private never deletes it.
+
+Setting `privacy_status` clears a scheduled publish (`publishAt`):
+otherwise a video made private while scheduled would still go public at
+that time, and a past `publishAt` read back is refused by the API. Pass
+`keep_schedule=True` to keep it (only meaningful with `"private"`).
+
+* **Raises:**
+  [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – `privacy_status` is not one of `PRIVACY_STATUSES`.
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
 
