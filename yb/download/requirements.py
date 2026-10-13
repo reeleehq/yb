@@ -200,6 +200,7 @@ def check_requirements(
     find_spec: Callable[[str], object | None] = importlib.util.find_spec,
     run: Callable[..., "subprocess.CompletedProcess[str]"] = subprocess.run,
     import_module: Callable[[str], object] = importlib.import_module,
+    check_deno_version: bool = True,
 ) -> list[str]:
     """Check what YouTube downloads need, and say how to fix what's missing.
 
@@ -211,6 +212,9 @@ def check_requirements(
         find_spec: Module lookup for :func:`has_module`.
         run: Subprocess runner for :func:`deno_version`.
         import_module: Importer for :func:`min_deno_version`.
+        check_deno_version: Also run ``deno --version`` and compare it with
+            yt-dlp's minimum. The download preflight turns this off: it spawns
+            a process, which belongs in an explicit check, not in a download.
 
     Returns:
         The problems found; empty when downloads should work.
@@ -243,7 +247,7 @@ def check_requirements(
             "extra_opts={'js_runtimes': {'node': {}}}. "
             f"See {EJS_WIKI_URL}"
         )
-    else:
+    elif check_deno_version:
         have, need = deno_version(runtime, run=run), min_deno_version(
             import_module=import_module
         )
@@ -285,7 +289,7 @@ def _preflight_opts() -> tuple[tuple[str, object], ...]:
     A warning filter set to ``error`` must not stop a download, so a warning
     raised as an exception is swallowed here.
     """
-    for problem in check_requirements(warn=False):
+    for problem in check_requirements(warn=False, check_deno_version=False):
         try:
             warnings.warn(problem, DownloadRequirementWarning, stacklevel=4)
         except DownloadRequirementWarning:

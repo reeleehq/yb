@@ -109,6 +109,7 @@ def test_missing_solver_scripts_point_at_the_default_extra(tmp_path):
         which=_no_which,
         search_dirs=[tmp_path],
         find_spec=lambda name: None if name == req.EJS_MODULE else object(),
+        check_deno_version=False,
     )
     assert len(problems) == 1 and "yt-dlp[default]" in problems[0]
     assert "yt-dlp-ejs" in problems[0]
@@ -117,7 +118,11 @@ def test_missing_solver_scripts_point_at_the_default_extra(tmp_path):
 def test_missing_yt_dlp_is_one_problem_not_two(tmp_path):
     _fake_deno(tmp_path)
     problems = req.check_requirements(
-        warn=False, which=_no_which, search_dirs=[tmp_path], find_spec=_missing_spec
+        warn=False,
+        which=_no_which,
+        search_dirs=[tmp_path],
+        find_spec=_missing_spec,
+        check_deno_version=False,
     )
     assert len(problems) == 1 and "yt-dlp is not installed" in problems[0]
 
@@ -128,7 +133,10 @@ def test_all_present_means_no_problems_and_no_warnings(tmp_path):
         warnings.simplefilter("error")
         assert (
             req.check_requirements(
-                which=_no_which, search_dirs=[tmp_path], find_spec=_found_spec
+                which=_no_which,
+                search_dirs=[tmp_path],
+                find_spec=_found_spec,
+                check_deno_version=False,
             )
             == []
         )
@@ -234,12 +242,14 @@ def _yt_dlp_with_min(version):
 def _check_with(tmp_path, run, **kwargs):
     _fake_deno(tmp_path)
     return req.check_requirements(
-        warn=False,
-        which=_no_which,
-        search_dirs=[tmp_path],
-        find_spec=_found_spec,
-        run=run,
-        **kwargs,
+        **{
+            "warn": False,
+            "which": _no_which,
+            "search_dirs": [tmp_path],
+            "find_spec": _found_spec,
+            "run": run,
+            **kwargs,
+        }
     )
 
 
@@ -325,3 +335,17 @@ def test_missing_deno_is_not_also_a_version_problem(tmp_path):
         run=_fake_run("deno 1.0.0"),
     )
     assert len(problems) == 1 and "No JavaScript runtime" in problems[0]
+
+
+def test_the_download_preflight_never_spawns_deno(monkeypatch):
+    seen = []
+    monkeypatch.setattr(req, "check_requirements", lambda **k: seen.append(k) or [])
+    req.with_runtime_opts({})
+    assert seen == [{"warn": False, "check_deno_version": False}]
+
+
+def test_the_version_check_can_be_turned_off(tmp_path):
+    problems = _check_with(
+        tmp_path, _fake_run("deno 0.1.0"), check_deno_version=False
+    )
+    assert problems == []
