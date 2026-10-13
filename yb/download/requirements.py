@@ -26,7 +26,9 @@ from __future__ import annotations
 
 import importlib.util
 import os
+import re
 import shutil
+import subprocess
 import sys
 import sysconfig
 import warnings
@@ -49,6 +51,17 @@ YT_DLP_MODULE = "yt_dlp"
 
 #: Module that carries yt-dlp's challenge-solver scripts (from ``yt-dlp[default]``).
 EJS_MODULE = "yt_dlp_ejs"
+
+#: Command that brings an installed Deno up to date.
+DENO_UPGRADE_CMD = "deno upgrade"
+
+#: Fallback for Deno's minimum version when yt-dlp can't be asked (not
+#: importable, or too old to say). yt-dlp's own value wins: see
+#: :func:`min_deno_version`.
+DENO_MIN_VERSION_FALLBACK = (2, 3, 0)
+
+#: Seconds to wait for ``deno --version``.
+DENO_VERSION_TIMEOUT = 10
 
 #: yt-dlp's notes on the JavaScript challenge.
 EJS_WIKI_URL = "https://github.com/yt-dlp/yt-dlp/wiki/EJS"
@@ -116,6 +129,52 @@ def find_js_runtime(
     return None
 
 
+def min_deno_version(
+    *, import_module: Callable[[str], object] = importlib.import_module
+) -> tuple[int, ...]:
+    """The oldest Deno yt-dlp supports, as a version tuple.
+
+    Read from yt-dlp (``DenoJsRuntime.MIN_SUPPORTED_VERSION``) so it follows
+    yt-dlp's upgrades; :data:`DENO_MIN_VERSION_FALLBACK` when yt-dlp isn't
+    importable or doesn't say.
+    """
+    try:
+        mod = import_module("yt_dlp.utils._jsruntime")
+        value = tuple(mod.DenoJsRuntime.MIN_SUPPORTED_VERSION)
+        if value and all(isinstance(n, int) for n in value):
+            return value
+    except Exception:  # any failure to ask yt-dlp means: use the fallback
+        pass
+    return DENO_MIN_VERSION_FALLBACK
+
+
+def deno_version(
+    runtime: JsRuntime,
+    *,
+    run: Callable[..., "subprocess.CompletedProcess[str]"] = subprocess.run,
+) -> tuple[int, ...] | None:
+    """Ask ``runtime`` for its version (``deno --version``); ``None`` if unknown.
+
+    Never raises: a runtime that can't be run, or prints something unexpected,
+    has an unknown version (which :func:`check_requirements` doesn't flag).
+    """
+    try:
+        out = run(
+            [str(runtime.path), "--version"],
+            capture_output=True,
+            text=True,
+            timeout=DENO_VERSION_TIMEOUT,
+        ).stdout
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return None
+    match = re.match(r"deno (\d+(?:\.\d+)*)", out or "")
+    return tuple(int(n) for n in match.group(1).split(".")) if match else None
+
+
+def _fmt_version(version: tuple[int, ...]) -> str:
+    return ".".join(map(str, version))
+
+
 def has_module(
     name: str, *, find_spec: Callable[[str], object | None] = importlib.util.find_spec
 ) -> bool:
@@ -139,6 +198,9 @@ def check_requirements(
     which: Callable[[str], str | None] = shutil.which,
     search_dirs: Iterable[Path] | None = None,
     find_spec: Callable[[str], object | None] = importlib.util.find_spec,
+    run: Callable[..., "subprocess.CompletedProcess[str]"] = subprocess.run,
+    import_module: Callable[[str], object] = importlib.import_module,
+    check_deno_version: bool = True,
 ) -> list[str]:
     """Check what YouTube downloads need, and say how to fix what's missing.
 
@@ -148,6 +210,11 @@ def check_requirements(
         warn: Also emit each problem as a :class:`DownloadRequirementWarning`.
         which, search_dirs: See :func:`find_js_runtime`.
         find_spec: Module lookup for :func:`has_module`.
+        run: Subprocess runner for :func:`deno_version`.
+        import_module: Importer for :func:`min_deno_version`.
+        check_deno_version: Also run ``deno --version`` and compare it with
+            yt-dlp's minimum. The download preflight turns this off: it spawns
+            a process, which belongs in an explicit check, not in a download.
 
     Returns:
         The problems found; empty when downloads should work.
@@ -180,10 +247,27 @@ def check_requirements(
             "extra_opts={'js_runtimes': {'node': {}}}. "
             f"See {EJS_WIKI_URL}"
         )
+    elif check_deno_version:
+        have, need = deno_version(runtime, run=run), min_deno_version(
+            import_module=import_module
+        )
+        if have is not None and have < need:
+            problems.append(
+                f"Deno {_fmt_version(have)} at {runtime.path} is older than the "
+                f"{_fmt_version(need)} yt-dlp requires, so YouTube downloads will "
+                f"fail. Upgrade it with: {_upgrade_cmd(runtime)}"
+            )
     if warn:
         for p in problems:
             warnings.warn(p, DownloadRequirementWarning, stacklevel=2)
     return problems
+
+
+def _upgrade_cmd(runtime: JsRuntime) -> str:
+    """How to upgrade ``runtime``: ``deno upgrade``, by full path when off ``PATH``."""
+    if runtime.on_path:
+        return DENO_UPGRADE_CMD
+    return f"{runtime.path} upgrade"
 
 
 def yt_dlp_runtime_opts(
@@ -205,7 +289,7 @@ def _preflight_opts() -> tuple[tuple[str, object], ...]:
     A warning filter set to ``error`` must not stop a download, so a warning
     raised as an exception is swallowed here.
     """
-    for problem in check_requirements(warn=False):
+    for problem in check_requirements(warn=False, check_deno_version=False):
         try:
             warnings.warn(problem, DownloadRequirementWarning, stacklevel=4)
         except DownloadRequirementWarning:
