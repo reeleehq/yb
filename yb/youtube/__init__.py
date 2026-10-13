@@ -58,6 +58,7 @@ from yb.youtube.api import (
     update_video_status,
     supersede,
     PRIVACY_STATUSES,
+    VisibilityDropWarning,
 )
 from yb.youtube.stats import (
     video_metadata,
@@ -123,6 +124,7 @@ __all__ = [
     "update_video_status",
     "supersede",
     "PRIVACY_STATUSES",
+    "VisibilityDropWarning",
     "VideoMetadata",
     "CATEGORY_SCIENCE_TECH",
     "CATEGORY_EDUCATION",
