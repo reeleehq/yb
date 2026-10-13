@@ -1,0 +1,42 @@
+yb.download.requirements
+========================
+
+.. automodule:: yb.download.requirements
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      DENO
+      DENO_INSTALL_CMD
+      DENO_INSTALL_ENV
+      YT_DLP_MODULE
+      EJS_MODULE
+      EJS_WIKI_URL
+      JS_RUNTIMES_OPT
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      check_requirements
+      deno_search_dirs
+      find_js_runtime
+      has_ejs_scripts
+      has_module
+      with_runtime_opts
+      yt_dlp_runtime_opts
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      JsRuntime
+   
+   .. rubric:: Exceptions
+
+   .. autosummary::
+   
+      DownloadRequirementWarning
+   

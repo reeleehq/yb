@@ -1,4 +1,4 @@
-> built 2026-10-12 05:28 UTC from d931e1d (main) · yb 0.1.13. Details: build_info.json
+> built 2026-10-13 04:15 UTC from 4f57633 (main) · yb 0.1.14. Details: build_info.json
 
 # index.html.md
 
@@ -51,6 +51,13 @@ pip install 'yb[all]'          # everything
 Everything heavy is an optional extra, and `import yb` never fails for a missing
 one — the error only surfaces when you actually call that feature. You also need
 **ffmpeg** on PATH for media work, and an `ELEVENLABS_API_KEY` for transcription.
+
+### System dependencies
+
+- **ffmpeg** on PATH, for media work.
+- **Deno**, for downloading from YouTube. YouTube makes yt-dlp solve a JavaScript challenge; without a runtime, downloads fail with `No video formats found!`. `yb[download]` depends on `yt-dlp[default]`, which brings the solver scripts; the runtime you install yourself: `curl -fsSL https://deno.land/install.sh | sh` (or `brew install deno`, or `pip install 'yt-dlp[deno]'` into the same environment). Deno is the runtime yt-dlp enables by default; to use another (node, bun), enable it yourself with `extra_opts={'js_runtimes': {'node': {}}}`. The installer puts Deno in `~/.deno/bin` and adds it to PATH only for interactive shells; yb also looks there (and next to the running Python), and passes yt-dlp the path, so cron jobs and services work too. To put it on PATH anyway: `export PATH="$HOME/.deno/bin:$PATH"` in `~/.profile`. See yt-dlp’s [EJS notes](https://github.com/yt-dlp/yt-dlp/wiki/EJS).
+
+Run `yb check` (or `yb.download.check_requirements()`) to see what is missing and how to install it. The first download in a process runs the same check and warns; it never refuses to try.
 
 ## Common tasks
 
@@ -158,7 +165,9 @@ Privacy, and replacing a published video with a re-cut (YouTube cannot swap the 
 from yb.youtube import update_video_status, supersede
 
 update_video_status("VIDEO_ID", privacy_status="public")  # other status fields kept
-supersede("OLD_ID", "NEW_ID", new_privacy="public")  # new takes old's playlist spots; old goes private
+supersede(
+    "OLD_ID", "NEW_ID", new_privacy="public"
+)  # new takes old's playlist spots; old goes private
 ```
 
 ### Read live stats & metadata
@@ -671,6 +680,10 @@ converts only when you ask it to (conversion needs ffmpeg):
 >>> ep = download_youtube_audio(url, audio_format="mp3")
 ```
 
+YouTube downloads need a JavaScript runtime (Deno) and yt-dlp’s solver
+scripts; [`check_requirements()`](_autosummary/yb.download.html.md#yb.download.check_requirements) (or `yb check`) says what’s missing and
+how to install it. The first download in a process runs it and warns.
+
 ### Functions
 
 | [`download_youtube_video`](_autosummary/yb.download.html.md#yb.download.download_youtube_video)(url, \*[, ...])      | Download a YouTube video to `download_dir` (default `~/Downloads`).           |
@@ -681,22 +694,32 @@ converts only when you ask it to (conversion needs ffmpeg):
 | [`youtube_playlist_info`](_autosummary/yb.download.html.md#yb.download.youtube_playlist_info)(url, \*[, ...])       | Fetch a playlist's per-video metadata without downloading.                    |
 | [`default_download_dir`](_autosummary/yb.download.html.md#yb.download.default_download_dir)()                      | Resolve the default download directory (`$YB_DOWNLOAD_DIR` or `~/Downloads`). |
 | [`convert_audio`](_autosummary/yb.download.html.md#yb.download.convert_audio)(src, audio_format, \*[, ...]) | Convert `src` to `audio_format`, returning the resulting path.                |
+| [`check_requirements`](_autosummary/yb.download.html.md#yb.download.check_requirements)(\*[, warn, which, ...])  | Check what YouTube downloads need, and say how to fix what's missing.         |
+| [`find_js_runtime`](_autosummary/yb.download.html.md#yb.download.find_js_runtime)(\*[, which, search_dirs])   | Find Deno on `PATH`, else in its standard install location.                   |
 
 ### Classes
 
-| [`DownloadResult`](_autosummary/yb.download.html.md#yb.download.DownloadResult)(path, info[, sidecars])   | Outcome of a download.   |
-|-------------------------------------------------------------------------------------------|--------------------------|
+| [`DownloadResult`](_autosummary/yb.download.html.md#yb.download.DownloadResult)(path, info[, sidecars])   | Outcome of a download.                 |
+|-------------------------------------------------------------------------------------------|----------------------------------------|
+| [`JsRuntime`](_autosummary/yb.download.html.md#yb.download.JsRuntime)(name, path, on_path)           | A JavaScript runtime found for yt-dlp. |
 
 ### Exceptions
 
-| [`AudioConversionError`](_autosummary/yb.download.html.md#yb.download.AudioConversionError)   | Raised when audio could not be converted to the requested format.   |
-|-------------------------------------------------------------------------|---------------------------------------------------------------------|
+| [`AudioConversionError`](_autosummary/yb.download.html.md#yb.download.AudioConversionError)       | Raised when audio could not be converted to the requested format.   |
+|-----------------------------------------------------------------------------|---------------------------------------------------------------------|
+| [`DownloadRequirementWarning`](_autosummary/yb.download.html.md#yb.download.DownloadRequirementWarning) | A download prerequisite (JS runtime, solver scripts) looks missing. |
 
 ### *exception* yb.download.AudioConversionError
 
 Bases: [`RuntimeError`](https://docs.python.org/3/builtins/exceptions.html#RuntimeError)
 
 Raised when audio could not be converted to the requested format.
+
+### *exception* yb.download.DownloadRequirementWarning
+
+Bases: [`UserWarning`](https://docs.python.org/3/builtins/exceptions.html#UserWarning)
+
+A download prerequisite (JS runtime, solver scripts) looks missing.
 
 ### *class* yb.download.DownloadResult(path, info, sidecars=<factory>)
 
@@ -720,6 +743,40 @@ Map of extra artifacts written (`info_json`, `thumbnail`,
 #### *property* video_id *: [str](https://docs.python.org/3/builtins/stdtypes.html#str)*
 
 The YouTube video id.
+
+### *class* yb.download.JsRuntime(name, path, on_path)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+A JavaScript runtime found for yt-dlp.
+
+#### name
+
+yt-dlp’s key for the runtime (e.g. `"deno"`).
+
+#### path
+
+The executable.
+
+#### on_path
+
+Whether yt-dlp would find it by name on `PATH` unaided.
+
+### yb.download.check_requirements(\*, warn=True, which=<function which>, search_dirs=None, find_spec=<function find_spec>)
+
+Check what YouTube downloads need, and say how to fix what’s missing.
+
+Never raises. Each problem is a message ending with the fix.
+
+* **Parameters:**
+  * **warn** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Also emit each problem as a [`DownloadRequirementWarning`](_autosummary/yb.download.html.md#yb.download.DownloadRequirementWarning).
+  * **which** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – See [`find_js_runtime()`](_autosummary/yb.download.html.md#yb.download.find_js_runtime).
+  * **search_dirs** ([`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – See [`find_js_runtime()`](_autosummary/yb.download.html.md#yb.download.find_js_runtime).
+  * **find_spec** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`object`](https://docs.python.org/3/builtins/functions.html#object) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – Module lookup for `has_module()`.
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
+* **Returns:**
+  The problems found; empty when downloads should work.
 
 ### yb.download.convert_audio(src, audio_format, , output=None, bitrate=None, overwrite=True, extra_ffmpeg_args=())
 
@@ -888,6 +945,19 @@ named `Title (video_id).mp4` in `~/Downloads`.
   A [`DownloadResult`](_autosummary/yb.download.html.md#yb.download.DownloadResult) with the media path, trimmed `info`, and any
   `sidecars` written.
 
+### yb.download.find_js_runtime(\*, which=<function which>, search_dirs=None)
+
+Find Deno on `PATH`, else in its standard install location.
+
+* **Parameters:**
+  * **which** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – `PATH` lookup (injectable for tests).
+  * **search_dirs** ([`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Extra directories to look in when it isn’t on `PATH`
+    (default `deno_search_dirs()`).
+* **Return type:**
+  [`JsRuntime`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.JsRuntime) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+* **Returns:**
+  The runtime found, or `None`.
+
 ### yb.download.youtube_playlist_info(url, , playlist_items=None, flat=True, extra_opts=None)
 
 Fetch a playlist’s per-video metadata without downloading.
@@ -919,8 +989,197 @@ the title/duration/chapters before deciding to download.
 
 ### Modules
 
-| [`youtube`](_autosummary/yb.download.youtube.html.md#module-yb.download.youtube)   | Download YouTube videos (and their metadata) via yt-dlp.   |
-|---------------------------------------------------------------------------------------|------------------------------------------------------------|
+| [`requirements`](_autosummary/yb.download.requirements.html.md#module-yb.download.requirements)   | Preflight for downloading: does yt-dlp have what YouTube now demands?   |
+|-------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------|
+| [`youtube`](_autosummary/yb.download.youtube.html.md#module-yb.download.youtube)             | Download YouTube videos (and their metadata) via yt-dlp.                |
+
+
+# _autosummary/yb.download.requirements.html.md
+
+# yb.download.requirements
+
+Preflight for downloading: does yt-dlp have what YouTube now demands?
+
+YouTube makes yt-dlp solve a JavaScript “n challenge”. Without a solver it
+fails late and cryptically (`No video formats found!`). Solving needs two
+things:
+
+- yt-dlp’s challenge-solver scripts, shipped by `yt-dlp[default]` (the
+  `yt-dlp-ejs` package), which `yb[download]` depends on;
+- a JavaScript runtime. **Deno** is the one yt-dlp enables by default, and the
+  one that works.
+
+Deno’s installer puts it in `~/.deno/bin` and only adds that to `PATH` for
+interactive shells, so a cron job or service often can’t see it. This module
+also looks there, and [`yt_dlp_runtime_opts()`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.yt_dlp_runtime_opts) hands yt-dlp the explicit
+path, so downloads work without touching `PATH`.
+
+```pycon
+>>> from yb.download import check_requirements
+>>> problems = check_requirements()
+>>> print("\n\n".join(problems) or "ready")
+```
+
+Nothing here raises: missing pieces are reported (and, by default, warned) with
+the command that fixes them.
+
+### Module Attributes
+
+| [`DENO`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.DENO)             | The JavaScript runtime yt-dlp enables by default, and the one that works.       |
+|-------------------------------------------------------------------|---------------------------------------------------------------------------------|
+| [`DENO_INSTALL_CMD`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.DENO_INSTALL_CMD) | Deno's official installer.                                                      |
+| [`DENO_INSTALL_ENV`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.DENO_INSTALL_ENV) | Env var Deno's installer honours for its install root (binary in `<root>/bin`). |
+| [`YT_DLP_MODULE`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.YT_DLP_MODULE)    | yt-dlp's import name.                                                           |
+| [`EJS_MODULE`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.EJS_MODULE)       | Module that carries yt-dlp's challenge-solver scripts (from `yt-dlp[default]`). |
+| [`EJS_WIKI_URL`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.EJS_WIKI_URL)     | yt-dlp's notes on the JavaScript challenge.                                     |
+| [`JS_RUNTIMES_OPT`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.JS_RUNTIMES_OPT)  | The yt-dlp option naming JS runtimes (`{"deno": {"path": ...}}`).               |
+
+### Functions
+
+| [`check_requirements`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.check_requirements)(\*[, warn, which, ...])   | Check what YouTube downloads need, and say how to fix what's missing.   |
+|-----------------------------------------------------------------------------------------------|-------------------------------------------------------------------------|
+| [`deno_search_dirs`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.deno_search_dirs)()                           | Where Deno lives when it isn't on `PATH`.                               |
+| [`find_js_runtime`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.find_js_runtime)(\*[, which, search_dirs])    | Find Deno on `PATH`, else in its standard install location.             |
+| [`has_ejs_scripts`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.has_ejs_scripts)(\*[, find_spec])             | Whether yt-dlp's challenge-solver scripts (`yt-dlp-ejs`) are installed. |
+| [`has_module`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.has_module)(name, \*[, find_spec])            | Whether module `name` is importable, without importing it.              |
+| [`with_runtime_opts`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.with_runtime_opts)(opts)                      | `opts` plus the preflight's runtime path, unless `opts` names runtimes. |
+| [`yt_dlp_runtime_opts`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.yt_dlp_runtime_opts)(runtime)                 | yt-dlp options pointing at `runtime` when yt-dlp can't find it alone.   |
+
+### Classes
+
+| [`JsRuntime`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.JsRuntime)(name, path, on_path)   | A JavaScript runtime found for yt-dlp.   |
+|-----------------------------------------------------------------------------------|------------------------------------------|
+
+### Exceptions
+
+| [`DownloadRequirementWarning`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.DownloadRequirementWarning)   | A download prerequisite (JS runtime, solver scripts) looks missing.   |
+|-------------------------------------------------------------------------------|-----------------------------------------------------------------------|
+
+### yb.download.requirements.DENO *= 'deno'*
+
+The JavaScript runtime yt-dlp enables by default, and the one that works.
+
+### yb.download.requirements.DENO_INSTALL_CMD *= 'curl -fsSL https://deno.land/install.sh | sh'*
+
+Deno’s official installer.
+
+### yb.download.requirements.DENO_INSTALL_ENV *= 'DENO_INSTALL'*
+
+Env var Deno’s installer honours for its install root (binary in `<root>/bin`).
+
+### *exception* yb.download.requirements.DownloadRequirementWarning
+
+Bases: [`UserWarning`](https://docs.python.org/3/builtins/exceptions.html#UserWarning)
+
+A download prerequisite (JS runtime, solver scripts) looks missing.
+
+### yb.download.requirements.EJS_MODULE *= 'yt_dlp_ejs'*
+
+Module that carries yt-dlp’s challenge-solver scripts (from `yt-dlp[default]`).
+
+### yb.download.requirements.EJS_WIKI_URL *= 'https://github.com/yt-dlp/yt-dlp/wiki/EJS'*
+
+yt-dlp’s notes on the JavaScript challenge.
+
+### yb.download.requirements.JS_RUNTIMES_OPT *= 'js_runtimes'*
+
+The yt-dlp option naming JS runtimes (`{"deno": {"path": ...}}`).
+
+### *class* yb.download.requirements.JsRuntime(name, path, on_path)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+A JavaScript runtime found for yt-dlp.
+
+#### name
+
+yt-dlp’s key for the runtime (e.g. `"deno"`).
+
+#### path
+
+The executable.
+
+#### on_path
+
+Whether yt-dlp would find it by name on `PATH` unaided.
+
+### yb.download.requirements.YT_DLP_MODULE *= 'yt_dlp'*
+
+yt-dlp’s import name.
+
+### yb.download.requirements.check_requirements(\*, warn=True, which=<function which>, search_dirs=None, find_spec=<function find_spec>)
+
+Check what YouTube downloads need, and say how to fix what’s missing.
+
+Never raises. Each problem is a message ending with the fix.
+
+* **Parameters:**
+  * **warn** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Also emit each problem as a [`DownloadRequirementWarning`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.DownloadRequirementWarning).
+  * **which** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – See [`find_js_runtime()`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.find_js_runtime).
+  * **search_dirs** ([`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – See [`find_js_runtime()`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.find_js_runtime).
+  * **find_spec** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`object`](https://docs.python.org/3/builtins/functions.html#object) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – Module lookup for [`has_module()`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.has_module).
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
+* **Returns:**
+  The problems found; empty when downloads should work.
+
+### yb.download.requirements.deno_search_dirs()
+
+Where Deno lives when it isn’t on `PATH`.
+
+This Python’s scripts dir and its interpreter’s dir (a pip-installed Deno,
+e.g. `yt-dlp[deno]`, in a venv that isn’t activated: yt-dlp looks there
+too), then the installer’s `$DENO_INSTALL/bin` and `~/.deno/bin`.
+
+* **Return type:**
+  [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis)]
+
+### yb.download.requirements.find_js_runtime(\*, which=<function which>, search_dirs=None)
+
+Find Deno on `PATH`, else in its standard install location.
+
+* **Parameters:**
+  * **which** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – `PATH` lookup (injectable for tests).
+  * **search_dirs** ([`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Extra directories to look in when it isn’t on `PATH`
+    (default [`deno_search_dirs()`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.deno_search_dirs)).
+* **Return type:**
+  [`JsRuntime`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.JsRuntime) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+* **Returns:**
+  The runtime found, or `None`.
+
+### yb.download.requirements.has_ejs_scripts(\*, find_spec=<function find_spec>)
+
+Whether yt-dlp’s challenge-solver scripts (`yt-dlp-ejs`) are installed.
+
+* **Return type:**
+  [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
+
+### yb.download.requirements.has_module(name, \*, find_spec=<function find_spec>)
+
+Whether module `name` is importable, without importing it.
+
+* **Return type:**
+  [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
+
+### yb.download.requirements.with_runtime_opts(opts)
+
+`opts` plus the preflight’s runtime path, unless `opts` names runtimes.
+
+The first call per process runs [`check_requirements()`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.check_requirements) (warning, never
+raising). An explicit `js_runtimes` in `opts` always wins, and skips the
+check: the caller has chosen a runtime.
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
+
+### yb.download.requirements.yt_dlp_runtime_opts(runtime)
+
+yt-dlp options pointing at `runtime` when yt-dlp can’t find it alone.
+
+Empty when there’s nothing to add (no runtime, or it’s already on `PATH`).
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]]
 
 
 # _autosummary/yb.download.youtube.html.md
@@ -3812,16 +4071,18 @@ Fetch a video’s live metadata & engagement numbers.
 
 # About this build
 
-This documentation was built on **2026-10-12 05:28 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/d931e1d84a809394aed6da841327f43479ea202b"><code>d931e1d</code></a> on branch <code>main</code>, for **yb 0.1.13** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-10-13 04:15 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/4f576331f98c1334a0a25fa02e69a891f4c0b6d7"><code>4f57633</code></a> on branch <code>main</code>, for **yb 0.1.14** (from <code>pyproject.toml</code>).
 
-#### NOTE
-Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
+#### WARNING
+The documentation and the package may be misaligned:
+
+- The documented version (0.1.14) is behind the latest release on PyPI (0.1.15): `pip install yb` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                    |
 |---------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/yb/commit/d931e1d84a809394aed6da841327f43479ea202b"><code>d931e1d84a809394aed6da841327f43479ea202b</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/yb/commit/4f576331f98c1334a0a25fa02e69a891f4c0b6d7"><code>4f576331f98c1334a0a25fa02e69a891f4c0b6d7</code></a> |
 | Branch              | <code>main</code>                                                                                                                                  |
 | Tags at this commit | none                                                                                                                                               |
 | Working tree        | clean                                                                                                                                              |
@@ -3832,15 +4093,15 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/yb</code>                                                                   |
-| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/38207906215">38207906215</a>          |
+| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/38345395351">38345395351</a>          |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>d931e1d84a809394aed6da841327f43479ea202b</code> (in the history of the built commit) |
+| Event commit | <code>4f576331f98c1334a0a25fa02e69a891f4c0b6d7</code> (in the history of the built commit) |
 
 ## Tools
 
 |          |         |
 |----------|---------|
-| epythet  | 0.2.12  |
+| epythet  | 0.2.13  |
 | Sphinx   | 9.1.0   |
 | docutils | 0.22.4  |
 | Python   | 3.12.15 |
@@ -3859,14 +4120,14 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/yb/0.1.13/">0.1.13</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/yb/0.1.15/">0.1.15</a>, newer than the documented version (0.1.14).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/yb && cd yb
-git checkout d931e1d84a809394aed6da841327f43479ea202b
-pip install "epythet==0.2.12"
+git checkout 4f576331f98c1334a0a25fa02e69a891f4c0b6d7
+pip install "epythet==0.2.13"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```
 

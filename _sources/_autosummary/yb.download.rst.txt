@@ -15,18 +15,22 @@ yb.download
       youtube_playlist_info
       default_download_dir
       convert_audio
+      check_requirements
+      find_js_runtime
    
    .. rubric:: Classes
 
    .. autosummary::
    
       DownloadResult
+      JsRuntime
    
    .. rubric:: Exceptions
 
    .. autosummary::
    
       AudioConversionError
+      DownloadRequirementWarning
    
 .. rubric:: Modules
 
@@ -34,4 +38,5 @@ yb.download
    :toctree:
    :recursive:
 
+   requirements
    youtube

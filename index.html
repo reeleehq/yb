@@ -208,6 +208,7 @@
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/yb.config.html">yb.config</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/yb.content.html">yb.content</a></li>
 <li class="toctree-l3 has-children"><a class="reference internal" href="_autosummary/yb.download.html">yb.download</a><input aria-label="Toggle navigation of yb.download" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="_autosummary/yb.download.requirements.html">yb.download.requirements</a></li>
 <li class="toctree-l4"><a class="reference internal" href="_autosummary/yb.download.youtube.html">yb.download.youtube</a></li>
 </ul>
 </li>
@@ -319,6 +320,14 @@ pip<span class="w"> </span>install<span class="w"> </span><span class="s1">'yb[a
 <p>Everything heavy is an optional extra, and <code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">yb</span></code> never fails for a missing
 one — the error only surfaces when you actually call that feature. You also need
 <strong>ffmpeg</strong> on PATH for media work, and an <code class="docutils literal notranslate"><span class="pre">ELEVENLABS_API_KEY</span></code> for transcription.</p>
+<section id="system-dependencies">
+<h3>System dependencies<a class="headerlink" href="#system-dependencies" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><strong>ffmpeg</strong> on PATH, for media work.</p></li>
+<li><p><strong>Deno</strong>, for downloading from YouTube. YouTube makes yt-dlp solve a JavaScript challenge; without a runtime, downloads fail with <code class="docutils literal notranslate"><span class="pre">No</span> <span class="pre">video</span> <span class="pre">formats</span> <span class="pre">found!</span></code>. <code class="docutils literal notranslate"><span class="pre">yb[download]</span></code> depends on <code class="docutils literal notranslate"><span class="pre">yt-dlp[default]</span></code>, which brings the solver scripts; the runtime you install yourself: <code class="docutils literal notranslate"><span class="pre">curl</span> <span class="pre">-fsSL</span> <span class="pre">https://deno.land/install.sh</span> <span class="pre">|</span> <span class="pre">sh</span></code> (or <code class="docutils literal notranslate"><span class="pre">brew</span> <span class="pre">install</span> <span class="pre">deno</span></code>, or <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">'yt-dlp[deno]'</span></code> into the same environment). Deno is the runtime yt-dlp enables by default; to use another (node, bun), enable it yourself with <code class="docutils literal notranslate"><span class="pre">extra_opts={'js_runtimes':</span> <span class="pre">{'node':</span> <span class="pre">{}}}</span></code>. The installer puts Deno in <code class="docutils literal notranslate"><span class="pre">~/.deno/bin</span></code> and adds it to PATH only for interactive shells; yb also looks there (and next to the running Python), and passes yt-dlp the path, so cron jobs and services work too. To put it on PATH anyway: <code class="docutils literal notranslate"><span class="pre">export</span> <span class="pre">PATH=&quot;$HOME/.deno/bin:$PATH&quot;</span></code> in <code class="docutils literal notranslate"><span class="pre">~/.profile</span></code>. See yt-dlp’s <a class="reference external" href="https://github.com/yt-dlp/yt-dlp/wiki/EJS">EJS notes</a>.</p></li>
+</ul>
+<p>Run <code class="docutils literal notranslate"><span class="pre">yb</span> <span class="pre">check</span></code> (or <code class="docutils literal notranslate"><span class="pre">yb.download.check_requirements()</span></code>) to see what is missing and how to install it. The first download in a process runs the same check and warns; it never refuses to try.</p>
+</section>
 </section>
 <section id="common-tasks">
 <h2>Common tasks<a class="headerlink" href="#common-tasks" title="Link to this heading">¶</a></h2>
@@ -417,7 +426,9 @@ interactive chapters. Short clips simply get none.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">yb.youtube</span><span class="w"> </span><span class="kn">import</span> <span class="n">update_video_status</span><span class="p">,</span> <span class="n">supersede</span>
 
 <span class="n">update_video_status</span><span class="p">(</span><span class="s2">"VIDEO_ID"</span><span class="p">,</span> <span class="n">privacy_status</span><span class="o">=</span><span class="s2">"public"</span><span class="p">)</span>  <span class="c1"># other status fields kept</span>
-<span class="n">supersede</span><span class="p">(</span><span class="s2">"OLD_ID"</span><span class="p">,</span> <span class="s2">"NEW_ID"</span><span class="p">,</span> <span class="n">new_privacy</span><span class="o">=</span><span class="s2">"public"</span><span class="p">)</span>  <span class="c1"># new takes old's playlist spots; old goes private</span>
+<span class="n">supersede</span><span class="p">(</span>
+    <span class="s2">"OLD_ID"</span><span class="p">,</span> <span class="s2">"NEW_ID"</span><span class="p">,</span> <span class="n">new_privacy</span><span class="o">=</span><span class="s2">"public"</span>
+<span class="p">)</span>  <span class="c1"># new takes old's playlist spots; old goes private</span>
 </pre></div>
 </div>
 </section>
@@ -586,7 +597,7 @@ it, and the <code class="docutils literal notranslate"><span class="pre">music</
 </section>
 </section>
 
-<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-10-12 05:28 UTC from <a href="https://github.com/reeleehq/yb/commit/d931e1d84a809394aed6da841327f43479ea202b">d931e1d</a> (main) · yb 0.1.13 · <a href="about-this-build.html">about this build</a></p>
+<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-10-13 04:15 UTC from <a href="https://github.com/reeleehq/yb/commit/4f576331f98c1334a0a25fa02e69a891f4c0b6d7">4f57633</a> (main) · yb 0.1.14 · <a href="about-this-build.html">about this build</a></p>
         </article>
       </div>
       <footer>
@@ -630,7 +641,10 @@ it, and the <code class="docutils literal notranslate"><span class="pre">music</
             <ul>
 <li><a class="reference internal" href="#">yb</a><ul>
 <li><a class="reference internal" href="#why">Why</a></li>
-<li><a class="reference internal" href="#install">Install</a></li>
+<li><a class="reference internal" href="#install">Install</a><ul>
+<li><a class="reference internal" href="#system-dependencies">System dependencies</a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#common-tasks">Common tasks</a><ul>
 <li><a class="reference internal" href="#download">Download</a></li>
 <li><a class="reference internal" href="#publish-to-youtube">Publish to YouTube</a></li>
@@ -653,7 +667,7 @@ it, and the <code class="docutils literal notranslate"><span class="pre">music</
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=1adce326"></script>
+</div><script src="_static/documentation_options.js?v=f2ffa296"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>

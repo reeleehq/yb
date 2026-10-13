@@ -48,6 +48,13 @@ Everything heavy is an optional extra, and `import yb` never fails for a missing
 one — the error only surfaces when you actually call that feature. You also need
 **ffmpeg** on PATH for media work, and an `ELEVENLABS_API_KEY` for transcription.
 
+### System dependencies
+
+- **ffmpeg** on PATH, for media work.
+- **Deno**, for downloading from YouTube. YouTube makes yt-dlp solve a JavaScript challenge; without a runtime, downloads fail with `No video formats found!`. `yb[download]` depends on `yt-dlp[default]`, which brings the solver scripts; the runtime you install yourself: `curl -fsSL https://deno.land/install.sh | sh` (or `brew install deno`, or `pip install 'yt-dlp[deno]'` into the same environment). Deno is the runtime yt-dlp enables by default; to use another (node, bun), enable it yourself with `extra_opts={'js_runtimes': {'node': {}}}`. The installer puts Deno in `~/.deno/bin` and adds it to PATH only for interactive shells; yb also looks there (and next to the running Python), and passes yt-dlp the path, so cron jobs and services work too. To put it on PATH anyway: `export PATH="$HOME/.deno/bin:$PATH"` in `~/.profile`. See yt-dlp’s [EJS notes](https://github.com/yt-dlp/yt-dlp/wiki/EJS).
+
+Run `yb check` (or `yb.download.check_requirements()`) to see what is missing and how to install it. The first download in a process runs the same check and warns; it never refuses to try.
+
 ## Common tasks
 
 ### Download
@@ -154,7 +161,9 @@ Privacy, and replacing a published video with a re-cut (YouTube cannot swap the 
 from yb.youtube import update_video_status, supersede
 
 update_video_status("VIDEO_ID", privacy_status="public")  # other status fields kept
-supersede("OLD_ID", "NEW_ID", new_privacy="public")  # new takes old's playlist spots; old goes private
+supersede(
+    "OLD_ID", "NEW_ID", new_privacy="public"
+)  # new takes old's playlist spots; old goes private
 ```
 
 ### Read live stats & metadata

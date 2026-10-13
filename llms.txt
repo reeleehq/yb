@@ -12,6 +12,7 @@
 - [yb.config](_autosummary/yb.config.html.md): User configuration for &#96;yb&#96; publishing defaults.
 - [yb.content](_autosummary/yb.content.html.md): Target-agnostic publication content: prepare it once, publish anywhere.
 - [yb.download](_autosummary/yb.download.html.md): Media download (yt-dlp) — fetch videos, audio, and their metadata.
+- [yb.download.requirements](_autosummary/yb.download.requirements.html.md): Preflight for downloading: does yt-dlp have what YouTube now demands?
 - [yb.download.youtube](_autosummary/yb.download.youtube.html.md): Download YouTube videos (and their metadata) via yt-dlp.
 - [yb.podcast](_autosummary/yb.podcast.html.md): Podcast publishing: show notes, chapters, cover video, and RSS.
 - [yb.podcast.chapters](_autosummary/yb.podcast.chapters.html.md): Podcast chapter markers: Podlove Simple Chapters (PSC) + MP3 ID3 chapters.
@@ -30,7 +31,7 @@
 - [yb.youtube.search](_autosummary/yb.youtube.search.html.md): Search YouTube for videos, with engagement numbers to rank them by.
 - [yb.youtube.stats](_autosummary/yb.youtube.stats.html.md): Read live video metadata &amp; engagement numbers from the YouTube Data API v3.
 - [For AI agents](ai-agents.html.md): &#96;yb&#96; ships artifacts for coding agents alongside its code. This page lists
-- [About this build](about-this-build.html.md): This documentation was built on &#42;&#42;2026-10-12 05:28 UTC&#42;&#42; from commit &lt;a href="https://github.com/ree...
+- [About this build](about-this-build.html.md): This documentation was built on &#42;&#42;2026-10-13 04:15 UTC&#42;&#42; from commit &lt;a href="https://github.com/ree...
 
 ## Optional
 

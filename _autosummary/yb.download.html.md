@@ -20,6 +20,10 @@ converts only when you ask it to (conversion needs ffmpeg):
 >>> ep = download_youtube_audio(url, audio_format="mp3")
 ```
 
+YouTube downloads need a JavaScript runtime (Deno) and yt-dlp’s solver
+scripts; [`check_requirements()`](#yb.download.check_requirements) (or `yb check`) says what’s missing and
+how to install it. The first download in a process runs it and warns.
+
 ### Functions
 
 | [`download_youtube_video`](#yb.download.download_youtube_video)(url, \*[, ...])      | Download a YouTube video to `download_dir` (default `~/Downloads`).           |
@@ -30,22 +34,32 @@ converts only when you ask it to (conversion needs ffmpeg):
 | [`youtube_playlist_info`](#yb.download.youtube_playlist_info)(url, \*[, ...])       | Fetch a playlist's per-video metadata without downloading.                    |
 | [`default_download_dir`](#yb.download.default_download_dir)()                      | Resolve the default download directory (`$YB_DOWNLOAD_DIR` or `~/Downloads`). |
 | [`convert_audio`](#yb.download.convert_audio)(src, audio_format, \*[, ...]) | Convert `src` to `audio_format`, returning the resulting path.                |
+| [`check_requirements`](#yb.download.check_requirements)(\*[, warn, which, ...])  | Check what YouTube downloads need, and say how to fix what's missing.         |
+| [`find_js_runtime`](#yb.download.find_js_runtime)(\*[, which, search_dirs])   | Find Deno on `PATH`, else in its standard install location.                   |
 
 ### Classes
 
-| [`DownloadResult`](#yb.download.DownloadResult)(path, info[, sidecars])   | Outcome of a download.   |
-|-------------------------------------------------------------------------------------------|--------------------------|
+| [`DownloadResult`](#yb.download.DownloadResult)(path, info[, sidecars])   | Outcome of a download.                 |
+|-------------------------------------------------------------------------------------------|----------------------------------------|
+| [`JsRuntime`](#yb.download.JsRuntime)(name, path, on_path)           | A JavaScript runtime found for yt-dlp. |
 
 ### Exceptions
 
-| [`AudioConversionError`](#yb.download.AudioConversionError)   | Raised when audio could not be converted to the requested format.   |
-|-------------------------------------------------------------------------|---------------------------------------------------------------------|
+| [`AudioConversionError`](#yb.download.AudioConversionError)       | Raised when audio could not be converted to the requested format.   |
+|-----------------------------------------------------------------------------|---------------------------------------------------------------------|
+| [`DownloadRequirementWarning`](#yb.download.DownloadRequirementWarning) | A download prerequisite (JS runtime, solver scripts) looks missing. |
 
 ### *exception* yb.download.AudioConversionError
 
 Bases: [`RuntimeError`](https://docs.python.org/3/builtins/exceptions.html#RuntimeError)
 
 Raised when audio could not be converted to the requested format.
+
+### *exception* yb.download.DownloadRequirementWarning
+
+Bases: [`UserWarning`](https://docs.python.org/3/builtins/exceptions.html#UserWarning)
+
+A download prerequisite (JS runtime, solver scripts) looks missing.
 
 ### *class* yb.download.DownloadResult(path, info, sidecars=<factory>)
 
@@ -69,6 +83,40 @@ Map of extra artifacts written (`info_json`, `thumbnail`,
 #### *property* video_id *: [str](https://docs.python.org/3/builtins/stdtypes.html#str)*
 
 The YouTube video id.
+
+### *class* yb.download.JsRuntime(name, path, on_path)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+A JavaScript runtime found for yt-dlp.
+
+#### name
+
+yt-dlp’s key for the runtime (e.g. `"deno"`).
+
+#### path
+
+The executable.
+
+#### on_path
+
+Whether yt-dlp would find it by name on `PATH` unaided.
+
+### yb.download.check_requirements(\*, warn=True, which=<function which>, search_dirs=None, find_spec=<function find_spec>)
+
+Check what YouTube downloads need, and say how to fix what’s missing.
+
+Never raises. Each problem is a message ending with the fix.
+
+* **Parameters:**
+  * **warn** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Also emit each problem as a [`DownloadRequirementWarning`](#yb.download.DownloadRequirementWarning).
+  * **which** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – See [`find_js_runtime()`](#yb.download.find_js_runtime).
+  * **search_dirs** ([`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – See [`find_js_runtime()`](#yb.download.find_js_runtime).
+  * **find_spec** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`object`](https://docs.python.org/3/builtins/functions.html#object) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – Module lookup for `has_module()`.
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
+* **Returns:**
+  The problems found; empty when downloads should work.
 
 ### yb.download.convert_audio(src, audio_format, , output=None, bitrate=None, overwrite=True, extra_ffmpeg_args=())
 
@@ -237,6 +285,19 @@ named `Title (video_id).mp4` in `~/Downloads`.
   A [`DownloadResult`](#yb.download.DownloadResult) with the media path, trimmed `info`, and any
   `sidecars` written.
 
+### yb.download.find_js_runtime(\*, which=<function which>, search_dirs=None)
+
+Find Deno on `PATH`, else in its standard install location.
+
+* **Parameters:**
+  * **which** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – `PATH` lookup (injectable for tests).
+  * **search_dirs** ([`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Extra directories to look in when it isn’t on `PATH`
+    (default `deno_search_dirs()`).
+* **Return type:**
+  [`JsRuntime`](yb.download.requirements.html.md#yb.download.requirements.JsRuntime) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+* **Returns:**
+  The runtime found, or `None`.
+
 ### yb.download.youtube_playlist_info(url, , playlist_items=None, flat=True, extra_opts=None)
 
 Fetch a playlist’s per-video metadata without downloading.
@@ -268,5 +329,6 @@ the title/duration/chapters before deciding to download.
 
 ### Modules
 
-| [`youtube`](yb.download.youtube.html.md#module-yb.download.youtube)   | Download YouTube videos (and their metadata) via yt-dlp.   |
-|---------------------------------------------------------------------------------------|------------------------------------------------------------|
+| [`requirements`](yb.download.requirements.html.md#module-yb.download.requirements)   | Preflight for downloading: does yt-dlp have what YouTube now demands?   |
+|-------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------|
+| [`youtube`](yb.download.youtube.html.md#module-yb.download.youtube)             | Download YouTube videos (and their metadata) via yt-dlp.                |
