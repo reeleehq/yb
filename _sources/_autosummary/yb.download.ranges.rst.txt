@@ -1,0 +1,30 @@
+yb.download.ranges
+==================
+
+.. automodule:: yb.download.ranges
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      Timestamp
+      DOWNLOAD_RANGES_OPT
+      INFO_RANGE_KEY
+      MAX_TIMESTAMP_SECONDS
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      default_range_func
+      parse_timestamp
+      range_opts
+      ranged_filename_template
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      TimeRange
+   

@@ -205,6 +205,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../../../_autosummary/yb.config.html">yb.config</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../_autosummary/yb.content.html">yb.content</a></li>
 <li class="toctree-l3 has-children"><a class="reference internal" href="../../../_autosummary/yb.download.html">yb.download</a><input aria-label="Toggle navigation of yb.download" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.ranges.html">yb.download.ranges</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.requirements.html">yb.download.requirements</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.youtube.html">yb.download.youtube</a></li>
 </ul>
@@ -285,6 +286,13 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Literal</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">yb.download.ranges</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">INFO_RANGE_KEY</span><span class="p">,</span>
+    <span class="n">TimeRange</span><span class="p">,</span>
+    <span class="n">Timestamp</span><span class="p">,</span>
+    <span class="n">range_opts</span><span class="p">,</span>
+    <span class="n">ranged_filename_template</span><span class="p">,</span>
+<span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">yb.download.requirements</span><span class="w"> </span><span class="kn">import</span> <span class="n">with_runtime_opts</span>
 
 <span class="n">PathLike</span> <span class="o">=</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span>
@@ -398,6 +406,9 @@
     <span class="n">subtitle_langs</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"en"</span><span class="p">,),</span>
     <span class="n">quiet</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">extra_opts</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">start</span><span class="p">:</span> <span class="n">Timestamp</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">end</span><span class="p">:</span> <span class="n">Timestamp</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">precise_cuts</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DownloadResult</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Download a YouTube video to ``download_dir`` (default ``~/Downloads``).</span>
 
@@ -421,11 +432,29 @@
 <span class="sd">        subtitle_langs: Subtitle languages to fetch when subtitles are enabled.</span>
 <span class="sd">        quiet: Suppress yt-dlp console output.</span>
 <span class="sd">        extra_opts: Any additional raw yt-dlp options (merged last, so they win).</span>
+<span class="sd">        start, end: Download only this span: seconds (``7.9``) or a timestamp</span>
+<span class="sd">            (``"0:07.9"``, ``"1:02:03"``). Either may be given alone (``end``</span>
+<span class="sd">            only = from the beginning; ``start`` only = to the end). The span</span>
+<span class="sd">            is recorded in ``info["download_range"]`` as ``{"start", "end"}``</span>
+<span class="sd">            seconds (``end`` is ``None`` for "to the end"), and, with the</span>
+<span class="sd">            default ``filename_template``, in the filename (``Title (id)</span>
+<span class="sd">            [7.9-8.75].mp4``) so a clip never collides with the full video.</span>
+<span class="sd">            Needs ffmpeg (see :mod:`yb.download.ranges`).</span>
+<span class="sd">        precise_cuts: With ``start``/``end``, re-encode at the cuts for</span>
+<span class="sd">            frame-accurate bounds (slower) instead of cutting at keyframes.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        A :class:`DownloadResult` with the media path, trimmed ``info``, and any</span>
 <span class="sd">        ``sidecars`` written.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: If ``start``/``end`` is not a timestamp, or ``end`` is not</span>
+<span class="sd">            after ``start``. Raised before anything is fetched or written.</span>
 <span class="sd">    """</span>
+    <span class="n">time_range</span> <span class="o">=</span> <span class="n">TimeRange</span><span class="o">.</span><span class="n">of</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="n">end</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">time_range</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">precise_cuts</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"precise_cuts needs a start and/or end to cut at"</span><span class="p">)</span>
+
     <span class="kn">from</span><span class="w"> </span><span class="nn">yt_dlp</span><span class="w"> </span><span class="kn">import</span> <span class="n">YoutubeDL</span>
 
     <span class="n">out_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">download_dir</span><span class="p">)</span> <span class="k">if</span> <span class="n">download_dir</span> <span class="k">else</span> <span class="n">default_download_dir</span><span class="p">()</span>
@@ -445,6 +474,15 @@
     <span class="p">}</span>
     <span class="k">if</span> <span class="n">merge_to</span><span class="p">:</span>
         <span class="n">opts</span><span class="p">[</span><span class="s2">"merge_output_format"</span><span class="p">]</span> <span class="o">=</span> <span class="n">merge_to</span>
+    <span class="k">if</span> <span class="n">time_range</span><span class="p">:</span>
+        <span class="n">opts</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">range_opts</span><span class="p">(</span><span class="n">time_range</span><span class="p">,</span> <span class="n">precise_cuts</span><span class="o">=</span><span class="n">precise_cuts</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">filename_template</span> <span class="o">==</span> <span class="n">DEFAULT_OUTTMPL</span><span class="p">:</span>
+            <span class="n">opts</span><span class="p">[</span><span class="s2">"outtmpl"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span>
+                <span class="n">out_dir</span>
+                <span class="o">/</span> <span class="n">ranged_filename_template</span><span class="p">(</span>
+                    <span class="n">filename_template</span><span class="p">,</span> <span class="n">time_range</span><span class="p">,</span> <span class="n">precise_cuts</span><span class="o">=</span><span class="n">precise_cuts</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
     <span class="n">opts</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">extra_opts</span> <span class="ow">or</span> <span class="p">{})</span>
 
     <span class="k">with</span> <span class="n">YoutubeDL</span><span class="p">(</span><span class="n">with_runtime_opts</span><span class="p">(</span><span class="n">opts</span><span class="p">))</span> <span class="k">as</span> <span class="n">ydl</span><span class="p">:</span>
@@ -459,7 +497,10 @@
         <span class="n">description</span><span class="o">=</span><span class="n">write_description</span><span class="p">,</span>
         <span class="n">subtitles</span><span class="o">=</span><span class="n">write_subtitles</span> <span class="ow">or</span> <span class="n">write_auto_subtitles</span><span class="p">,</span>
     <span class="p">)</span>
-    <span class="k">return</span> <span class="n">DownloadResult</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="n">info</span><span class="o">=</span><span class="n">_trim_info</span><span class="p">(</span><span class="n">info</span><span class="p">),</span> <span class="n">sidecars</span><span class="o">=</span><span class="n">sidecars</span><span class="p">)</span></div>
+    <span class="n">trimmed</span> <span class="o">=</span> <span class="n">_trim_info</span><span class="p">(</span><span class="n">info</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">time_range</span> <span class="ow">and</span> <span class="s2">"download_ranges"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="n">extra_opts</span> <span class="ow">or</span> <span class="p">{}):</span>
+        <span class="n">trimmed</span><span class="p">[</span><span class="n">INFO_RANGE_KEY</span><span class="p">]</span> <span class="o">=</span> <span class="n">time_range</span><span class="o">.</span><span class="n">as_info</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">DownloadResult</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="n">info</span><span class="o">=</span><span class="n">trimmed</span><span class="p">,</span> <span class="n">sidecars</span><span class="o">=</span><span class="n">sidecars</span><span class="p">)</span></div>
 
 
 
@@ -483,6 +524,9 @@
     <span class="n">subtitle_langs</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"en"</span><span class="p">,),</span>
     <span class="n">quiet</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">extra_opts</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">start</span><span class="p">:</span> <span class="n">Timestamp</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">end</span><span class="p">:</span> <span class="n">Timestamp</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">precise_cuts</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DownloadResult</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Download only a video's audio (no video stream).</span>
 
@@ -523,6 +567,10 @@
 <span class="sd">        subtitle_langs: Subtitle languages to fetch when subtitles are enabled.</span>
 <span class="sd">        quiet: Suppress yt-dlp console output.</span>
 <span class="sd">        extra_opts: Any additional raw yt-dlp options (merged last, so they win).</span>
+<span class="sd">        start, end, precise_cuts: Download only a span, as in</span>
+<span class="sd">            :func:`download_youtube_video`:</span>
+
+<span class="sd">                &gt;&gt;&gt; download_youtube_audio(url, start="0:07.9", end="0:08.75")  # doctest: +SKIP</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        A :class:`DownloadResult` whose ``path`` is the audio file — converted</span>
@@ -552,6 +600,9 @@
         <span class="n">subtitle_langs</span><span class="o">=</span><span class="n">subtitle_langs</span><span class="p">,</span>
         <span class="n">quiet</span><span class="o">=</span><span class="n">quiet</span><span class="p">,</span>
         <span class="n">extra_opts</span><span class="o">=</span><span class="n">extra_opts</span><span class="p">,</span>
+        <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">,</span>
+        <span class="n">end</span><span class="o">=</span><span class="n">end</span><span class="p">,</span>
+        <span class="n">precise_cuts</span><span class="o">=</span><span class="n">precise_cuts</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="k">if</span> <span class="n">audio_format</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">result</span>
@@ -811,18 +862,23 @@
     <span class="n">subtitles</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
     <span class="n">stem</span> <span class="o">=</span> <span class="n">media_path</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">""</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">sibling</span><span class="p">(</span><span class="n">ext</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+        <span class="c1"># Not ``stem.with_suffix``: a dot in the name ("... [7.9-8.75]") is not an extension.</span>
+        <span class="k">return</span> <span class="n">stem</span><span class="o">.</span><span class="n">with_name</span><span class="p">(</span><span class="n">stem</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="n">ext</span><span class="p">)</span>
+
     <span class="n">out</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="k">if</span> <span class="n">info_json</span><span class="p">:</span>
-        <span class="n">cand</span> <span class="o">=</span> <span class="n">stem</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">".info.json"</span><span class="p">)</span>
+        <span class="n">cand</span> <span class="o">=</span> <span class="n">sibling</span><span class="p">(</span><span class="s2">".info.json"</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">cand</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
             <span class="n">out</span><span class="p">[</span><span class="s2">"info_json"</span><span class="p">]</span> <span class="o">=</span> <span class="n">cand</span>
     <span class="k">if</span> <span class="n">description</span><span class="p">:</span>
-        <span class="n">cand</span> <span class="o">=</span> <span class="n">stem</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">".description"</span><span class="p">)</span>
+        <span class="n">cand</span> <span class="o">=</span> <span class="n">sibling</span><span class="p">(</span><span class="s2">".description"</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">cand</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
             <span class="n">out</span><span class="p">[</span><span class="s2">"description"</span><span class="p">]</span> <span class="o">=</span> <span class="n">cand</span>
     <span class="k">if</span> <span class="n">thumbnail</span><span class="p">:</span>
         <span class="k">for</span> <span class="n">ext</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">".jpg"</span><span class="p">,</span> <span class="s2">".webp"</span><span class="p">,</span> <span class="s2">".png"</span><span class="p">):</span>
-            <span class="n">cand</span> <span class="o">=</span> <span class="n">stem</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="n">ext</span><span class="p">)</span>
+            <span class="n">cand</span> <span class="o">=</span> <span class="n">sibling</span><span class="p">(</span><span class="n">ext</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">cand</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
                 <span class="n">out</span><span class="p">[</span><span class="s2">"thumbnail"</span><span class="p">]</span> <span class="o">=</span> <span class="n">cand</span>
                 <span class="k">break</span>
@@ -880,7 +936,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=5bbfd6f0"></script>
+</div><script src="../../../_static/documentation_options.js?v=d24e387d"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

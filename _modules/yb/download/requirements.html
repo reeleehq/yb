@@ -205,6 +205,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../../../_autosummary/yb.config.html">yb.config</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../_autosummary/yb.content.html">yb.content</a></li>
 <li class="toctree-l3 has-children"><a class="reference internal" href="../../../_autosummary/yb.download.html">yb.download</a><input aria-label="Toggle navigation of yb.download" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.ranges.html">yb.download.ranges</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.requirements.html">yb.download.requirements</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.youtube.html">yb.download.youtube</a></li>
 </ul>
@@ -543,8 +544,9 @@
             <span class="sa">f</span><span class="s2">"See </span><span class="si">{</span><span class="n">EJS_WIKI_URL</span><span class="si">}</span><span class="s2">"</span>
         <span class="p">)</span>
     <span class="k">elif</span> <span class="n">check_deno_version</span><span class="p">:</span>
-        <span class="n">have</span><span class="p">,</span> <span class="n">need</span> <span class="o">=</span> <span class="n">deno_version</span><span class="p">(</span><span class="n">runtime</span><span class="p">,</span> <span class="n">run</span><span class="o">=</span><span class="n">run</span><span class="p">),</span> <span class="n">min_deno_version</span><span class="p">(</span>
-            <span class="n">import_module</span><span class="o">=</span><span class="n">import_module</span>
+        <span class="n">have</span><span class="p">,</span> <span class="n">need</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">deno_version</span><span class="p">(</span><span class="n">runtime</span><span class="p">,</span> <span class="n">run</span><span class="o">=</span><span class="n">run</span><span class="p">),</span>
+            <span class="n">min_deno_version</span><span class="p">(</span><span class="n">import_module</span><span class="o">=</span><span class="n">import_module</span><span class="p">),</span>
         <span class="p">)</span>
         <span class="k">if</span> <span class="n">have</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">have</span> <span class="o">&lt;</span> <span class="n">need</span><span class="p">:</span>
             <span class="n">problems</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
@@ -637,7 +639,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=5bbfd6f0"></script>
+</div><script src="../../../_static/documentation_options.js?v=d24e387d"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

@@ -2,18 +2,20 @@
 
 # About this build
 
-This documentation was built on **2026-10-13 06:44 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/b6bacc5f29f0fdd8c6244c52fa85c05a151bdd10"><code>b6bacc5</code></a> on branch <code>main</code>, for **yb 0.1.15** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-10-13 06:46 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/53498b10457699755987dcf78b78c2c7c556ca9d"><code>53498b1</code></a> on branch <code>main</code>, for **yb 0.1.17** (from <code>pyproject.toml</code>).
 
-#### NOTE
-Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
+#### WARNING
+The documentation and the package may be misaligned:
+
+- The documented version (0.1.17) is ahead of the latest release on PyPI (0.1.15): these docs describe unreleased code.
 
 ## Source
 
 |                     |                                                                                                                                                    |
 |---------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/yb/commit/b6bacc5f29f0fdd8c6244c52fa85c05a151bdd10"><code>b6bacc5f29f0fdd8c6244c52fa85c05a151bdd10</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/yb/commit/53498b10457699755987dcf78b78c2c7c556ca9d"><code>53498b10457699755987dcf78b78c2c7c556ca9d</code></a> |
 | Branch              | <code>main</code>                                                                                                                                  |
-| Tags at this commit | none                                                                                                                                               |
+| Tags at this commit | <code>0.1.17</code>                                                                                                                                |
 | Working tree        | clean                                                                                                                                              |
 | Remote              | <code>https://github.com/reeleehq/yb</code>                                                                                                        |
 
@@ -22,9 +24,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/yb</code>                                                                   |
-| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/38358202320">38358202320</a>          |
+| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/38358406903">38358406903</a>          |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>b6bacc5f29f0fdd8c6244c52fa85c05a151bdd10</code> (in the history of the built commit) |
+| Event commit | <code>1a75368352f4b5f2954d2c74bb68a85991aff859</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -49,13 +51,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/yb/0.1.15/">0.1.15</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/yb/0.1.15/">0.1.15</a>, older than the documented version (0.1.17).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/yb && cd yb
-git checkout b6bacc5f29f0fdd8c6244c52fa85c05a151bdd10
+git checkout 53498b10457699755987dcf78b78c2c7c556ca9d
 pip install "epythet==0.2.14"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

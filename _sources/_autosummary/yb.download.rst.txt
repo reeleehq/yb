@@ -17,6 +17,7 @@ yb.download
       convert_audio
       check_requirements
       find_js_runtime
+      parse_timestamp
    
    .. rubric:: Classes
 
@@ -24,6 +25,7 @@ yb.download
    
       DownloadResult
       JsRuntime
+      TimeRange
    
    .. rubric:: Exceptions
 
@@ -38,5 +40,6 @@ yb.download
    :toctree:
    :recursive:
 
+   ranges
    requirements
    youtube

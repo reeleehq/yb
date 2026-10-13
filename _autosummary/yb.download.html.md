@@ -20,6 +20,14 @@ converts only when you ask it to (conversion needs ffmpeg):
 >>> ep = download_youtube_audio(url, audio_format="mp3")
 ```
 
+For sound or clip sourcing, fetch just a span (seconds or `"mm:ss"`; needs
+ffmpeg, see [`yb.download.ranges`](yb.download.ranges.html.md#module-yb.download.ranges)). The span is recorded in
+`result.info["download_range"]` for provenance:
+
+```pycon
+>>> clip = download_youtube_audio(url, start="0:07.9", end="0:08.75")
+```
+
 YouTube downloads need a JavaScript runtime (Deno) and yt-dlp’s solver
 scripts; [`check_requirements()`](#yb.download.check_requirements) (or `yb check`) says what’s missing and
 how to install it. The first download in a process runs it and warns.
@@ -36,12 +44,14 @@ how to install it. The first download in a process runs it and warns.
 | [`convert_audio`](#yb.download.convert_audio)(src, audio_format, \*[, ...]) | Convert `src` to `audio_format`, returning the resulting path.                |
 | [`check_requirements`](#yb.download.check_requirements)(\*[, warn, which, ...])  | Check what YouTube downloads need, and say how to fix what's missing.         |
 | [`find_js_runtime`](#yb.download.find_js_runtime)(\*[, which, search_dirs])   | Find Deno on `PATH`, else in its standard install location.                   |
+| [`parse_timestamp`](#yb.download.parse_timestamp)(value)                      | Seconds from a number or a `"[[h:]m:]s[.fraction]"` string.                   |
 
 ### Classes
 
 | [`DownloadResult`](#yb.download.DownloadResult)(path, info[, sidecars])   | Outcome of a download.                 |
 |-------------------------------------------------------------------------------------------|----------------------------------------|
 | [`JsRuntime`](#yb.download.JsRuntime)(name, path, on_path)           | A JavaScript runtime found for yt-dlp. |
+| [`TimeRange`](#yb.download.TimeRange)([start, end])                  | A span of a video, in seconds.         |
 
 ### Exceptions
 
@@ -102,6 +112,35 @@ The executable.
 
 Whether yt-dlp would find it by name on `PATH` unaided.
 
+### *class* yb.download.TimeRange(start=0.0, end=None)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+A span of a video, in seconds. `end=None` means “to the end”.
+
+#### as_info()
+
+The span as recorded on a result’s `info` (for provenance).
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]
+
+#### *property* label *: [str](https://docs.python.org/3/builtins/stdtypes.html#str)*
+
+`"7.9-8.75"` or `"30-end"`.
+
+* **Type:**
+  Compact, filename-safe form
+
+#### *classmethod* of(, start=None, end=None)
+
+Build from user input; `None` when neither bound is given.
+
+* **Raises:**
+  [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – On a bad timestamp, or `end` not after `start`.
+* **Return type:**
+  [`TimeRange`](yb.download.ranges.html.md#yb.download.ranges.TimeRange) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
 ### yb.download.check_requirements(\*, warn=True, which=<function which>, search_dirs=None, find_spec=<function find_spec>, run=<function run>, import_module=<function import_module>, check_deno_version=True)
 
 Check what YouTube downloads need, and say how to fix what’s missing.
@@ -151,7 +190,7 @@ Resolve the default download directory (`$YB_DOWNLOAD_DIR` or `~/Downloads`).
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
-### yb.download.download_youtube_audio(url, , download_dir=None, audio_format=None, bitrate=None, keep_original=False, on_error='raise', fmt='bestaudio/best', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None)
+### yb.download.download_youtube_audio(url, , download_dir=None, audio_format=None, bitrate=None, keep_original=False, on_error='raise', fmt='bestaudio/best', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False)
 
 Download only a video’s audio (no video stream).
 
@@ -194,6 +233,27 @@ Pass `audio_format` to get a specific format instead:
   * **subtitle_langs** ([`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis)]) – Subtitle languages to fetch when subtitles are enabled.
   * **quiet** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Suppress yt-dlp console output.
   * **extra_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Any additional raw yt-dlp options (merged last, so they win).
+  * **start** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`float`](https://docs.python.org/3/builtins/functions.html#float) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – 
+
+    Download only a span, as in
+    [`download_youtube_video()`](#yb.download.download_youtube_video):
+    ```pycon
+    >>> download_youtube_audio(url, start="0:07.9", end="0:08.75")
+    ```
+  * **end** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`float`](https://docs.python.org/3/builtins/functions.html#float) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – 
+
+    Download only a span, as in
+    [`download_youtube_video()`](#yb.download.download_youtube_video):
+    ```pycon
+    >>> download_youtube_audio(url, start="0:07.9", end="0:08.75")
+    ```
+  * **precise_cuts** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – 
+
+    Download only a span, as in
+    [`download_youtube_video()`](#yb.download.download_youtube_video):
+    ```pycon
+    >>> download_youtube_audio(url, start="0:07.9", end="0:08.75")
+    ```
 * **Return type:**
   [`DownloadResult`](yb.download.youtube.html.md#yb.download.youtube.DownloadResult)
 * **Returns:**
@@ -260,7 +320,7 @@ Selecting a subset (yt-dlp `--playlist-items` is **1-based**):
   in playlist order. Entries skipped by selection/filter or that failed
   (under `ignoreerrors`) are omitted.
 
-### yb.download.download_youtube_video(url, , download_dir=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None)
+### yb.download.download_youtube_video(url, , download_dir=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False)
 
 Download a YouTube video to `download_dir` (default `~/Downloads`).
 
@@ -284,11 +344,32 @@ named `Title (video_id).mp4` in `~/Downloads`.
   * **subtitle_langs** ([`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis)]) – Subtitle languages to fetch when subtitles are enabled.
   * **quiet** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Suppress yt-dlp console output.
   * **extra_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Any additional raw yt-dlp options (merged last, so they win).
+  * **start** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`float`](https://docs.python.org/3/builtins/functions.html#float) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Download only this span: seconds (`7.9`) or a timestamp
+    (`"0:07.9"`, `"1:02:03"`). Either may be given alone (`end`
+    only = from the beginning; `start` only = to the end). The span
+    is recorded in `info["download_range"]` as `{"start", "end"}`
+    seconds (`end` is `None` for “to the end”), and, with the
+    default `filename_template`, in the filename (`Title (id)
+    [7.9-8.75].mp4`) so a clip never collides with the full video.
+    Needs ffmpeg (see [`yb.download.ranges`](yb.download.ranges.html.md#module-yb.download.ranges)).
+  * **end** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`float`](https://docs.python.org/3/builtins/functions.html#float) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Download only this span: seconds (`7.9`) or a timestamp
+    (`"0:07.9"`, `"1:02:03"`). Either may be given alone (`end`
+    only = from the beginning; `start` only = to the end). The span
+    is recorded in `info["download_range"]` as `{"start", "end"}`
+    seconds (`end` is `None` for “to the end”), and, with the
+    default `filename_template`, in the filename (`Title (id)
+    [7.9-8.75].mp4`) so a clip never collides with the full video.
+    Needs ffmpeg (see [`yb.download.ranges`](yb.download.ranges.html.md#module-yb.download.ranges)).
+  * **precise_cuts** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – With `start`/`end`, re-encode at the cuts for
+    frame-accurate bounds (slower) instead of cutting at keyframes.
 * **Return type:**
   [`DownloadResult`](yb.download.youtube.html.md#yb.download.youtube.DownloadResult)
 * **Returns:**
   A [`DownloadResult`](#yb.download.DownloadResult) with the media path, trimmed `info`, and any
   `sidecars` written.
+* **Raises:**
+  [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `start`/`end` is not a timestamp, or `end` is not
+      after `start`. Raised before anything is fetched or written.
 
 ### yb.download.find_js_runtime(\*, which=<function which>, search_dirs=None)
 
@@ -302,6 +383,15 @@ Find Deno on `PATH`, else in its standard install location.
   [`JsRuntime`](yb.download.requirements.html.md#yb.download.requirements.JsRuntime) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 * **Returns:**
   The runtime found, or `None`.
+
+### yb.download.parse_timestamp(value)
+
+Seconds from a number or a `"[[h:]m:]s[.fraction]"` string.
+
+* **Raises:**
+  [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `value` is negative, not finite, or not a timestamp.
+* **Return type:**
+  [`float`](https://docs.python.org/3/builtins/functions.html#float)
 
 ### yb.download.youtube_playlist_info(url, , playlist_items=None, flat=True, extra_opts=None)
 
@@ -334,6 +424,7 @@ the title/duration/chapters before deciding to download.
 
 ### Modules
 
-| [`requirements`](yb.download.requirements.html.md#module-yb.download.requirements)   | Preflight for downloading: does yt-dlp have what YouTube now demands?   |
-|-------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------|
-| [`youtube`](yb.download.youtube.html.md#module-yb.download.youtube)             | Download YouTube videos (and their metadata) via yt-dlp.                |
+| [`ranges`](yb.download.ranges.html.md#module-yb.download.ranges)             | Download just a time range of a video: parse start/end, build yt-dlp's options.   |
+|-----------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
+| [`requirements`](yb.download.requirements.html.md#module-yb.download.requirements) | Preflight for downloading: does yt-dlp have what YouTube now demands?             |
+| [`youtube`](yb.download.youtube.html.md#module-yb.download.youtube)           | Download YouTube videos (and their metadata) via yt-dlp.                          |

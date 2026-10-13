@@ -84,7 +84,7 @@ Resolve the default download directory (`$YB_DOWNLOAD_DIR` or `~/Downloads`).
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
-### yb.download.youtube.download_youtube_audio(url, , download_dir=None, audio_format=None, bitrate=None, keep_original=False, on_error='raise', fmt='bestaudio/best', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None)
+### yb.download.youtube.download_youtube_audio(url, , download_dir=None, audio_format=None, bitrate=None, keep_original=False, on_error='raise', fmt='bestaudio/best', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False)
 
 Download only a video’s audio (no video stream).
 
@@ -127,6 +127,27 @@ Pass `audio_format` to get a specific format instead:
   * **subtitle_langs** ([`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis)]) – Subtitle languages to fetch when subtitles are enabled.
   * **quiet** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Suppress yt-dlp console output.
   * **extra_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Any additional raw yt-dlp options (merged last, so they win).
+  * **start** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`float`](https://docs.python.org/3/builtins/functions.html#float) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – 
+
+    Download only a span, as in
+    [`download_youtube_video()`](#yb.download.youtube.download_youtube_video):
+    ```pycon
+    >>> download_youtube_audio(url, start="0:07.9", end="0:08.75")
+    ```
+  * **end** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`float`](https://docs.python.org/3/builtins/functions.html#float) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – 
+
+    Download only a span, as in
+    [`download_youtube_video()`](#yb.download.youtube.download_youtube_video):
+    ```pycon
+    >>> download_youtube_audio(url, start="0:07.9", end="0:08.75")
+    ```
+  * **precise_cuts** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – 
+
+    Download only a span, as in
+    [`download_youtube_video()`](#yb.download.youtube.download_youtube_video):
+    ```pycon
+    >>> download_youtube_audio(url, start="0:07.9", end="0:08.75")
+    ```
 * **Return type:**
   [`DownloadResult`](#yb.download.youtube.DownloadResult)
 * **Returns:**
@@ -193,7 +214,7 @@ Selecting a subset (yt-dlp `--playlist-items` is **1-based**):
   in playlist order. Entries skipped by selection/filter or that failed
   (under `ignoreerrors`) are omitted.
 
-### yb.download.youtube.download_youtube_video(url, , download_dir=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None)
+### yb.download.youtube.download_youtube_video(url, , download_dir=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False)
 
 Download a YouTube video to `download_dir` (default `~/Downloads`).
 
@@ -217,11 +238,32 @@ named `Title (video_id).mp4` in `~/Downloads`.
   * **subtitle_langs** ([`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis)]) – Subtitle languages to fetch when subtitles are enabled.
   * **quiet** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Suppress yt-dlp console output.
   * **extra_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Any additional raw yt-dlp options (merged last, so they win).
+  * **start** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`float`](https://docs.python.org/3/builtins/functions.html#float) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Download only this span: seconds (`7.9`) or a timestamp
+    (`"0:07.9"`, `"1:02:03"`). Either may be given alone (`end`
+    only = from the beginning; `start` only = to the end). The span
+    is recorded in `info["download_range"]` as `{"start", "end"}`
+    seconds (`end` is `None` for “to the end”), and, with the
+    default `filename_template`, in the filename (`Title (id)
+    [7.9-8.75].mp4`) so a clip never collides with the full video.
+    Needs ffmpeg (see [`yb.download.ranges`](yb.download.ranges.html.md#module-yb.download.ranges)).
+  * **end** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`float`](https://docs.python.org/3/builtins/functions.html#float) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Download only this span: seconds (`7.9`) or a timestamp
+    (`"0:07.9"`, `"1:02:03"`). Either may be given alone (`end`
+    only = from the beginning; `start` only = to the end). The span
+    is recorded in `info["download_range"]` as `{"start", "end"}`
+    seconds (`end` is `None` for “to the end”), and, with the
+    default `filename_template`, in the filename (`Title (id)
+    [7.9-8.75].mp4`) so a clip never collides with the full video.
+    Needs ffmpeg (see [`yb.download.ranges`](yb.download.ranges.html.md#module-yb.download.ranges)).
+  * **precise_cuts** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – With `start`/`end`, re-encode at the cuts for
+    frame-accurate bounds (slower) instead of cutting at keyframes.
 * **Return type:**
   [`DownloadResult`](#yb.download.youtube.DownloadResult)
 * **Returns:**
   A [`DownloadResult`](#yb.download.youtube.DownloadResult) with the media path, trimmed `info`, and any
   `sidecars` written.
+* **Raises:**
+  [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `start`/`end` is not a timestamp, or `end` is not
+      after `start`. Raised before anything is fetched or written.
 
 ### yb.download.youtube.glob_escape(name)
 

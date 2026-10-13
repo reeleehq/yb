@@ -204,6 +204,7 @@
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/yb.config.html">yb.config</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/yb.content.html">yb.content</a></li>
 <li class="toctree-l3 has-children"><a class="reference internal" href="_autosummary/yb.download.html">yb.download</a><input aria-label="Toggle navigation of yb.download" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="_autosummary/yb.download.ranges.html">yb.download.ranges</a></li>
 <li class="toctree-l4"><a class="reference internal" href="_autosummary/yb.download.requirements.html">yb.download.requirements</a></li>
 <li class="toctree-l4"><a class="reference internal" href="_autosummary/yb.download.youtube.html">yb.download.youtube</a></li>
 </ul>
@@ -300,6 +301,12 @@
 
         <ul>
           <li><a href="_autosummary/yb.youtube.search.html#yb.youtube.search.api_available">(in module yb.youtube.search)</a>
+</li>
+        </ul></li>
+        <li><a href="_autosummary/yb.download.ranges.html#yb.download.ranges.TimeRange.as_info">as_info() (yb.download.ranges.TimeRange method)</a>
+
+        <ul>
+          <li><a href="_autosummary/yb.download.html#yb.download.TimeRange.as_info">(yb.download.TimeRange method)</a>
 </li>
         </ul></li>
         <li><a href="_autosummary/yb.content.html#yb.content.PublicationContent.audio_language">audio_language (yb.content.PublicationContent attribute)</a>
@@ -456,6 +463,8 @@
 </li>
         <li><a href="_autosummary/yb.config.html#yb.config.DEFAULT_PRIVACY_STATUS">DEFAULT_PRIVACY_STATUS (in module yb.config)</a>
 </li>
+        <li><a href="_autosummary/yb.download.ranges.html#yb.download.ranges.default_range_func">default_range_func() (in module yb.download.ranges)</a>
+</li>
         <li><a href="_autosummary/yb.youtube.auth.html#yb.youtube.auth.DEFAULT_SCOPES">DEFAULT_SCOPES (in module yb.youtube.auth)</a>
 </li>
         <li><a href="_autosummary/yb.youtube.html#yb.youtube.default_token_file">default_token_file() (in module yb.youtube)</a>
@@ -511,6 +520,8 @@
 </li>
         </ul></li>
         <li><a href="_autosummary/yb.download.youtube.html#yb.download.youtube.DOWNLOAD_DIR_ENV">DOWNLOAD_DIR_ENV (in module yb.download.youtube)</a>
+</li>
+        <li><a href="_autosummary/yb.download.ranges.html#yb.download.ranges.DOWNLOAD_RANGES_OPT">DOWNLOAD_RANGES_OPT (in module yb.download.ranges)</a>
 </li>
         <li><a href="_autosummary/yb.html#yb.download_youtube_audio">download_youtube_audio() (in module yb)</a>
 
@@ -704,20 +715,22 @@
           <li><a href="_autosummary/yb.download.youtube.html#yb.download.youtube.DownloadResult.info">(yb.download.youtube.DownloadResult attribute)</a>
 </li>
         </ul></li>
+        <li><a href="_autosummary/yb.download.ranges.html#yb.download.ranges.INFO_RANGE_KEY">INFO_RANGE_KEY (in module yb.download.ranges)</a>
+</li>
         <li><a href="_autosummary/yb.youtube.metadata.html#yb.youtube.metadata.VideoMetadata.insert_body">insert_body() (yb.youtube.metadata.VideoMetadata method)</a>
 
         <ul>
           <li><a href="_autosummary/yb.youtube.html#yb.youtube.VideoMetadata.insert_body">(yb.youtube.VideoMetadata method)</a>
 </li>
         </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="_autosummary/yb.youtube.html#yb.youtube.insert_caption">insert_caption() (in module yb.youtube)</a>
 
         <ul>
           <li><a href="_autosummary/yb.youtube.captions.html#yb.youtube.captions.insert_caption">(in module yb.youtube.captions)</a>
 </li>
         </ul></li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="_autosummary/yb.youtube.captions.html#yb.youtube.captions.CaptionTrack.is_draft">is_draft (yb.youtube.captions.CaptionTrack attribute)</a>
 
         <ul>
@@ -770,6 +783,12 @@
   <h2>L</h2>
   <table style="width: 100%" class="indextable genindextable"><tr>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="_autosummary/yb.download.ranges.html#yb.download.ranges.TimeRange.label">label (yb.download.ranges.TimeRange property)</a>
+
+        <ul>
+          <li><a href="_autosummary/yb.download.html#yb.download.TimeRange.label">(yb.download.TimeRange property)</a>
+</li>
+        </ul></li>
         <li><a href="_autosummary/yb.content.html#yb.content.PublicationContent.language">language (yb.content.PublicationContent attribute)</a>
 
         <ul>
@@ -780,14 +799,14 @@
           <li><a href="_autosummary/yb.youtube.html#yb.youtube.CaptionTrack.language">(yb.youtube.CaptionTrack attribute)</a>
 </li>
         </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="_autosummary/yb.youtube.html#yb.youtube.list_captions">list_captions() (in module yb.youtube)</a>
 
         <ul>
           <li><a href="_autosummary/yb.youtube.captions.html#yb.youtube.captions.list_captions">(in module yb.youtube.captions)</a>
 </li>
         </ul></li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="_autosummary/yb.youtube.html#yb.youtube.list_my_playlists">list_my_playlists() (in module yb.youtube)</a>
 
         <ul>
@@ -810,6 +829,8 @@
   <h2>M</h2>
   <table style="width: 100%" class="indextable genindextable"><tr>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="_autosummary/yb.download.ranges.html#yb.download.ranges.MAX_TIMESTAMP_SECONDS">MAX_TIMESTAMP_SECONDS (in module yb.download.ranges)</a>
+</li>
         <li><a href="_autosummary/yb.content.html#yb.content.PublicationContent.media">media (yb.content.PublicationContent attribute)</a>
 
         <ul>
@@ -831,6 +852,8 @@
           <li><a href="_autosummary/yb.content.html#module-yb.content">yb.content</a>
 </li>
           <li><a href="_autosummary/yb.download.html#module-yb.download">yb.download</a>
+</li>
+          <li><a href="_autosummary/yb.download.ranges.html#module-yb.download.ranges">yb.download.ranges</a>
 </li>
           <li><a href="_autosummary/yb.download.requirements.html#module-yb.download.requirements">yb.download.requirements</a>
 </li>
@@ -899,14 +922,20 @@
   <h2>O</h2>
   <table style="width: 100%" class="indextable genindextable"><tr>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="_autosummary/yb.download.ranges.html#yb.download.ranges.TimeRange.of">of() (yb.download.ranges.TimeRange class method)</a>
+
+        <ul>
+          <li><a href="_autosummary/yb.download.html#yb.download.TimeRange.of">(yb.download.TimeRange class method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="_autosummary/yb.download.html#yb.download.JsRuntime.on_path">on_path (yb.download.JsRuntime attribute)</a>
 
         <ul>
           <li><a href="_autosummary/yb.download.requirements.html#yb.download.requirements.JsRuntime.on_path">(yb.download.requirements.JsRuntime attribute)</a>
 </li>
         </ul></li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="_autosummary/yb.download.youtube.html#yb.download.youtube.OnConvertError">OnConvertError (in module yb.download.youtube)</a>
 </li>
     </ul></td>
@@ -917,6 +946,12 @@
   <h2>P</h2>
   <table style="width: 100%" class="indextable genindextable"><tr>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="_autosummary/yb.download.html#yb.download.parse_timestamp">parse_timestamp() (in module yb.download)</a>
+
+        <ul>
+          <li><a href="_autosummary/yb.download.ranges.html#yb.download.ranges.parse_timestamp">(in module yb.download.ranges)</a>
+</li>
+        </ul></li>
         <li><a href="_autosummary/yb.youtube.html#yb.youtube.PartialPublish">PartialPublish</a>, <a href="_autosummary/yb.youtube.publish.html#yb.youtube.publish.PartialPublish">[1]</a>
 </li>
         <li><a href="_autosummary/yb.download.html#yb.download.DownloadResult.path">path (yb.download.DownloadResult attribute)</a>
@@ -967,14 +1002,14 @@
           <li><a href="_autosummary/yb.podcast.feed.html#yb.podcast.feed.PodcastChannel">(class in yb.podcast.feed)</a>
 </li>
         </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="_autosummary/yb.podcast.html#yb.podcast.PodcastEpisode">PodcastEpisode (class in yb.podcast)</a>
 
         <ul>
           <li><a href="_autosummary/yb.podcast.publish.html#yb.podcast.publish.PodcastEpisode">(class in yb.podcast.publish)</a>
 </li>
         </ul></li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="_autosummary/yb.html#yb.prepare_and_publish">prepare_and_publish() (in module yb)</a>
 
         <ul>
@@ -1039,6 +1074,10 @@
   <h2>R</h2>
   <table style="width: 100%" class="indextable genindextable"><tr>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="_autosummary/yb.download.ranges.html#yb.download.ranges.range_opts">range_opts() (in module yb.download.ranges)</a>
+</li>
+        <li><a href="_autosummary/yb.download.ranges.html#yb.download.ranges.ranged_filename_template">ranged_filename_template() (in module yb.download.ranges)</a>
+</li>
         <li><a href="_autosummary/yb.youtube.html#yb.youtube.rank_by_engagement">rank_by_engagement() (in module yb.youtube)</a>
 
         <ul>
@@ -1147,14 +1186,22 @@
         </ul></li>
         <li><a href="_autosummary/yb.youtube.search.html#yb.youtube.search.THUMBNAIL_QUALITIES">THUMBNAIL_QUALITIES (in module yb.youtube.search)</a>
 </li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="_autosummary/yb.youtube.html#yb.youtube.thumbnail_url">thumbnail_url() (in module yb.youtube)</a>
 
         <ul>
           <li><a href="_autosummary/yb.youtube.search.html#yb.youtube.search.thumbnail_url">(in module yb.youtube.search)</a>
 </li>
         </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="_autosummary/yb.download.html#yb.download.TimeRange">TimeRange (class in yb.download)</a>
+
+        <ul>
+          <li><a href="_autosummary/yb.download.ranges.html#yb.download.ranges.TimeRange">(class in yb.download.ranges)</a>
+</li>
+        </ul></li>
+        <li><a href="_autosummary/yb.download.ranges.html#yb.download.ranges.Timestamp">Timestamp (in module yb.download.ranges)</a>
+</li>
         <li><a href="_autosummary/yb.content.html#yb.content.PublicationContent.title">title (yb.content.PublicationContent attribute)</a>
 
         <ul>
@@ -1319,6 +1366,13 @@
 </li>
         </ul></li>
         <li>
+    yb.download.ranges
+
+        <ul>
+          <li><a href="_autosummary/yb.download.ranges.html#module-yb.download.ranges">module</a>
+</li>
+        </ul></li>
+        <li>
     yb.download.requirements
 
         <ul>
@@ -1374,6 +1428,8 @@
           <li><a href="_autosummary/yb.podcast.shownotes.html#module-yb.podcast.shownotes">module</a>
 </li>
         </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
         <li>
     yb.youtube
 
@@ -1381,8 +1437,6 @@
           <li><a href="_autosummary/yb.youtube.html#module-yb.youtube">module</a>
 </li>
         </ul></li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li>
     yb.youtube.api
 
@@ -1502,7 +1556,7 @@
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=5bbfd6f0"></script>
+</div><script src="_static/documentation_options.js?v=d24e387d"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>
