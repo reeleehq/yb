@@ -8,6 +8,7 @@ import os
 import sys
 import types
 import warnings
+from pathlib import Path
 
 import pytest
 
@@ -51,8 +52,10 @@ def test_deno_on_path_is_used_as_is():
 def test_deno_off_path_is_found_in_its_install_dir(tmp_path):
     deno = _fake_deno(tmp_path)
     rt = req.find_js_runtime(which=_no_which, search_dirs=[tmp_path])
-    assert rt == req.JsRuntime("deno", deno, on_path=False)
-    assert req.yt_dlp_runtime_opts(rt) == {"js_runtimes": {"deno": {"path": str(deno)}}}
+    assert rt.name == "deno" and not rt.on_path
+    assert rt.path.samefile(deno)  # Windows may report deno.EXE
+    opts = req.yt_dlp_runtime_opts(rt)
+    assert Path(opts["js_runtimes"]["deno"]["path"]).samefile(deno)
 
 
 @pytest.mark.skipif(os.name == "nt", reason="no executable bit on Windows")
@@ -71,7 +74,7 @@ def test_default_search_dirs_honour_deno_install(tmp_path, monkeypatch):
 def test_a_pip_installed_deno_next_to_python_is_found(tmp_path, monkeypatch):
     deno = _fake_deno(tmp_path)
     monkeypatch.setattr(req.sysconfig, "get_path", lambda name: str(tmp_path))
-    assert req.find_js_runtime(which=_no_which).path == deno
+    assert req.find_js_runtime(which=_no_which).path.samefile(deno)
 
 
 def test_an_explicit_runtime_skips_the_check_even_under_error_filters(monkeypatch):
