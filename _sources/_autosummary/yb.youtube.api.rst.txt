@@ -23,3 +23,9 @@ yb.youtube.api
       update_video_status
       upload_video
    
+   .. rubric:: Exceptions
+
+   .. autosummary::
+   
+      VisibilityDropWarning
+   

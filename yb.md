@@ -1,4 +1,4 @@
-> built 2026-10-13 06:46 UTC from 53498b1 (main) · yb 0.1.17. Details: build_info.json
+> built 2026-10-13 11:10 UTC from d4b8abd (main) · yb 0.1.17. Details: build_info.json
 
 # index.html.md
 
@@ -149,6 +149,8 @@ publish_video(
 
 If captions, the thumbnail or the playlist fail after the upload (a 403 `quotaExceeded`, say), `PartialPublish` is raised with the new video’s id in `err.result`. Call again with `resume=err.result` to finish without uploading a second copy.
 
+`PartialPublish` is a `RuntimeError` and replaces the original error, which stays reachable as `err.__cause__`. Code that caught `googleapiclient.errors.HttpError` around a publish call no longer catches a failure that happens after the upload: catch `PartialPublish` too (or inspect `err.__cause__`).
+
 **Chapters** are on by default: when the media is long enough to host them
 (YouTube requires ≥3 markers, each ≥10 s, first at `0:00`), they are detected
 from the transcript and embedded in the description so YouTube renders
@@ -177,6 +179,15 @@ update_video_status("VIDEO_ID", privacy_status="public")  # other status fields 
 supersede(
     "OLD_ID", "NEW_ID", new_privacy="public"
 )  # new takes old's playlist spots; old goes private
+```
+
+`supersede` does not change the new video’s privacy unless you pass `new_privacy=`, and uploads are `unlisted` by default. So superseding a **public** video with a fresh upload leaves the public with neither: the old one goes private and the re-cut stays unlisted. When that happens, `supersede` emits a `VisibilityDropWarning` before it changes anything. Pass `new_privacy="public"` to publish the re-cut, or make the warning an error to refuse such calls:
+
+```python
+import warnings
+from yb.youtube import VisibilityDropWarning
+
+warnings.simplefilter("error", VisibilityDropWarning)  # supersede now raises, changing nothing
 ```
 
 ### Read live stats & metadata
@@ -2625,8 +2636,8 @@ tags, languages, and chapter blocks in the description).
 
 ### Module Attributes
 
-| [`PRIVACY_STATUSES`](_autosummary/yb.youtube.api.html.md#yb.youtube.api.PRIVACY_STATUSES)   | Privacy values `videos.update(part="status")` accepts.   |
-|---------------------------------------------------------------------|----------------------------------------------------------|
+| [`PRIVACY_STATUSES`](_autosummary/yb.youtube.api.html.md#yb.youtube.api.PRIVACY_STATUSES)   | Privacy values `videos.update(part="status")` accepts, least visible first.   |
+|---------------------------------------------------------------------|-------------------------------------------------------------------------------|
 
 ### Functions
 
@@ -2640,9 +2651,26 @@ tags, languages, and chapter blocks in the description).
 | [`update_video_status`](_autosummary/yb.youtube.api.html.md#yb.youtube.api.update_video_status)(video_id, \*[, ...])           | Change a video's privacy (or synthetic-media flag), keeping the rest. |
 | [`upload_video`](_autosummary/yb.youtube.api.html.md#yb.youtube.api.upload_video)(video_path, body, \*[, service, ...]) | Resumably upload a video with the given `videos.insert` `body`.       |
 
+### Exceptions
+
+| [`VisibilityDropWarning`](_autosummary/yb.youtube.api.html.md#yb.youtube.api.VisibilityDropWarning)   | [`supersede()`](_autosummary/yb.youtube.api.html.md#yb.youtube.api.supersede) leaves the re-cut less visible than the original was.   |
+|--------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------|
+
 ### yb.youtube.api.PRIVACY_STATUSES *= ('private', 'unlisted', 'public')*
 
-Privacy values `videos.update(part="status")` accepts.
+Privacy values `videos.update(part="status")` accepts, least visible first.
+
+### *exception* yb.youtube.api.VisibilityDropWarning
+
+Bases: [`UserWarning`](https://docs.python.org/3/builtins/exceptions.html#UserWarning)
+
+[`supersede()`](_autosummary/yb.youtube.api.html.md#yb.youtube.api.supersede) leaves the re-cut less visible than the original was.
+
+Emitted before anything is changed, so escalating it refuses the call:
+
+```default
+warnings.simplefilter("error", VisibilityDropWarning)
+```
 
 ### yb.youtube.api.get_video(video_id, , part='snippet,status', service=None, \*\*cred_kwargs)
 
@@ -2685,6 +2713,13 @@ puts the new one where the old one was and takes the old one out of view:
    `old_id`, so a failure part-way never leaves a playlist with neither;
 4. sets `old_id` to `old_privacy` (default `"private"`), clearing any
    scheduled publish. It is never deleted.
+
+The new video keeps its own privacy unless `new_privacy` is given, and an
+upload is `unlisted` by default: so the re-cut of a public video is NOT
+made public for you. When the result is less visible than the old video
+was (a public original, an unlisted re-cut), a [`VisibilityDropWarning`](_autosummary/yb.youtube.api.html.md#yb.youtube.api.VisibilityDropWarning)
+is emitted before anything changes; pass `new_privacy="public"` to publish
+the re-cut, or turn the warning into an error to refuse such calls.
 
 Captions and thumbnails are not copied: upload them with the new video
 ([`yb.youtube.publish_video()`](_autosummary/yb.youtube.html.md#yb.youtube.publish_video)). Safe to re-run: every step checks
@@ -3077,10 +3112,11 @@ Edit an existing video:
 
 ### Exceptions
 
-| [`ConsentRequired`](_autosummary/yb.youtube.html.md#yb.youtube.ConsentRequired)                         | Consent is needed and this process cannot obtain it.                        |
-|------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|
-| [`ConsentPending`](_autosummary/yb.youtube.html.md#yb.youtube.ConsentPending)(url, \*, redirect_uri)   | Consent was started, and now waits for the user to paste the redirect back. |
-| [`PartialPublish`](_autosummary/yb.youtube.html.md#yb.youtube.PartialPublish)(result, \*, step, error) | The video was uploaded, then a later step failed (yb#21).                   |
+| [`ConsentRequired`](_autosummary/yb.youtube.html.md#yb.youtube.ConsentRequired)                         | Consent is needed and this process cannot obtain it.                                                               |
+|------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
+| [`ConsentPending`](_autosummary/yb.youtube.html.md#yb.youtube.ConsentPending)(url, \*, redirect_uri)   | Consent was started, and now waits for the user to paste the redirect back.                                        |
+| [`VisibilityDropWarning`](_autosummary/yb.youtube.html.md#yb.youtube.VisibilityDropWarning)                   | [`supersede()`](_autosummary/yb.youtube.html.md#yb.youtube.supersede) leaves the re-cut less visible than the original was. |
+| [`PartialPublish`](_autosummary/yb.youtube.html.md#yb.youtube.PartialPublish)(result, \*, step, error) | The video was uploaded, then a later step failed (yb#21).                                                          |
 
 ### *class* yb.youtube.CaptionTrack(path, language, name='', is_draft=False)
 
@@ -3218,6 +3254,18 @@ Build the snippet for `videos.update` (categoryId is required).
 
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
+
+### *exception* yb.youtube.VisibilityDropWarning
+
+Bases: [`UserWarning`](https://docs.python.org/3/builtins/exceptions.html#UserWarning)
+
+[`supersede()`](_autosummary/yb.youtube.html.md#yb.youtube.supersede) leaves the re-cut less visible than the original was.
+
+Emitted before anything is changed, so escalating it refuses the call:
+
+```default
+warnings.simplefilter("error", VisibilityDropWarning)
+```
 
 ### yb.youtube.add_stats(videos, , api_key=None, backend='auto')
 
@@ -3630,6 +3678,13 @@ puts the new one where the old one was and takes the old one out of view:
    `old_id`, so a failure part-way never leaves a playlist with neither;
 4. sets `old_id` to `old_privacy` (default `"private"`), clearing any
    scheduled publish. It is never deleted.
+
+The new video keeps its own privacy unless `new_privacy` is given, and an
+upload is `unlisted` by default: so the re-cut of a public video is NOT
+made public for you. When the result is less visible than the old video
+was (a public original, an unlisted re-cut), a [`VisibilityDropWarning`](_autosummary/yb.youtube.html.md#yb.youtube.VisibilityDropWarning)
+is emitted before anything changes; pass `new_privacy="public"` to publish
+the re-cut, or turn the warning into an error to refuse such calls.
 
 Captions and thumbnails are not copied: upload them with the new video
 ([`yb.youtube.publish_video()`](_autosummary/yb.youtube.html.md#yb.youtube.publish_video)). Safe to re-run: every step checks
@@ -4445,20 +4500,20 @@ Fetch a video’s live metadata & engagement numbers.
 
 # About this build
 
-This documentation was built on **2026-10-13 06:46 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/53498b10457699755987dcf78b78c2c7c556ca9d"><code>53498b1</code></a> on branch <code>main</code>, for **yb 0.1.17** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-10-13 11:10 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/d4b8abd12eef1695161d1afd29a0eb944c9e4c30"><code>d4b8abd</code></a> on branch <code>main</code>, for **yb 0.1.17** (from <code>pyproject.toml</code>).
 
 #### WARNING
 The documentation and the package may be misaligned:
 
-- The documented version (0.1.17) is ahead of the latest release on PyPI (0.1.15): these docs describe unreleased code.
+- The documented version (0.1.17) is behind the latest release on PyPI (0.1.18): `pip install yb` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                    |
 |---------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/yb/commit/53498b10457699755987dcf78b78c2c7c556ca9d"><code>53498b10457699755987dcf78b78c2c7c556ca9d</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/yb/commit/d4b8abd12eef1695161d1afd29a0eb944c9e4c30"><code>d4b8abd12eef1695161d1afd29a0eb944c9e4c30</code></a> |
 | Branch              | <code>main</code>                                                                                                                                  |
-| Tags at this commit | <code>0.1.17</code>                                                                                                                                |
+| Tags at this commit | none                                                                                                                                               |
 | Working tree        | clean                                                                                                                                              |
 | Remote              | <code>https://github.com/reeleehq/yb</code>                                                                                                        |
 
@@ -4467,15 +4522,15 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/yb</code>                                                                   |
-| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/38358406903">38358406903</a>          |
+| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/38388189166">38388189166</a>          |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>1a75368352f4b5f2954d2c74bb68a85991aff859</code> (in the history of the built commit) |
+| Event commit | <code>d4b8abd12eef1695161d1afd29a0eb944c9e4c30</code> (in the history of the built commit) |
 
 ## Tools
 
 |          |         |
 |----------|---------|
-| epythet  | 0.2.14  |
+| epythet  | 0.2.15  |
 | Sphinx   | 9.1.0   |
 | docutils | 0.22.4  |
 | Python   | 3.12.15 |
@@ -4494,14 +4549,14 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/yb/0.1.15/">0.1.15</a>, older than the documented version (0.1.17).
+Latest release: <a href="https://pypi.org/project/yb/0.1.18/">0.1.18</a>, newer than the documented version (0.1.17).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/yb && cd yb
-git checkout 53498b10457699755987dcf78b78c2c7c556ca9d
-pip install "epythet==0.2.14"
+git checkout d4b8abd12eef1695161d1afd29a0eb944c9e4c30
+pip install "epythet==0.2.15"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```
 

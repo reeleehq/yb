@@ -8,8 +8,8 @@ tags, languages, and chapter blocks in the description).
 
 ### Module Attributes
 
-| [`PRIVACY_STATUSES`](#yb.youtube.api.PRIVACY_STATUSES)   | Privacy values `videos.update(part="status")` accepts.   |
-|---------------------------------------------------------------------|----------------------------------------------------------|
+| [`PRIVACY_STATUSES`](#yb.youtube.api.PRIVACY_STATUSES)   | Privacy values `videos.update(part="status")` accepts, least visible first.   |
+|---------------------------------------------------------------------|-------------------------------------------------------------------------------|
 
 ### Functions
 
@@ -23,9 +23,26 @@ tags, languages, and chapter blocks in the description).
 | [`update_video_status`](#yb.youtube.api.update_video_status)(video_id, \*[, ...])           | Change a video's privacy (or synthetic-media flag), keeping the rest. |
 | [`upload_video`](#yb.youtube.api.upload_video)(video_path, body, \*[, service, ...]) | Resumably upload a video with the given `videos.insert` `body`.       |
 
+### Exceptions
+
+| [`VisibilityDropWarning`](#yb.youtube.api.VisibilityDropWarning)   | [`supersede()`](#yb.youtube.api.supersede) leaves the re-cut less visible than the original was.   |
+|--------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------|
+
 ### yb.youtube.api.PRIVACY_STATUSES *= ('private', 'unlisted', 'public')*
 
-Privacy values `videos.update(part="status")` accepts.
+Privacy values `videos.update(part="status")` accepts, least visible first.
+
+### *exception* yb.youtube.api.VisibilityDropWarning
+
+Bases: [`UserWarning`](https://docs.python.org/3/builtins/exceptions.html#UserWarning)
+
+[`supersede()`](#yb.youtube.api.supersede) leaves the re-cut less visible than the original was.
+
+Emitted before anything is changed, so escalating it refuses the call:
+
+```default
+warnings.simplefilter("error", VisibilityDropWarning)
+```
 
 ### yb.youtube.api.get_video(video_id, , part='snippet,status', service=None, \*\*cred_kwargs)
 
@@ -68,6 +85,13 @@ puts the new one where the old one was and takes the old one out of view:
    `old_id`, so a failure part-way never leaves a playlist with neither;
 4. sets `old_id` to `old_privacy` (default `"private"`), clearing any
    scheduled publish. It is never deleted.
+
+The new video keeps its own privacy unless `new_privacy` is given, and an
+upload is `unlisted` by default: so the re-cut of a public video is NOT
+made public for you. When the result is less visible than the old video
+was (a public original, an unlisted re-cut), a [`VisibilityDropWarning`](#yb.youtube.api.VisibilityDropWarning)
+is emitted before anything changes; pass `new_privacy="public"` to publish
+the re-cut, or turn the warning into an error to refuse such calls.
 
 Captions and thumbnails are not copied: upload them with the new video
 ([`yb.youtube.publish_video()`](yb.youtube.html.md#yb.youtube.publish_video)). Safe to re-run: every step checks

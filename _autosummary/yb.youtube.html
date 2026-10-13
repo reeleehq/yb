@@ -458,7 +458,10 @@ client (see the <code class="docutils literal notranslate"><span class="pre">yb-
 <tr class="row-even"><td><p><a class="reference internal" href="#yb.youtube.ConsentPending" title="yb.youtube.ConsentPending"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ConsentPending</span></code></a>(url, *, redirect_uri)</p></td>
 <td><p>Consent was started, and now waits for the user to paste the redirect back.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#yb.youtube.PartialPublish" title="yb.youtube.PartialPublish"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PartialPublish</span></code></a>(result, *, step, error)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.youtube.VisibilityDropWarning" title="yb.youtube.VisibilityDropWarning"><code class="xref py py-obj docutils literal notranslate"><span class="pre">VisibilityDropWarning</span></code></a></p></td>
+<td><p><a class="reference internal" href="#yb.youtube.supersede" title="yb.youtube.supersede"><code class="xref py py-func docutils literal notranslate"><span class="pre">supersede()</span></code></a> leaves the re-cut less visible than the original was.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#yb.youtube.PartialPublish" title="yb.youtube.PartialPublish"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PartialPublish</span></code></a>(result, *, step, error)</p></td>
 <td><p>The video was uploaded, then a later step failed (yb#21).</p></td>
 </tr>
 </tbody>
@@ -641,6 +644,17 @@ not to stylised artwork or a visualizer. Left unset when <code class="docutils l
 </dl>
 </dd></dl>
 
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="yb.youtube.VisibilityDropWarning">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">yb.youtube.</span></span><span class="sig-name descname"><span class="pre">VisibilityDropWarning</span></span><a class="reference internal" href="../_modules/yb/youtube/api.html#VisibilityDropWarning"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.youtube.VisibilityDropWarning" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#UserWarning" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">UserWarning</span></code></a></p>
+<p><a class="reference internal" href="#yb.youtube.supersede" title="yb.youtube.supersede"><code class="xref py py-func docutils literal notranslate"><span class="pre">supersede()</span></code></a> leaves the re-cut less visible than the original was.</p>
+<p>Emitted before anything is changed, so escalating it refuses the call:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">warnings</span><span class="o">.</span><span class="n">simplefilter</span><span class="p">(</span><span class="s2">"error"</span><span class="p">,</span> <span class="n">VisibilityDropWarning</span><span class="p">)</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="py function">
@@ -1163,6 +1177,12 @@ appends, if the playlist is not sorted manually), THEN removes
 <li><p>sets <code class="docutils literal notranslate"><span class="pre">old_id</span></code> to <code class="docutils literal notranslate"><span class="pre">old_privacy</span></code> (default <code class="docutils literal notranslate"><span class="pre">&quot;private&quot;</span></code>), clearing any
 scheduled publish. It is never deleted.</p></li>
 </ol>
+<p>The new video keeps its own privacy unless <code class="docutils literal notranslate"><span class="pre">new_privacy</span></code> is given, and an
+upload is <code class="docutils literal notranslate"><span class="pre">unlisted</span></code> by default: so the re-cut of a public video is NOT
+made public for you. When the result is less visible than the old video
+was (a public original, an unlisted re-cut), a <a class="reference internal" href="#yb.youtube.VisibilityDropWarning" title="yb.youtube.VisibilityDropWarning"><code class="xref py py-class docutils literal notranslate"><span class="pre">VisibilityDropWarning</span></code></a>
+is emitted before anything changes; pass <code class="docutils literal notranslate"><span class="pre">new_privacy=&quot;public&quot;</span></code> to publish
+the re-cut, or turn the warning into an error to refuse such calls.</p>
 <p>Captions and thumbnails are not copied: upload them with the new video
 (<a class="reference internal" href="#yb.youtube.publish_video" title="yb.youtube.publish_video"><code class="xref py py-func docutils literal notranslate"><span class="pre">yb.youtube.publish_video()</span></code></a>). Safe to re-run: every step checks
 before it acts. Quota: see <a class="reference internal" href="#yb.youtube.playlists_containing" title="yb.youtube.playlists_containing"><code class="xref py py-func docutils literal notranslate"><span class="pre">yb.youtube.playlists_containing()</span></code></a>; each
@@ -1420,6 +1440,7 @@ table <code class="docutils literal notranslate"><span class="pre">str</span></c
 <li><a class="reference internal" href="#yb.youtube.VideoMetadata.update_snippet"><code class="docutils literal notranslate"><span class="pre">VideoMetadata.update_snippet()</span></code></a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#yb.youtube.VisibilityDropWarning"><code class="docutils literal notranslate"><span class="pre">VisibilityDropWarning</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.add_stats"><code class="docutils literal notranslate"><span class="pre">add_stats()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.add_to_playlist"><code class="docutils literal notranslate"><span class="pre">add_to_playlist()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.add_video_to_playlist"><code class="docutils literal notranslate"><span class="pre">add_video_to_playlist()</span></code></a></li>

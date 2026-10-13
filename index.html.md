@@ -145,6 +145,8 @@ publish_video(
 
 If captions, the thumbnail or the playlist fail after the upload (a 403 `quotaExceeded`, say), `PartialPublish` is raised with the new video’s id in `err.result`. Call again with `resume=err.result` to finish without uploading a second copy.
 
+`PartialPublish` is a `RuntimeError` and replaces the original error, which stays reachable as `err.__cause__`. Code that caught `googleapiclient.errors.HttpError` around a publish call no longer catches a failure that happens after the upload: catch `PartialPublish` too (or inspect `err.__cause__`).
+
 **Chapters** are on by default: when the media is long enough to host them
 (YouTube requires ≥3 markers, each ≥10 s, first at `0:00`), they are detected
 from the transcript and embedded in the description so YouTube renders
@@ -173,6 +175,15 @@ update_video_status("VIDEO_ID", privacy_status="public")  # other status fields 
 supersede(
     "OLD_ID", "NEW_ID", new_privacy="public"
 )  # new takes old's playlist spots; old goes private
+```
+
+`supersede` does not change the new video’s privacy unless you pass `new_privacy=`, and uploads are `unlisted` by default. So superseding a **public** video with a fresh upload leaves the public with neither: the old one goes private and the re-cut stays unlisted. When that happens, `supersede` emits a `VisibilityDropWarning` before it changes anything. Pass `new_privacy="public"` to publish the re-cut, or make the warning an error to refuse such calls:
+
+```python
+import warnings
+from yb.youtube import VisibilityDropWarning
+
+warnings.simplefilter("error", VisibilityDropWarning)  # supersede now raises, changing nothing
 ```
 
 ### Read live stats & metadata

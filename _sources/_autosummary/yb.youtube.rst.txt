@@ -67,6 +67,7 @@ yb.youtube
    
       ConsentRequired
       ConsentPending
+      VisibilityDropWarning
       PartialPublish
    
 .. rubric:: Modules

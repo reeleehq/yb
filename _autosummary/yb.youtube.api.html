@@ -287,7 +287,7 @@ tags, languages, and chapter blocks in the description).</p>
 <table class="autosummary longtable docutils align-default">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="#yb.youtube.api.PRIVACY_STATUSES" title="yb.youtube.api.PRIVACY_STATUSES"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PRIVACY_STATUSES</span></code></a></p></td>
-<td><p>Privacy values <code class="docutils literal notranslate"><span class="pre">videos.update(part=&quot;status&quot;)</span></code> accepts.</p></td>
+<td><p>Privacy values <code class="docutils literal notranslate"><span class="pre">videos.update(part=&quot;status&quot;)</span></code> accepts, least visible first.</p></td>
 </tr>
 </tbody>
 </table>
@@ -323,10 +323,31 @@ tags, languages, and chapter blocks in the description).</p>
 </tbody>
 </table>
 </div>
+<p class="rubric">Exceptions</p>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.youtube.api.VisibilityDropWarning" title="yb.youtube.api.VisibilityDropWarning"><code class="xref py py-obj docutils literal notranslate"><span class="pre">VisibilityDropWarning</span></code></a></p></td>
+<td><p><a class="reference internal" href="#yb.youtube.api.supersede" title="yb.youtube.api.supersede"><code class="xref py py-func docutils literal notranslate"><span class="pre">supersede()</span></code></a> leaves the re-cut less visible than the original was.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
 <dl class="py data">
 <dt class="sig sig-object py" id="yb.youtube.api.PRIVACY_STATUSES">
 <span class="sig-prename descclassname"><span class="pre">yb.youtube.api.</span></span><span class="sig-name descname"><span class="pre">PRIVACY_STATUSES</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">('private',</span> <span class="pre">'unlisted',</span> <span class="pre">'public')</span></span><a class="headerlink" href="#yb.youtube.api.PRIVACY_STATUSES" title="Link to this definition">¶</a></dt>
-<dd><p>Privacy values <code class="docutils literal notranslate"><span class="pre">videos.update(part=&quot;status&quot;)</span></code> accepts.</p>
+<dd><p>Privacy values <code class="docutils literal notranslate"><span class="pre">videos.update(part=&quot;status&quot;)</span></code> accepts, least visible first.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="yb.youtube.api.VisibilityDropWarning">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">yb.youtube.api.</span></span><span class="sig-name descname"><span class="pre">VisibilityDropWarning</span></span><a class="reference internal" href="../_modules/yb/youtube/api.html#VisibilityDropWarning"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.youtube.api.VisibilityDropWarning" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#UserWarning" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">UserWarning</span></code></a></p>
+<p><a class="reference internal" href="#yb.youtube.api.supersede" title="yb.youtube.api.supersede"><code class="xref py py-func docutils literal notranslate"><span class="pre">supersede()</span></code></a> leaves the re-cut less visible than the original was.</p>
+<p>Emitted before anything is changed, so escalating it refuses the call:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">warnings</span><span class="o">.</span><span class="n">simplefilter</span><span class="p">(</span><span class="s2">"error"</span><span class="p">,</span> <span class="n">VisibilityDropWarning</span><span class="p">)</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="py function">
@@ -382,6 +403,12 @@ appends, if the playlist is not sorted manually), THEN removes
 <li><p>sets <code class="docutils literal notranslate"><span class="pre">old_id</span></code> to <code class="docutils literal notranslate"><span class="pre">old_privacy</span></code> (default <code class="docutils literal notranslate"><span class="pre">&quot;private&quot;</span></code>), clearing any
 scheduled publish. It is never deleted.</p></li>
 </ol>
+<p>The new video keeps its own privacy unless <code class="docutils literal notranslate"><span class="pre">new_privacy</span></code> is given, and an
+upload is <code class="docutils literal notranslate"><span class="pre">unlisted</span></code> by default: so the re-cut of a public video is NOT
+made public for you. When the result is less visible than the old video
+was (a public original, an unlisted re-cut), a <a class="reference internal" href="#yb.youtube.api.VisibilityDropWarning" title="yb.youtube.api.VisibilityDropWarning"><code class="xref py py-class docutils literal notranslate"><span class="pre">VisibilityDropWarning</span></code></a>
+is emitted before anything changes; pass <code class="docutils literal notranslate"><span class="pre">new_privacy=&quot;public&quot;</span></code> to publish
+the re-cut, or turn the warning into an error to refuse such calls.</p>
 <p>Captions and thumbnails are not copied: upload them with the new video
 (<a class="reference internal" href="yb.youtube.html#yb.youtube.publish_video" title="yb.youtube.publish_video"><code class="xref py py-func docutils literal notranslate"><span class="pre">yb.youtube.publish_video()</span></code></a>). Safe to re-run: every step checks
 before it acts. Quota: see <a class="reference internal" href="yb.youtube.html#yb.youtube.playlists_containing" title="yb.youtube.playlists_containing"><code class="xref py py-func docutils literal notranslate"><span class="pre">yb.youtube.playlists_containing()</span></code></a>; each
@@ -510,6 +537,7 @@ that time, and a past <code class="docutils literal notranslate"><span class="pr
             <ul>
 <li><a class="reference internal" href="#">yb.youtube.api</a><ul>
 <li><a class="reference internal" href="#yb.youtube.api.PRIVACY_STATUSES"><code class="docutils literal notranslate"><span class="pre">PRIVACY_STATUSES</span></code></a></li>
+<li><a class="reference internal" href="#yb.youtube.api.VisibilityDropWarning"><code class="docutils literal notranslate"><span class="pre">VisibilityDropWarning</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.api.get_video"><code class="docutils literal notranslate"><span class="pre">get_video()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.api.set_chapters"><code class="docutils literal notranslate"><span class="pre">set_chapters()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.api.set_thumbnail"><code class="docutils literal notranslate"><span class="pre">set_thumbnail()</span></code></a></li>

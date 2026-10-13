@@ -78,10 +78,11 @@ Edit an existing video:
 
 ### Exceptions
 
-| [`ConsentRequired`](#yb.youtube.ConsentRequired)                         | Consent is needed and this process cannot obtain it.                        |
-|------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|
-| [`ConsentPending`](#yb.youtube.ConsentPending)(url, \*, redirect_uri)   | Consent was started, and now waits for the user to paste the redirect back. |
-| [`PartialPublish`](#yb.youtube.PartialPublish)(result, \*, step, error) | The video was uploaded, then a later step failed (yb#21).                   |
+| [`ConsentRequired`](#yb.youtube.ConsentRequired)                         | Consent is needed and this process cannot obtain it.                                                               |
+|------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
+| [`ConsentPending`](#yb.youtube.ConsentPending)(url, \*, redirect_uri)   | Consent was started, and now waits for the user to paste the redirect back.                                        |
+| [`VisibilityDropWarning`](#yb.youtube.VisibilityDropWarning)                   | [`supersede()`](#yb.youtube.supersede) leaves the re-cut less visible than the original was. |
+| [`PartialPublish`](#yb.youtube.PartialPublish)(result, \*, step, error) | The video was uploaded, then a later step failed (yb#21).                                                          |
 
 ### *class* yb.youtube.CaptionTrack(path, language, name='', is_draft=False)
 
@@ -219,6 +220,18 @@ Build the snippet for `videos.update` (categoryId is required).
 
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
+
+### *exception* yb.youtube.VisibilityDropWarning
+
+Bases: [`UserWarning`](https://docs.python.org/3/builtins/exceptions.html#UserWarning)
+
+[`supersede()`](#yb.youtube.supersede) leaves the re-cut less visible than the original was.
+
+Emitted before anything is changed, so escalating it refuses the call:
+
+```default
+warnings.simplefilter("error", VisibilityDropWarning)
+```
 
 ### yb.youtube.add_stats(videos, , api_key=None, backend='auto')
 
@@ -631,6 +644,13 @@ puts the new one where the old one was and takes the old one out of view:
    `old_id`, so a failure part-way never leaves a playlist with neither;
 4. sets `old_id` to `old_privacy` (default `"private"`), clearing any
    scheduled publish. It is never deleted.
+
+The new video keeps its own privacy unless `new_privacy` is given, and an
+upload is `unlisted` by default: so the re-cut of a public video is NOT
+made public for you. When the result is less visible than the old video
+was (a public original, an unlisted re-cut), a [`VisibilityDropWarning`](#yb.youtube.VisibilityDropWarning)
+is emitted before anything changes; pass `new_privacy="public"` to publish
+the re-cut, or turn the warning into an error to refuse such calls.
 
 Captions and thumbnails are not copied: upload them with the new video
 ([`yb.youtube.publish_video()`](#yb.youtube.publish_video)). Safe to re-run: every step checks

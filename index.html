@@ -411,6 +411,7 @@ pass <code class="docutils literal notranslate"><span class="pre">on_error=&quot
 </pre></div>
 </div>
 <p>If captions, the thumbnail or the playlist fail after the upload (a 403 <code class="docutils literal notranslate"><span class="pre">quotaExceeded</span></code>, say), <code class="docutils literal notranslate"><span class="pre">PartialPublish</span></code> is raised with the new video’s id in <code class="docutils literal notranslate"><span class="pre">err.result</span></code>. Call again with <code class="docutils literal notranslate"><span class="pre">resume=err.result</span></code> to finish without uploading a second copy.</p>
+<p><code class="docutils literal notranslate"><span class="pre">PartialPublish</span></code> is a <code class="docutils literal notranslate"><span class="pre">RuntimeError</span></code> and replaces the original error, which stays reachable as <code class="docutils literal notranslate"><span class="pre">err.__cause__</span></code>. Code that caught <code class="docutils literal notranslate"><span class="pre">googleapiclient.errors.HttpError</span></code> around a publish call no longer catches a failure that happens after the upload: catch <code class="docutils literal notranslate"><span class="pre">PartialPublish</span></code> too (or inspect <code class="docutils literal notranslate"><span class="pre">err.__cause__</span></code>).</p>
 <p><strong>Chapters</strong> are on by default: when the media is long enough to host them
 (YouTube requires ≥3 markers, each ≥10 s, first at <code class="docutils literal notranslate"><span class="pre">0:00</span></code>), they are detected
 from the transcript and embedded in the description so YouTube renders
@@ -436,6 +437,13 @@ interactive chapters. Short clips simply get none.</p>
 <span class="n">supersede</span><span class="p">(</span>
     <span class="s2">"OLD_ID"</span><span class="p">,</span> <span class="s2">"NEW_ID"</span><span class="p">,</span> <span class="n">new_privacy</span><span class="o">=</span><span class="s2">"public"</span>
 <span class="p">)</span>  <span class="c1"># new takes old's playlist spots; old goes private</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">supersede</span></code> does not change the new video’s privacy unless you pass <code class="docutils literal notranslate"><span class="pre">new_privacy=</span></code>, and uploads are <code class="docutils literal notranslate"><span class="pre">unlisted</span></code> by default. So superseding a <strong>public</strong> video with a fresh upload leaves the public with neither: the old one goes private and the re-cut stays unlisted. When that happens, <code class="docutils literal notranslate"><span class="pre">supersede</span></code> emits a <code class="docutils literal notranslate"><span class="pre">VisibilityDropWarning</span></code> before it changes anything. Pass <code class="docutils literal notranslate"><span class="pre">new_privacy=&quot;public&quot;</span></code> to publish the re-cut, or make the warning an error to refuse such calls:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">yb.youtube</span><span class="w"> </span><span class="kn">import</span> <span class="n">VisibilityDropWarning</span>
+
+<span class="n">warnings</span><span class="o">.</span><span class="n">simplefilter</span><span class="p">(</span><span class="s2">"error"</span><span class="p">,</span> <span class="n">VisibilityDropWarning</span><span class="p">)</span>  <span class="c1"># supersede now raises, changing nothing</span>
 </pre></div>
 </div>
 </section>
@@ -604,7 +612,7 @@ it, and the <code class="docutils literal notranslate"><span class="pre">music</
 </section>
 </section>
 
-<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-10-13 06:46 UTC from <a href="https://github.com/reeleehq/yb/commit/53498b10457699755987dcf78b78c2c7c556ca9d">53498b1</a> (main) · yb 0.1.17 · <a href="about-this-build.html">about this build</a></p>
+<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-10-13 11:10 UTC from <a href="https://github.com/reeleehq/yb/commit/d4b8abd12eef1695161d1afd29a0eb944c9e4c30">d4b8abd</a> (main) · yb 0.1.17 · <a href="about-this-build.html">about this build</a></p>
         </article>
       </div>
       <footer>
