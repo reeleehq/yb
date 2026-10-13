@@ -248,8 +248,9 @@ def check_requirements(
             f"See {EJS_WIKI_URL}"
         )
     elif check_deno_version:
-        have, need = deno_version(runtime, run=run), min_deno_version(
-            import_module=import_module
+        have, need = (
+            deno_version(runtime, run=run),
+            min_deno_version(import_module=import_module),
         )
         if have is not None and have < need:
             problems.append(
