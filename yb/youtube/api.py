@@ -291,8 +291,8 @@ def _warn_if_visibility_drops(
     """Warn when neither video ends up as visible as ``old_id`` is now (yb#30)."""
     try:
         old_status = get_video(old_id, part="status", service=service)["status"]
-    except KeyError:
-        return  # unchanged behaviour: the retire step reports a missing video
+    except Exception:  # noqa: BLE001 - only a warning: never a new failure
+        return  # a missing video is reported by the retire step, as before
     before = old_status.get("privacyStatus")
     new_after = new_privacy or new_status.get("privacyStatus")
     if before not in PRIVACY_STATUSES or new_after not in PRIVACY_STATUSES:
@@ -314,8 +314,9 @@ def _warn_if_visibility_drops(
 def _is_manual_sort_required(error: Exception) -> bool:
     """Whether ``error`` is YouTube's ``manualSortRequired`` refusal.
 
-    Reads the reason from a googleapiclient ``HttpError`` (``error_details``,
-    else its JSON ``content``), falling back to the message.
+    Reads the reasons from a googleapiclient ``HttpError``: both its
+    ``error_details`` and the ``errors`` of its JSON ``content`` (the former
+    may hold the body's ``details`` instead), falling back to the message.
     """
     reasons = [
         d.get("reason")
@@ -323,10 +324,10 @@ def _is_manual_sort_required(error: Exception) -> bool:
         if isinstance(d, dict)
     ]
     content = getattr(error, "content", None)
-    if not reasons and content:
+    if content:
         try:
-            body = json.loads(content)
-            reasons = [d.get("reason") for d in body["error"]["errors"]]
+            errors = json.loads(content)["error"]["errors"]
+            reasons += [d.get("reason") for d in errors if isinstance(d, dict)]
         except (ValueError, TypeError, KeyError, AttributeError):
             pass
     return "manualSortRequired" in reasons or "manualSortRequired" in str(error)

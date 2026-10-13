@@ -319,10 +319,32 @@ def test_a_scheduled_re_cut_says_when_it_goes_public():
 class _HttpError(Exception):
     """Shaped like googleapiclient's HttpError: a reason in its details."""
 
-    def __init__(self, reason, *, content=None):
+    def __init__(self, reason, *, content=None, details=None):
         super().__init__("<HttpError 400>")
-        self.error_details = [{"reason": reason}] if content is None else ""
+        self.error_details = (
+            details if details is not None else [{"reason": reason}] if content is None else ""
+        )
         self.content = content
+
+
+def test_a_failed_read_of_the_old_video_skips_the_warning_only(monkeypatch):
+    """Review of #31: the warning's extra read must not add a failure path."""
+    svc = FakeService()
+    reads = {"n": 0}
+    list_ = _Videos.list
+
+    def flaky(self, *, part, id):
+        reads["n"] += 1
+        if id == "old" and reads["n"] == 2:  # the warning's read, not the retire's
+            raise TimeoutError("timed out")
+        return list_(self, part=part, id=id)
+
+    monkeypatch.setattr(_Videos, "list", flaky)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", VisibilityDropWarning)
+        supersede("old", "new", service=svc)
+
+    assert svc.status["old"]["privacyStatus"] == "private"
 
 
 @pytest.mark.parametrize(
@@ -332,6 +354,12 @@ class _HttpError(Exception):
         _HttpError(
             "",
             content=b'{"error": {"errors": [{"reason": "manualSortRequired"}]}}',
+        ),
+        _HttpError(  # error_details took the body's "details", not "errors"
+            "",
+            content=b'{"error": {"errors": [{"reason": "manualSortRequired"}],'
+            b' "details": [{"@type": "type.googleapis.com/x"}]}}',
+            details=[{"@type": "type.googleapis.com/x"}],
         ),
     ],
 )
