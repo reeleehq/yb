@@ -1,4 +1,4 @@
-> built 2026-10-13 04:15 UTC from 4f57633 (main) · yb 0.1.14. Details: build_info.json
+> built 2026-10-13 06:44 UTC from b6bacc5 (main) · yb 0.1.15. Details: build_info.json
 
 # index.html.md
 
@@ -55,7 +55,7 @@ one — the error only surfaces when you actually call that feature. You also ne
 ### System dependencies
 
 - **ffmpeg** on PATH, for media work.
-- **Deno**, for downloading from YouTube. YouTube makes yt-dlp solve a JavaScript challenge; without a runtime, downloads fail with `No video formats found!`. `yb[download]` depends on `yt-dlp[default]`, which brings the solver scripts; the runtime you install yourself: `curl -fsSL https://deno.land/install.sh | sh` (or `brew install deno`, or `pip install 'yt-dlp[deno]'` into the same environment). Deno is the runtime yt-dlp enables by default; to use another (node, bun), enable it yourself with `extra_opts={'js_runtimes': {'node': {}}}`. The installer puts Deno in `~/.deno/bin` and adds it to PATH only for interactive shells; yb also looks there (and next to the running Python), and passes yt-dlp the path, so cron jobs and services work too. To put it on PATH anyway: `export PATH="$HOME/.deno/bin:$PATH"` in `~/.profile`. See yt-dlp’s [EJS notes](https://github.com/yt-dlp/yt-dlp/wiki/EJS).
+- **Deno**, for downloading from YouTube. YouTube makes yt-dlp solve a JavaScript challenge; without a runtime, downloads fail with `No video formats found!`. `yb[download]` depends on `yt-dlp[default]`, which brings the solver scripts; the runtime you install yourself: `curl -fsSL https://deno.land/install.sh | sh` (or `brew install deno`, or `pip install 'yt-dlp[deno]'` into the same environment). Deno is the runtime yt-dlp enables by default; to use another (node, bun), enable it yourself with `extra_opts={'js_runtimes': {'node': {}}}`. The installer puts Deno in `~/.deno/bin` and adds it to PATH only for interactive shells; yb also looks there (and next to the running Python), and passes yt-dlp the path, so cron jobs and services work too. `yb check` also runs `deno --version` and reports a Deno older than yt-dlp’s minimum (read from yt-dlp itself) with the `deno upgrade` command. To put it on PATH anyway: `export PATH="$HOME/.deno/bin:$PATH"` in `~/.profile`. See yt-dlp’s [EJS notes](https://github.com/yt-dlp/yt-dlp/wiki/EJS).
 
 Run `yb check` (or `yb.download.check_requirements()`) to see what is missing and how to install it. The first download in a process runs the same check and warns; it never refuses to try.
 
@@ -762,7 +762,7 @@ The executable.
 
 Whether yt-dlp would find it by name on `PATH` unaided.
 
-### yb.download.check_requirements(\*, warn=True, which=<function which>, search_dirs=None, find_spec=<function find_spec>)
+### yb.download.check_requirements(\*, warn=True, which=<function which>, search_dirs=None, find_spec=<function find_spec>, run=<function run>, import_module=<function import_module>, check_deno_version=True)
 
 Check what YouTube downloads need, and say how to fix what’s missing.
 
@@ -773,6 +773,11 @@ Never raises. Each problem is a message ending with the fix.
   * **which** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – See [`find_js_runtime()`](_autosummary/yb.download.html.md#yb.download.find_js_runtime).
   * **search_dirs** ([`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – See [`find_js_runtime()`](_autosummary/yb.download.html.md#yb.download.find_js_runtime).
   * **find_spec** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`object`](https://docs.python.org/3/builtins/functions.html#object) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – Module lookup for `has_module()`.
+  * **run** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis), [`CompletedProcess`](https://docs.python.org/3/library/subprocess.html#subprocess.CompletedProcess)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]) – Subprocess runner for `deno_version()`.
+  * **import_module** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`object`](https://docs.python.org/3/builtins/functions.html#object)]) – Importer for `min_deno_version()`.
+  * **check_deno_version** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Also run `deno --version` and compare it with
+    yt-dlp’s minimum. The download preflight turns this off: it spawns
+    a process, which belongs in an explicit check, not in a download.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
 * **Returns:**
@@ -1025,23 +1030,28 @@ the command that fixes them.
 
 ### Module Attributes
 
-| [`DENO`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.DENO)             | The JavaScript runtime yt-dlp enables by default, and the one that works.       |
-|-------------------------------------------------------------------|---------------------------------------------------------------------------------|
-| [`DENO_INSTALL_CMD`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.DENO_INSTALL_CMD) | Deno's official installer.                                                      |
-| [`DENO_INSTALL_ENV`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.DENO_INSTALL_ENV) | Env var Deno's installer honours for its install root (binary in `<root>/bin`). |
-| [`YT_DLP_MODULE`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.YT_DLP_MODULE)    | yt-dlp's import name.                                                           |
-| [`EJS_MODULE`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.EJS_MODULE)       | Module that carries yt-dlp's challenge-solver scripts (from `yt-dlp[default]`). |
-| [`EJS_WIKI_URL`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.EJS_WIKI_URL)     | yt-dlp's notes on the JavaScript challenge.                                     |
-| [`JS_RUNTIMES_OPT`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.JS_RUNTIMES_OPT)  | The yt-dlp option naming JS runtimes (`{"deno": {"path": ...}}`).               |
+| [`DENO`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.DENO)                      | The JavaScript runtime yt-dlp enables by default, and the one that works.                           |
+|----------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------|
+| [`DENO_INSTALL_CMD`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.DENO_INSTALL_CMD)          | Deno's official installer.                                                                          |
+| [`DENO_INSTALL_ENV`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.DENO_INSTALL_ENV)          | Env var Deno's installer honours for its install root (binary in `<root>/bin`).                     |
+| [`YT_DLP_MODULE`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.YT_DLP_MODULE)             | yt-dlp's import name.                                                                               |
+| [`EJS_MODULE`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.EJS_MODULE)                | Module that carries yt-dlp's challenge-solver scripts (from `yt-dlp[default]`).                     |
+| [`DENO_UPGRADE_CMD`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.DENO_UPGRADE_CMD)          | Command that brings an installed Deno up to date.                                                   |
+| [`DENO_MIN_VERSION_FALLBACK`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.DENO_MIN_VERSION_FALLBACK) | Fallback for Deno's minimum version when yt-dlp can't be asked (not importable, or too old to say). |
+| [`DENO_VERSION_TIMEOUT`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.DENO_VERSION_TIMEOUT)      | Seconds to wait for `deno --version`.                                                               |
+| [`EJS_WIKI_URL`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.EJS_WIKI_URL)              | yt-dlp's notes on the JavaScript challenge.                                                         |
+| [`JS_RUNTIMES_OPT`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.JS_RUNTIMES_OPT)           | The yt-dlp option naming JS runtimes (`{"deno": {"path": ...}}`).                                   |
 
 ### Functions
 
 | [`check_requirements`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.check_requirements)(\*[, warn, which, ...])   | Check what YouTube downloads need, and say how to fix what's missing.   |
 |-----------------------------------------------------------------------------------------------|-------------------------------------------------------------------------|
 | [`deno_search_dirs`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.deno_search_dirs)()                           | Where Deno lives when it isn't on `PATH`.                               |
+| [`deno_version`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.deno_version)(runtime, \*[, run])             | Ask `runtime` for its version (`deno --version`); `None` if unknown.    |
 | [`find_js_runtime`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.find_js_runtime)(\*[, which, search_dirs])    | Find Deno on `PATH`, else in its standard install location.             |
 | [`has_ejs_scripts`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.has_ejs_scripts)(\*[, find_spec])             | Whether yt-dlp's challenge-solver scripts (`yt-dlp-ejs`) are installed. |
 | [`has_module`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.has_module)(name, \*[, find_spec])            | Whether module `name` is importable, without importing it.              |
+| [`min_deno_version`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.min_deno_version)(\*[, import_module])        | The oldest Deno yt-dlp supports, as a version tuple.                    |
 | [`with_runtime_opts`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.with_runtime_opts)(opts)                      | `opts` plus the preflight's runtime path, unless `opts` names runtimes. |
 | [`yt_dlp_runtime_opts`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.yt_dlp_runtime_opts)(runtime)                 | yt-dlp options pointing at `runtime` when yt-dlp can't find it alone.   |
 
@@ -1066,6 +1076,20 @@ Deno’s official installer.
 ### yb.download.requirements.DENO_INSTALL_ENV *= 'DENO_INSTALL'*
 
 Env var Deno’s installer honours for its install root (binary in `<root>/bin`).
+
+### yb.download.requirements.DENO_MIN_VERSION_FALLBACK *= (2, 3, 0)*
+
+Fallback for Deno’s minimum version when yt-dlp can’t be asked (not
+importable, or too old to say). yt-dlp’s own value wins: see
+[`min_deno_version()`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.min_deno_version).
+
+### yb.download.requirements.DENO_UPGRADE_CMD *= 'deno upgrade'*
+
+Command that brings an installed Deno up to date.
+
+### yb.download.requirements.DENO_VERSION_TIMEOUT *= 10*
+
+Seconds to wait for `deno --version`.
 
 ### *exception* yb.download.requirements.DownloadRequirementWarning
 
@@ -1107,7 +1131,7 @@ Whether yt-dlp would find it by name on `PATH` unaided.
 
 yt-dlp’s import name.
 
-### yb.download.requirements.check_requirements(\*, warn=True, which=<function which>, search_dirs=None, find_spec=<function find_spec>)
+### yb.download.requirements.check_requirements(\*, warn=True, which=<function which>, search_dirs=None, find_spec=<function find_spec>, run=<function run>, import_module=<function import_module>, check_deno_version=True)
 
 Check what YouTube downloads need, and say how to fix what’s missing.
 
@@ -1118,6 +1142,11 @@ Never raises. Each problem is a message ending with the fix.
   * **which** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – See [`find_js_runtime()`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.find_js_runtime).
   * **search_dirs** ([`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – See [`find_js_runtime()`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.find_js_runtime).
   * **find_spec** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`object`](https://docs.python.org/3/builtins/functions.html#object) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – Module lookup for [`has_module()`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.has_module).
+  * **run** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis), [`CompletedProcess`](https://docs.python.org/3/library/subprocess.html#subprocess.CompletedProcess)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]) – Subprocess runner for [`deno_version()`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.deno_version).
+  * **import_module** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`object`](https://docs.python.org/3/builtins/functions.html#object)]) – Importer for [`min_deno_version()`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.min_deno_version).
+  * **check_deno_version** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Also run `deno --version` and compare it with
+    yt-dlp’s minimum. The download preflight turns this off: it spawns
+    a process, which belongs in an explicit check, not in a download.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
 * **Returns:**
@@ -1133,6 +1162,16 @@ too), then the installer’s `$DENO_INSTALL/bin` and `~/.deno/bin`.
 
 * **Return type:**
   [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis)]
+
+### yb.download.requirements.deno_version(runtime, \*, run=<function run>)
+
+Ask `runtime` for its version (`deno --version`); `None` if unknown.
+
+Never raises: a runtime that can’t be run, or prints something unexpected,
+has an unknown version (which [`check_requirements()`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.check_requirements) doesn’t flag).
+
+* **Return type:**
+  [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`int`](https://docs.python.org/3/builtins/functions.html#int), [`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 ### yb.download.requirements.find_js_runtime(\*, which=<function which>, search_dirs=None)
 
@@ -1160,6 +1199,17 @@ Whether module `name` is importable, without importing it.
 
 * **Return type:**
   [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
+
+### yb.download.requirements.min_deno_version(\*, import_module=<function import_module>)
+
+The oldest Deno yt-dlp supports, as a version tuple.
+
+Read from yt-dlp (`DenoJsRuntime.MIN_SUPPORTED_VERSION`) so it follows
+yt-dlp’s upgrades; [`DENO_MIN_VERSION_FALLBACK`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.DENO_MIN_VERSION_FALLBACK) when yt-dlp isn’t
+importable or doesn’t say.
+
+* **Return type:**
+  [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`int`](https://docs.python.org/3/builtins/functions.html#int), [`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis)]
 
 ### yb.download.requirements.with_runtime_opts(opts)
 
@@ -4071,18 +4121,16 @@ Fetch a video’s live metadata & engagement numbers.
 
 # About this build
 
-This documentation was built on **2026-10-13 04:15 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/4f576331f98c1334a0a25fa02e69a891f4c0b6d7"><code>4f57633</code></a> on branch <code>main</code>, for **yb 0.1.14** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-10-13 06:44 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/b6bacc5f29f0fdd8c6244c52fa85c05a151bdd10"><code>b6bacc5</code></a> on branch <code>main</code>, for **yb 0.1.15** (from <code>pyproject.toml</code>).
 
-#### WARNING
-The documentation and the package may be misaligned:
-
-- The documented version (0.1.14) is behind the latest release on PyPI (0.1.15): `pip install yb` gives newer code than these docs describe.
+#### NOTE
+Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
 
 ## Source
 
 |                     |                                                                                                                                                    |
 |---------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/yb/commit/4f576331f98c1334a0a25fa02e69a891f4c0b6d7"><code>4f576331f98c1334a0a25fa02e69a891f4c0b6d7</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/yb/commit/b6bacc5f29f0fdd8c6244c52fa85c05a151bdd10"><code>b6bacc5f29f0fdd8c6244c52fa85c05a151bdd10</code></a> |
 | Branch              | <code>main</code>                                                                                                                                  |
 | Tags at this commit | none                                                                                                                                               |
 | Working tree        | clean                                                                                                                                              |
@@ -4093,15 +4141,15 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/yb</code>                                                                   |
-| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/38345395351">38345395351</a>          |
+| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/38358202320">38358202320</a>          |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>4f576331f98c1334a0a25fa02e69a891f4c0b6d7</code> (in the history of the built commit) |
+| Event commit | <code>b6bacc5f29f0fdd8c6244c52fa85c05a151bdd10</code> (in the history of the built commit) |
 
 ## Tools
 
 |          |         |
 |----------|---------|
-| epythet  | 0.2.13  |
+| epythet  | 0.2.14  |
 | Sphinx   | 9.1.0   |
 | docutils | 0.22.4  |
 | Python   | 3.12.15 |
@@ -4120,14 +4168,14 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/yb/0.1.15/">0.1.15</a>, newer than the documented version (0.1.14).
+Latest release: <a href="https://pypi.org/project/yb/0.1.15/">0.1.15</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/yb && cd yb
-git checkout 4f576331f98c1334a0a25fa02e69a891f4c0b6d7
-pip install "epythet==0.2.13"
+git checkout b6bacc5f29f0fdd8c6244c52fa85c05a151bdd10
+pip install "epythet==0.2.14"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```
 

@@ -13,6 +13,9 @@ yb.download.requirements
       DENO_INSTALL_ENV
       YT_DLP_MODULE
       EJS_MODULE
+      DENO_UPGRADE_CMD
+      DENO_MIN_VERSION_FALLBACK
+      DENO_VERSION_TIMEOUT
       EJS_WIKI_URL
       JS_RUNTIMES_OPT
    
@@ -22,9 +25,11 @@ yb.download.requirements
    
       check_requirements
       deno_search_dirs
+      deno_version
       find_js_runtime
       has_ejs_scripts
       has_module
+      min_deno_version
       with_runtime_opts
       yt_dlp_runtime_opts
    

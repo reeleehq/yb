@@ -1,36 +1,36 @@
 {
   "schema_version": 1,
-  "built_at": "2026-10-13T04:15:16Z",
+  "built_at": "2026-10-13T06:44:00Z",
   "package": {
     "name": "yb",
-    "version": "0.1.14",
+    "version": "0.1.15",
     "display_name": "yb",
     "source": "pyproject.toml"
   },
   "git": {
     "available": true,
-    "commit": "4f576331f98c1334a0a25fa02e69a891f4c0b6d7",
-    "short_commit": "4f57633",
+    "commit": "b6bacc5f29f0fdd8c6244c52fa85c05a151bdd10",
+    "short_commit": "b6bacc5",
     "branch": "main",
     "tags": [],
     "dirty": false,
     "remote_url": "https://github.com/reeleehq/yb",
-    "commit_url": "https://github.com/reeleehq/yb/commit/4f576331f98c1334a0a25fa02e69a891f4c0b6d7",
+    "commit_url": "https://github.com/reeleehq/yb/commit/b6bacc5f29f0fdd8c6244c52fa85c05a151bdd10",
     "error": null
   },
   "ci": {
     "provider": "github",
     "repository": "reeleehq/yb",
-    "sha": "4f576331f98c1334a0a25fa02e69a891f4c0b6d7",
+    "sha": "b6bacc5f29f0fdd8c6244c52fa85c05a151bdd10",
     "sha_in_history": true,
     "ref": "refs/heads/main",
     "ref_name": "main",
-    "run_id": "38345395351",
-    "run_url": "https://github.com/reeleehq/yb/actions/runs/38345395351",
+    "run_id": "38358202320",
+    "run_url": "https://github.com/reeleehq/yb/actions/runs/38358202320",
     "server_url": "https://github.com"
   },
   "tools": {
-    "epythet": "0.2.13",
+    "epythet": "0.2.14",
     "sphinx": "9.1.0",
     "docutils": "0.22.4",
     "python": "3.12.15"
@@ -56,20 +56,18 @@
   },
   "site": {
     "modules_documented": 23,
-    "objects_documented": 278
+    "objects_documented": 283
   },
   "pypi": {
     "checked": true,
     "latest": "0.1.15",
-    "relation": "behind",
+    "relation": "same",
     "error": null
   },
-  "reproduce": "git clone https://github.com/reeleehq/yb && cd yb\ngit checkout 4f576331f98c1334a0a25fa02e69a891f4c0b6d7\npip install \"epythet==0.2.13\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
+  "reproduce": "git clone https://github.com/reeleehq/yb && cd yb\ngit checkout b6bacc5f29f0fdd8c6244c52fa85c05a151bdd10\npip install \"epythet==0.2.14\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
   "warnings": [],
   "alignment": {
-    "aligned": false,
-    "notes": [
-      "The documented version (0.1.14) is behind the latest release on PyPI (0.1.15): `pip install yb` gives newer code than these docs describe."
-    ]
+    "aligned": true,
+    "notes": []
   }
 }

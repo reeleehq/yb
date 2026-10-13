@@ -295,7 +295,9 @@
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">importlib.util</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">sysconfig</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
@@ -318,6 +320,17 @@
 
 <span class="c1">#: Module that carries yt-dlp's challenge-solver scripts (from ``yt-dlp[default]``).</span>
 <span class="n">EJS_MODULE</span> <span class="o">=</span> <span class="s2">"yt_dlp_ejs"</span>
+
+<span class="c1">#: Command that brings an installed Deno up to date.</span>
+<span class="n">DENO_UPGRADE_CMD</span> <span class="o">=</span> <span class="s2">"deno upgrade"</span>
+
+<span class="c1">#: Fallback for Deno's minimum version when yt-dlp can't be asked (not</span>
+<span class="c1">#: importable, or too old to say). yt-dlp's own value wins: see</span>
+<span class="c1">#: :func:`min_deno_version`.</span>
+<span class="n">DENO_MIN_VERSION_FALLBACK</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+<span class="c1">#: Seconds to wait for ``deno --version``.</span>
+<span class="n">DENO_VERSION_TIMEOUT</span> <span class="o">=</span> <span class="mi">10</span>
 
 <span class="c1">#: yt-dlp's notes on the JavaScript challenge.</span>
 <span class="n">EJS_WIKI_URL</span> <span class="o">=</span> <span class="s2">"https://github.com/yt-dlp/yt-dlp/wiki/EJS"</span>
@@ -397,6 +410,58 @@
 
 
 
+<div class="viewcode-block" id="min_deno_version">
+<a class="viewcode-back" href="../../../_autosummary/yb.download.requirements.html#yb.download.min_deno_version">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">min_deno_version</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span> <span class="n">import_module</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">object</span><span class="p">]</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">import_module</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""The oldest Deno yt-dlp supports, as a version tuple.</span>
+
+<span class="sd">    Read from yt-dlp (``DenoJsRuntime.MIN_SUPPORTED_VERSION``) so it follows</span>
+<span class="sd">    yt-dlp's upgrades; :data:`DENO_MIN_VERSION_FALLBACK` when yt-dlp isn't</span>
+<span class="sd">    importable or doesn't say.</span>
+<span class="sd">    """</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">mod</span> <span class="o">=</span> <span class="n">import_module</span><span class="p">(</span><span class="s2">"yt_dlp.utils._jsruntime"</span><span class="p">)</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">mod</span><span class="o">.</span><span class="n">DenoJsRuntime</span><span class="o">.</span><span class="n">MIN_SUPPORTED_VERSION</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">value</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">value</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># any failure to ask yt-dlp means: use the fallback</span>
+        <span class="k">pass</span>
+    <span class="k">return</span> <span class="n">DENO_MIN_VERSION_FALLBACK</span></div>
+
+
+
+<div class="viewcode-block" id="deno_version">
+<a class="viewcode-back" href="../../../_autosummary/yb.download.requirements.html#yb.download.deno_version">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">deno_version</span><span class="p">(</span>
+    <span class="n">runtime</span><span class="p">:</span> <span class="n">JsRuntime</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">run</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="s2">"subprocess.CompletedProcess[str]"</span><span class="p">]</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Ask ``runtime`` for its version (``deno --version``); ``None`` if unknown.</span>
+
+<span class="sd">    Never raises: a runtime that can't be run, or prints something unexpected,</span>
+<span class="sd">    has an unknown version (which :func:`check_requirements` doesn't flag).</span>
+<span class="sd">    """</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">run</span><span class="p">(</span>
+            <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">runtime</span><span class="o">.</span><span class="n">path</span><span class="p">),</span> <span class="s2">"--version"</span><span class="p">],</span>
+            <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="n">DENO_VERSION_TIMEOUT</span><span class="p">,</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">stdout</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">SubprocessError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">"deno (\d+(?:\.\d+)*)"</span><span class="p">,</span> <span class="n">out</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"."</span><span class="p">))</span> <span class="k">if</span> <span class="n">match</span> <span class="k">else</span> <span class="kc">None</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_fmt_version</span><span class="p">(</span><span class="n">version</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">return</span> <span class="s2">"."</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">version</span><span class="p">))</span>
+
+
 <div class="viewcode-block" id="has_module">
 <a class="viewcode-back" href="../../../_autosummary/yb.download.requirements.html#yb.download.has_module">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">has_module</span><span class="p">(</span>
@@ -428,6 +493,9 @@
     <span class="n">which</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="n">shutil</span><span class="o">.</span><span class="n">which</span><span class="p">,</span>
     <span class="n">search_dirs</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">find_spec</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">object</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">find_spec</span><span class="p">,</span>
+    <span class="n">run</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="s2">"subprocess.CompletedProcess[str]"</span><span class="p">]</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">,</span>
+    <span class="n">import_module</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">object</span><span class="p">]</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">import_module</span><span class="p">,</span>
+    <span class="n">check_deno_version</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""Check what YouTube downloads need, and say how to fix what's missing.</span>
 
@@ -437,6 +505,11 @@
 <span class="sd">        warn: Also emit each problem as a :class:`DownloadRequirementWarning`.</span>
 <span class="sd">        which, search_dirs: See :func:`find_js_runtime`.</span>
 <span class="sd">        find_spec: Module lookup for :func:`has_module`.</span>
+<span class="sd">        run: Subprocess runner for :func:`deno_version`.</span>
+<span class="sd">        import_module: Importer for :func:`min_deno_version`.</span>
+<span class="sd">        check_deno_version: Also run ``deno --version`` and compare it with</span>
+<span class="sd">            yt-dlp's minimum. The download preflight turns this off: it spawns</span>
+<span class="sd">            a process, which belongs in an explicit check, not in a download.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        The problems found; empty when downloads should work.</span>
@@ -469,11 +542,28 @@
             <span class="s2">"extra_opts={'js_runtimes': {'node': </span><span class="si">{}</span><span class="s2">}}. "</span>
             <span class="sa">f</span><span class="s2">"See </span><span class="si">{</span><span class="n">EJS_WIKI_URL</span><span class="si">}</span><span class="s2">"</span>
         <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">check_deno_version</span><span class="p">:</span>
+        <span class="n">have</span><span class="p">,</span> <span class="n">need</span> <span class="o">=</span> <span class="n">deno_version</span><span class="p">(</span><span class="n">runtime</span><span class="p">,</span> <span class="n">run</span><span class="o">=</span><span class="n">run</span><span class="p">),</span> <span class="n">min_deno_version</span><span class="p">(</span>
+            <span class="n">import_module</span><span class="o">=</span><span class="n">import_module</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">have</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">have</span> <span class="o">&lt;</span> <span class="n">need</span><span class="p">:</span>
+            <span class="n">problems</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"Deno </span><span class="si">{</span><span class="n">_fmt_version</span><span class="p">(</span><span class="n">have</span><span class="p">)</span><span class="si">}</span><span class="s2"> at </span><span class="si">{</span><span class="n">runtime</span><span class="o">.</span><span class="n">path</span><span class="si">}</span><span class="s2"> is older than the "</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">_fmt_version</span><span class="p">(</span><span class="n">need</span><span class="p">)</span><span class="si">}</span><span class="s2"> yt-dlp requires, so YouTube downloads will "</span>
+                <span class="sa">f</span><span class="s2">"fail. Upgrade it with: </span><span class="si">{</span><span class="n">_upgrade_cmd</span><span class="p">(</span><span class="n">runtime</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
     <span class="k">if</span> <span class="n">warn</span><span class="p">:</span>
         <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">problems</span><span class="p">:</span>
             <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">DownloadRequirementWarning</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">problems</span></div>
 
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_upgrade_cmd</span><span class="p">(</span><span class="n">runtime</span><span class="p">:</span> <span class="n">JsRuntime</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""How to upgrade ``runtime``: ``deno upgrade``, by full path when off ``PATH``."""</span>
+    <span class="k">if</span> <span class="n">runtime</span><span class="o">.</span><span class="n">on_path</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">DENO_UPGRADE_CMD</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">runtime</span><span class="o">.</span><span class="n">path</span><span class="si">}</span><span class="s2"> upgrade"</span>
 
 
 <div class="viewcode-block" id="yt_dlp_runtime_opts">
@@ -498,7 +588,7 @@
 <span class="sd">    A warning filter set to ``error`` must not stop a download, so a warning</span>
 <span class="sd">    raised as an exception is swallowed here.</span>
 <span class="sd">    """</span>
-    <span class="k">for</span> <span class="n">problem</span> <span class="ow">in</span> <span class="n">check_requirements</span><span class="p">(</span><span class="n">warn</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">problem</span> <span class="ow">in</span> <span class="n">check_requirements</span><span class="p">(</span><span class="n">warn</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">check_deno_version</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">problem</span><span class="p">,</span> <span class="n">DownloadRequirementWarning</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
         <span class="k">except</span> <span class="n">DownloadRequirementWarning</span><span class="p">:</span>
@@ -547,7 +637,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=f2ffa296"></script>
+</div><script src="../../../_static/documentation_options.js?v=5bbfd6f0"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

@@ -102,7 +102,7 @@ The executable.
 
 Whether yt-dlp would find it by name on `PATH` unaided.
 
-### yb.download.check_requirements(\*, warn=True, which=<function which>, search_dirs=None, find_spec=<function find_spec>)
+### yb.download.check_requirements(\*, warn=True, which=<function which>, search_dirs=None, find_spec=<function find_spec>, run=<function run>, import_module=<function import_module>, check_deno_version=True)
 
 Check what YouTube downloads need, and say how to fix what’s missing.
 
@@ -113,6 +113,11 @@ Never raises. Each problem is a message ending with the fix.
   * **which** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – See [`find_js_runtime()`](#yb.download.find_js_runtime).
   * **search_dirs** ([`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – See [`find_js_runtime()`](#yb.download.find_js_runtime).
   * **find_spec** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`object`](https://docs.python.org/3/builtins/functions.html#object) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – Module lookup for `has_module()`.
+  * **run** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis), [`CompletedProcess`](https://docs.python.org/3/library/subprocess.html#subprocess.CompletedProcess)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]) – Subprocess runner for `deno_version()`.
+  * **import_module** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`object`](https://docs.python.org/3/builtins/functions.html#object)]) – Importer for `min_deno_version()`.
+  * **check_deno_version** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Also run `deno --version` and compare it with
+    yt-dlp’s minimum. The download preflight turns this off: it spawns
+    a process, which belongs in an explicit check, not in a download.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
 * **Returns:**
