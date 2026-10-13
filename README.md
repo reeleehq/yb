@@ -46,6 +46,13 @@ Everything heavy is an optional extra, and `import yb` never fails for a missing
 one — the error only surfaces when you actually call that feature. You also need
 **ffmpeg** on PATH for media work, and an `ELEVENLABS_API_KEY` for transcription.
 
+### System dependencies
+
+- **ffmpeg** on PATH, for media work.
+- **Deno**, for downloading from YouTube. YouTube makes yt-dlp solve a JavaScript challenge; without a runtime, downloads fail with `No video formats found!`. `yb[download]` depends on `yt-dlp[default]`, which brings the solver scripts; the runtime you install yourself: `curl -fsSL https://deno.land/install.sh | sh` (or `brew install deno`). Node alone does not work. The installer puts Deno in `~/.deno/bin` and adds it to PATH only for interactive shells; yb also looks there and passes yt-dlp the path, so cron jobs and services work too. To put it on PATH anyway: `export PATH="$HOME/.deno/bin:$PATH"` in `~/.profile`. See yt-dlp's [EJS notes](https://github.com/yt-dlp/yt-dlp/wiki/EJS).
+
+Run `yb check` (or `yb.download.check_requirements()`) to see what is missing and how to install it. The first download in a process runs the same check and warns; it never refuses to try.
+
 ## Common tasks
 
 ### Download
