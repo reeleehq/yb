@@ -210,3 +210,118 @@ def test_yb_check_exit_status(monkeypatch, capsys):
     monkeypatch.setattr(req, "check_requirements", lambda **k: [])
     assert main(["check"]) == 0
     assert "ready" in capsys.readouterr().out
+
+
+# --- Deno's minimum version (yb#27) ------------------------------------------
+
+
+def _fake_run(stdout="", *, error=None):
+    def run(cmd, **kwargs):
+        if error:
+            raise error
+        return types.SimpleNamespace(stdout=stdout)
+
+    return run
+
+
+def _yt_dlp_with_min(version):
+    mod = types.SimpleNamespace(
+        DenoJsRuntime=types.SimpleNamespace(MIN_SUPPORTED_VERSION=version)
+    )
+    return lambda name: mod
+
+
+def _check_with(tmp_path, run, **kwargs):
+    _fake_deno(tmp_path)
+    return req.check_requirements(
+        warn=False,
+        which=_no_which,
+        search_dirs=[tmp_path],
+        find_spec=_found_spec,
+        run=run,
+        **kwargs,
+    )
+
+
+def test_min_version_is_read_from_yt_dlp():
+    assert req.min_deno_version(import_module=_yt_dlp_with_min((9, 1, 0))) == (9, 1, 0)
+
+
+@pytest.mark.parametrize(
+    "importer",
+    [
+        pytest.param(lambda name: (_ for _ in ()).throw(ImportError(name)), id="absent"),
+        pytest.param(lambda name: types.SimpleNamespace(), id="no-attribute"),
+        pytest.param(_yt_dlp_with_min(("x",)), id="garbage"),
+    ],
+)
+def test_min_version_falls_back_when_yt_dlp_cannot_say(importer):
+    assert req.min_deno_version(import_module=importer) == req.DENO_MIN_VERSION_FALLBACK
+
+
+def test_deno_version_parses_deno_output(tmp_path):
+    rt = req.JsRuntime("deno", tmp_path / "deno", on_path=True)
+    out = "deno 2.9.7 (stable, release, x86_64-unknown-linux-gnu)\nv8 14.0\n"
+    assert req.deno_version(rt, run=_fake_run(out)) == (2, 9, 7)
+
+
+@pytest.mark.parametrize(
+    "run",
+    [
+        _fake_run(error=FileNotFoundError()),
+        _fake_run(error=PermissionError()),
+        _fake_run(error=req.subprocess.TimeoutExpired("deno", 1)),
+        _fake_run(""),
+        _fake_run("something else 1.0"),
+    ],
+)
+def test_unknown_deno_version_is_none(tmp_path, run):
+    rt = req.JsRuntime("deno", tmp_path / "deno", on_path=True)
+    assert req.deno_version(rt, run=run) is None
+
+
+def test_too_old_deno_is_reported_with_the_upgrade_command(tmp_path):
+    problems = _check_with(
+        tmp_path,
+        _fake_run("deno 2.1.4 (stable)\n"),
+        import_module=_yt_dlp_with_min((2, 3, 0)),
+    )
+    assert len(problems) == 1
+    msg = problems[0]
+    assert "2.1.4" in msg and "2.3.0" in msg and "upgrade" in msg
+    assert str(tmp_path) in msg  # off PATH: upgrade by full path
+
+
+def test_too_old_deno_on_path_suggests_plain_deno_upgrade():
+    problems = req.check_requirements(
+        warn=False,
+        which=lambda n: "/usr/bin/deno",
+        search_dirs=[],
+        find_spec=_found_spec,
+        run=_fake_run("deno 1.46.3\n"),
+        import_module=_yt_dlp_with_min((2, 3, 0)),
+    )
+    assert problems and problems[0].endswith(f"Upgrade it with: {req.DENO_UPGRADE_CMD}")
+
+
+@pytest.mark.parametrize("have", ["deno 2.3.0", "deno 2.9.7", "deno 10.0.0"])
+def test_deno_at_or_above_the_minimum_is_fine(tmp_path, have):
+    problems = _check_with(
+        tmp_path, _fake_run(have), import_module=_yt_dlp_with_min((2, 3, 0))
+    )
+    assert problems == []
+
+
+def test_unknown_deno_version_is_not_a_problem(tmp_path):
+    assert _check_with(tmp_path, _fake_run(error=OSError())) == []
+
+
+def test_missing_deno_is_not_also_a_version_problem(tmp_path):
+    problems = req.check_requirements(
+        warn=False,
+        which=_no_which,
+        search_dirs=[tmp_path],
+        find_spec=_found_spec,
+        run=_fake_run("deno 1.0.0"),
+    )
+    assert len(problems) == 1 and "No JavaScript runtime" in problems[0]
