@@ -180,6 +180,23 @@ def test_a_fresh_run_attaches_two_tracks_in_one_language(api, tmp_path):
     assert [c[0] for c in calls].count("caption en") == 2
 
 
+def test_a_resume_runs_the_second_track_in_a_language_it_lacks(api, tmp_path):
+    """yb#30: steps were marked done by language, so after the second of two
+    "en" tracks failed, a resume skipped it."""
+    calls, fail, video, thumb, _ = api
+    caps = [
+        CaptionTrack(tmp_path / "a.srt", "en", "A"),
+        CaptionTrack(tmp_path / "b.srt", "en", "B"),
+    ]
+
+    result = _publish(
+        video, thumb, caps, resume={"video_id": "vid1", "captions": ["en"]}
+    )
+
+    assert [c[0] for c in calls].count("caption en") == 1
+    assert result["captions"] == ["en", "en"]
+
+
 def test_a_hand_built_resume_gets_defaults_and_drops_extra_keys(api):
     calls, fail, video, thumb, caps = api
 

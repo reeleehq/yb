@@ -7,7 +7,9 @@ tags, languages, and chapter blocks in the description).
 
 from __future__ import annotations
 
+import json
 import re
+import warnings
 from pathlib import Path
 from typing import Sequence
 
@@ -114,8 +116,17 @@ def update_video_fields(
     return update_video(video_id, writable, service=service)
 
 
-#: Privacy values ``videos.update(part="status")`` accepts.
+#: Privacy values ``videos.update(part="status")`` accepts, least visible first.
 PRIVACY_STATUSES = ("private", "unlisted", "public")
+
+
+class VisibilityDropWarning(UserWarning):
+    """:func:`supersede` leaves the re-cut less visible than the original was.
+
+    Emitted before anything is changed, so escalating it refuses the call::
+
+        warnings.simplefilter("error", VisibilityDropWarning)
+    """
 
 #: The ``status`` keys a ``videos.update`` may write. The part is replaced
 #: wholesale, so everything else read back (``uploadStatus``, ``rejectionReason``,
@@ -197,6 +208,13 @@ def supersede(
     3. sets ``old_id`` to ``old_privacy`` (default ``"private"``), clearing any
        scheduled publish. It is never deleted.
 
+    The new video keeps its own privacy unless ``new_privacy`` is given, and an
+    upload is ``unlisted`` by default: so the re-cut of a public video is NOT
+    made public for you. When the result is less visible than the old video
+    was (a public original, an unlisted re-cut), a :class:`VisibilityDropWarning`
+    is emitted before anything changes; pass ``new_privacy="public"`` to publish
+    the re-cut, or turn the warning into an error to refuse such calls.
+
     Captions and thumbnails are not copied: upload them with the new video
     (:func:`yb.youtube.publish_video`). Safe to re-run: every step checks
     before it acts. Quota: see :func:`yb.youtube.playlists_containing`; each
@@ -227,6 +245,9 @@ def supersede(
             f"new video {new_id} is not processed yet "
             f"(uploadStatus={new_status.get('uploadStatus')!r}); nothing was changed"
         )
+    _warn_if_visibility_drops(
+        old_id, new_id, new_status, old_privacy, new_privacy, service=service
+    )
     if new_privacy is not None:
         update_video_status(new_id, privacy_status=new_privacy, service=service)
     moved = []
@@ -237,8 +258,10 @@ def supersede(
                 position = first_position(old_id, pid, service=service)
                 try:
                     add_to_playlist(new_id, pid, position=position, service=service)
-                except Exception:  # noqa: BLE001 - e.g. manualSortRequired
-                    if position is None:
+                except Exception as e:
+                    # Retry only the one refusal known to have inserted nothing:
+                    # after a timeout the insert may have landed (yb#30).
+                    if position is None or not _is_manual_sort_required(e):
                         raise
                     position = None
                     add_to_playlist(new_id, pid, service=service)
@@ -260,6 +283,53 @@ def supersede(
         "old_privacy": old_privacy,
         "new_privacy": new_privacy,
     }
+
+
+def _warn_if_visibility_drops(
+    old_id, new_id, new_status, old_privacy, new_privacy, *, service
+) -> None:
+    """Warn when neither video ends up as visible as ``old_id`` is now (yb#30)."""
+    try:
+        old_status = get_video(old_id, part="status", service=service)["status"]
+    except KeyError:
+        return  # unchanged behaviour: the retire step reports a missing video
+    before = old_status.get("privacyStatus")
+    new_after = new_privacy or new_status.get("privacyStatus")
+    if before not in PRIVACY_STATUSES or new_after not in PRIVACY_STATUSES:
+        return
+    rank = PRIVACY_STATUSES.index
+    if max(rank(new_after), rank(old_privacy)) >= rank(before):
+        return
+    scheduled = new_status.get("publishAt") if new_privacy is None else None
+    when = f", scheduled to publish at {scheduled}" if scheduled else ""
+    warnings.warn(
+        f"supersede: {old_id} is {before} and will become {old_privacy}, while "
+        f"its replacement {new_id} stays {new_after}{when}. Pass "
+        f"new_privacy={before!r} to give the re-cut the original's visibility.",
+        VisibilityDropWarning,
+        stacklevel=3,
+    )
+
+
+def _is_manual_sort_required(error: Exception) -> bool:
+    """Whether ``error`` is YouTube's ``manualSortRequired`` refusal.
+
+    Reads the reason from a googleapiclient ``HttpError`` (``error_details``,
+    else its JSON ``content``), falling back to the message.
+    """
+    reasons = [
+        d.get("reason")
+        for d in getattr(error, "error_details", None) or []
+        if isinstance(d, dict)
+    ]
+    content = getattr(error, "content", None)
+    if not reasons and content:
+        try:
+            body = json.loads(content)
+            reasons = [d.get("reason") for d in body["error"]["errors"]]
+        except (ValueError, TypeError, KeyError, AttributeError):
+            pass
+    return "manualSortRequired" in reasons or "manualSortRequired" in str(error)
 
 
 def set_thumbnail(

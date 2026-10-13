@@ -1,8 +1,11 @@
 """Change a video's privacy, and retire an upload a re-cut replaces (yb#19)."""
 
+import warnings
+
 import pytest
 
 from yb.youtube import (
+    VisibilityDropWarning,
     playlists_containing,
     remove_from_playlist,
     supersede,
@@ -73,7 +76,10 @@ class _Items:
         pos = body["snippet"].get("position")
 
         def run():
+            self.svc.inserts += 1
             vid = body["snippet"]["resourceId"]["videoId"]
+            if pos is not None and self.svc.insert_error is not None:
+                raise self.svc.insert_error
             if pos is None:
                 self.svc.items[pid].append(vid)
                 return {"id": "new"}
@@ -111,6 +117,8 @@ class FakeService:
         self.items = {"PL1": ["a", "old"], "PL2": ["old", "old"], "PL3": ["b"]}
         self.updates = []
         self.fail_update = False
+        self.insert_error: Exception | None = None  # raised by a positioned insert
+        self.inserts = 0
 
     def videos(self):
         return _Videos(self)
@@ -254,3 +262,102 @@ def test_supersede_can_publish_the_new_video_first():
 
     assert svc.status["new"]["privacyStatus"] == "public"
     assert [b["id"] for b in svc.updates] == ["new", "old"]
+
+
+# --- yb#30: the visibility warning, and retrying only manualSortRequired ---
+
+
+def test_retiring_a_public_video_for_an_unlisted_re_cut_warns_first():
+    svc = FakeService()
+
+    with pytest.warns(VisibilityDropWarning, match="new_privacy='public'"):
+        out = supersede("old", "new", service=svc)
+
+    assert out["new_privacy"] is None  # the result is what it always was
+    assert svc.status["new"]["privacyStatus"] == "unlisted"
+    assert svc.status["old"]["privacyStatus"] == "private"
+
+
+@pytest.mark.parametrize(
+    "kw, old_before",
+    [
+        ({"new_privacy": "public"}, "public"),
+        ({"old_privacy": "public"}, "public"),  # the original stays up
+        ({}, "unlisted"),  # an unlisted re-cut of an unlisted video
+        ({}, "private"),
+    ],
+)
+def test_no_warning_when_nothing_becomes_less_visible(kw, old_before):
+    svc = FakeService()
+    svc.status["old"]["privacyStatus"] = old_before
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", VisibilityDropWarning)
+        supersede("old", "new", service=svc, **kw)
+
+
+def test_the_warning_as_an_error_refuses_before_anything_changes():
+    svc = FakeService()
+    before = {k: list(v) for k, v in svc.items.items()}
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", VisibilityDropWarning)
+        with pytest.raises(VisibilityDropWarning):
+            supersede("old", "new", service=svc)
+
+    assert svc.items == before and not svc.updates
+
+
+def test_a_scheduled_re_cut_says_when_it_goes_public():
+    svc = FakeService()
+    svc.status["new"]["publishAt"] = "2030-01-01T00:00:00Z"
+
+    with pytest.warns(VisibilityDropWarning, match="2030-01-01"):
+        supersede("old", "new", service=svc)
+
+
+class _HttpError(Exception):
+    """Shaped like googleapiclient's HttpError: a reason in its details."""
+
+    def __init__(self, reason, *, content=None):
+        super().__init__("<HttpError 400>")
+        self.error_details = [{"reason": reason}] if content is None else ""
+        self.content = content
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        _HttpError("manualSortRequired"),
+        _HttpError(
+            "",
+            content=b'{"error": {"errors": [{"reason": "manualSortRequired"}]}}',
+        ),
+    ],
+)
+def test_an_auto_sorted_playlist_is_recognised_from_an_http_error(error):
+    svc = FakeService()
+    svc.items = {"PL1": ["a", "old", "b"]}
+    svc.insert_error = error
+
+    out = supersede("old", "new", service=svc)
+
+    assert [v for v in svc.items["PL1"] if v] == ["a", "b", "new"]
+    assert out["playlists"][0]["position"] is None
+
+
+@pytest.mark.parametrize(
+    "error", [TimeoutError("timed out"), _HttpError("quotaExceeded")]
+)
+def test_any_other_insert_failure_is_not_retried_as_an_append(error):
+    """Review of #23: after a timeout the insert may have landed, and a quota
+    error would be paid for twice."""
+    svc = FakeService()
+    svc.items = {"PL1": ["a", "old", "b"]}
+    svc.insert_error = error
+
+    with pytest.raises(type(error)):
+        supersede("old", "new", service=svc)
+
+    assert [v for v in svc.items["PL1"] if v] == ["a", "old", "b"]
+    assert svc.inserts == 1

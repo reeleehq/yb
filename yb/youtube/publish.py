@@ -11,6 +11,7 @@ Two entry points:
 
 from __future__ import annotations
 
+from collections import Counter
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
@@ -82,9 +83,12 @@ def _restore_partial(result: dict, step: str, message: str) -> PartialPublish:
 _Step = tuple[str, str, Callable[[], Any]]
 
 
-def _step_done(result: Mapping, kind: str, key: str) -> bool:
+def _step_done(result: Mapping, kind: str, key: str, nth: int = 1) -> bool:
+    """Whether the saved ``result`` records this step; ``nth`` counts tracks
+    in the same language, so a second ``"en"`` needs ``"en"`` recorded twice
+    (yb#30)."""
     if kind == "caption":
-        return key in result["captions"]
+        return result["captions"].count(key) >= nth
     if kind == "thumbnail":
         return bool(result["thumbnail"])
     return result["playlist"] is not None
@@ -109,8 +113,10 @@ def _after_upload(
         if resuming
         else None
     )
+    seen: Counter = Counter()
     for kind, key, run in steps:
-        if done is not None and _step_done(done, kind, key):
+        seen[kind, key] += 1
+        if done is not None and _step_done(done, kind, key, seen[kind, key]):
             continue
         try:
             out = run()
