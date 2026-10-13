@@ -4,6 +4,7 @@ No network and no real runtime: PATH lookup, module lookup and yt-dlp itself
 are all faked.
 """
 
+import os
 import sys
 import types
 import warnings
@@ -28,7 +29,7 @@ def _missing_spec(name):
 
 
 def _fake_deno(directory):
-    deno = directory / "deno"
+    deno = directory / ("deno.exe" if os.name == "nt" else "deno")
     deno.write_text("#!/bin/sh\n")
     deno.chmod(0o755)
     return deno
@@ -54,6 +55,7 @@ def test_deno_off_path_is_found_in_its_install_dir(tmp_path):
     assert req.yt_dlp_runtime_opts(rt) == {"js_runtimes": {"deno": {"path": str(deno)}}}
 
 
+@pytest.mark.skipif(os.name == "nt", reason="no executable bit on Windows")
 def test_non_executable_file_is_not_a_runtime(tmp_path):
     (tmp_path / "deno").write_text("")
     assert req.find_js_runtime(which=_no_which, search_dirs=[tmp_path]) is None
@@ -62,8 +64,30 @@ def test_non_executable_file_is_not_a_runtime(tmp_path):
 def test_default_search_dirs_honour_deno_install(tmp_path, monkeypatch):
     monkeypatch.setenv("DENO_INSTALL", str(tmp_path))
     dirs = req.deno_search_dirs()
-    assert dirs[0] == tmp_path / "bin"
+    assert tmp_path / "bin" in dirs
     assert dirs[-1].parts[-2:] == (".deno", "bin")
+
+
+def test_a_pip_installed_deno_next_to_python_is_found(tmp_path, monkeypatch):
+    deno = _fake_deno(tmp_path)
+    monkeypatch.setattr(req.sysconfig, "get_path", lambda name: str(tmp_path))
+    assert req.find_js_runtime(which=_no_which).path == deno
+
+
+def test_an_explicit_runtime_skips_the_check_even_under_error_filters(monkeypatch):
+    monkeypatch.setattr(req, "check_requirements", lambda **k: ["no deno"])
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        mine = {"js_runtimes": {"node": {}}}
+        assert req.with_runtime_opts(mine) == mine
+
+
+def test_error_filters_never_stop_a_download(monkeypatch):
+    monkeypatch.setattr(req, "check_requirements", lambda **k: ["no deno"])
+    monkeypatch.setattr(req, "find_js_runtime", lambda: None)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert req.with_runtime_opts({"quiet": True}) == {"quiet": True}
 
 
 def test_missing_runtime_is_reported_with_the_install_command(tmp_path):
