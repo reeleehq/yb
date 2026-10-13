@@ -1,12 +1,17 @@
 """Command line for ``yb``: ``python -m yb`` / the ``yb`` script.
 
-Currently one command, ``auth``: YouTube consent that works from a machine with
-no browser and no terminal (a session driven from a phone), by pasting the
-browser's redirect back::
+``auth``: YouTube consent that works from a machine with no browser and no
+terminal (a session driven from a phone), by pasting the browser's redirect
+back::
 
     yb auth                          # print the consent URL
     yb auth --paste '<redirected URL>'   # finish; also - (stdin) or @file
     yb auth --check                  # is a usable token cached? (never prompts)
+
+``check``: are YouTube downloads ready (JS runtime, solver scripts)? Prints what
+is missing and how to install it; exit status 1 if anything is::
+
+    yb check
 """
 
 from __future__ import annotations
@@ -54,6 +59,20 @@ def _auth(args: argparse.Namespace) -> int:
     return 0
 
 
+def _check(args: argparse.Namespace) -> int:
+    from yb.download.requirements import check_requirements, find_js_runtime
+
+    problems = check_requirements(warn=False)
+    for p in problems:
+        print(f"- {p}", file=sys.stderr)
+    if runtime := find_js_runtime():
+        where = "on PATH" if runtime.on_path else "off PATH; yb passes yt-dlp its path"
+        print(f"JS runtime: {runtime.name} at {runtime.path} ({where})")
+    if not problems:
+        print("Downloads ready.")
+    return 1 if problems else 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Entry point; returns the process exit status."""
     parser = argparse.ArgumentParser(prog="yb", description=__doc__.split("\n")[0])
@@ -77,6 +96,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     auth.add_argument("--client-secrets", help="OAuth client JSON (default: as usual)")
     auth.add_argument("--token-file", help="token cache location (default: as usual)")
     auth.set_defaults(run=_auth)
+    check = commands.add_parser(
+        "check", help="are YouTube downloads ready? (JS runtime, solver scripts)"
+    )
+    check.set_defaults(run=_check)
     args = parser.parse_args(argv)
     return args.run(args)
 

@@ -16,6 +16,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
 
+from yb.download.requirements import with_runtime_opts
+
 PathLike = str | Path
 
 #: What :func:`download_youtube_audio` does when a format conversion fails.
@@ -96,7 +98,7 @@ def youtube_video_info(url: str, *, extra_opts: dict | None = None) -> dict[str,
 
     opts = {"quiet": True, "skip_download": True, "noplaylist": True}
     opts.update(extra_opts or {})
-    with YoutubeDL(opts) as ydl:
+    with YoutubeDL(with_runtime_opts(opts)) as ydl:
         info = ydl.extract_info(url, download=False)
     return _trim_info(info)
 
@@ -165,7 +167,7 @@ def download_youtube_video(
         opts["merge_output_format"] = merge_to
     opts.update(extra_opts or {})
 
-    with YoutubeDL(opts) as ydl:
+    with YoutubeDL(with_runtime_opts(opts)) as ydl:
         info = ydl.extract_info(url, download=True)
 
     path = _resolve_output_path(info, ydl, out_dir, merge_to)
@@ -325,7 +327,7 @@ def youtube_playlist_info(
     if playlist_items:
         opts["playlist_items"] = playlist_items
     opts.update(extra_opts or {})
-    with YoutubeDL(opts) as ydl:
+    with YoutubeDL(with_runtime_opts(opts)) as ydl:
         info = ydl.extract_info(url, download=False)
 
     raw_entries = (info.get("entries") if info else None) or []
@@ -453,7 +455,7 @@ def download_youtube_playlist(
         opts["match_filter"] = _reject_title_filter(title_reject)
     opts.update(extra_opts or {})
 
-    with YoutubeDL(opts) as ydl:
+    with YoutubeDL(with_runtime_opts(opts)) as ydl:
         info = ydl.extract_info(url, download=True)
 
     results: list[DownloadResult] = []

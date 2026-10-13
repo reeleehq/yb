@@ -74,10 +74,12 @@ file untouched.
 
 ## Notes
 
-- **yt-dlp needs a JavaScript runtime.** Without one it warns
-  (`No supported JavaScript runtime could be found`) and *some formats may be
-  silently missing*. Install `deno` (`brew install deno`, or
-  `curl -fsSL https://deno.land/install.sh | sh`), or point yt-dlp at an existing
-  runtime with the `js_runtimes` option (e.g. node) via `extra_opts=`.
+- **YouTube downloads need Deno and yt-dlp's solver scripts.** Without them
+  yt-dlp fails with `No video formats found!`. `yb[download]` depends on
+  `yt-dlp[default]` (the scripts); install Deno with
+  `curl -fsSL https://deno.land/install.sh | sh` (Deno is yt-dlp's default
+  runtime; node or bun must be enabled via `extra_opts={'js_runtimes': ...}`).
+  yb also finds Deno in `~/.deno/bin` when it is not on PATH. Run `yb check`
+  (or `yb.download.check_requirements()`) to see what is missing.
 - Downloading audio then feeding it to a podcast episode? Continue with
   **yb-podcast**. Publishing a video? See **yb-publish**.
