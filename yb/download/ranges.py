@@ -77,8 +77,7 @@ def parse_timestamp(value: Timestamp) -> float:
         raise ValueError(f"not a timestamp: {value!r}")
     if not math.isfinite(seconds) or not 0 <= seconds <= MAX_TIMESTAMP_SECONDS:
         raise ValueError(
-            f"a timestamp must be between 0 and {MAX_TIMESTAMP_SECONDS}s, "
-            f"got {value!r}"
+            f"a timestamp must be between 0 and {MAX_TIMESTAMP_SECONDS}s, got {value!r}"
         )
     return seconds + 0.0  # turns -0.0 into 0.0
 
