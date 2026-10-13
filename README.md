@@ -91,6 +91,15 @@ already is that format, so it's safe to pass unconditionally. If conversion
 can't happen (no ffmpeg) it raises, and **the download is always left on disk**;
 pass `on_error="warn"` to fall back to the unconverted file instead.
 
+**A time range.** To source a sound or a clip without downloading the whole video, pass `start=` and/or `end=` to `download_youtube_video` or `download_youtube_audio` (seconds, or `"mm:ss"` / `"hh:mm:ss"`):
+
+```python
+clip = download_youtube_audio(url, start="0:07.9", end="0:08.75")
+clip.info["download_range"]  # {"start": 7.9, "end": 8.75}, for provenance
+```
+
+The range is cut by ffmpeg (so it needs one; to use a specific build pass `extra_opts={"ffmpeg_location": "/path/to/ffmpeg"}`, e.g. when the system ffmpeg lacks what yt-dlp asks of it). Cuts land on keyframes; `precise_cuts=True` re-encodes for frame-accurate bounds. With the default filename template the range goes in the name (`Title (id) [7.9-8.75].webm`), so a clip never collides with the full download.
+
 The same conversion is available standalone for files you already have:
 
 ```python

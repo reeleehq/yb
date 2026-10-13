@@ -14,6 +14,12 @@ converts only when you ask it to (conversion needs ffmpeg):
     >>> from yb.download import download_youtube_audio  # doctest: +SKIP
     >>> ep = download_youtube_audio(url, audio_format="mp3")  # doctest: +SKIP
 
+For sound or clip sourcing, fetch just a span (seconds or ``"mm:ss"``; needs
+ffmpeg, see :mod:`yb.download.ranges`). The span is recorded in
+``result.info["download_range"]`` for provenance:
+
+    >>> clip = download_youtube_audio(url, start="0:07.9", end="0:08.75")  # doctest: +SKIP
+
 YouTube downloads need a JavaScript runtime (Deno) and yt-dlp's solver
 scripts; :func:`check_requirements` (or ``yb check``) says what's missing and
 how to install it. The first download in a process runs it and warns.
@@ -32,6 +38,7 @@ from yb.download.youtube import (
     DEFAULT_OUTTMPL,
     DEFAULT_AUDIO_FMT,
 )
+from yb.download.ranges import TimeRange, parse_timestamp
 from yb.download.requirements import (
     check_requirements,
     find_js_runtime,
@@ -56,4 +63,6 @@ __all__ = [
     "find_js_runtime",
     "DownloadRequirementWarning",
     "JsRuntime",
+    "TimeRange",
+    "parse_timestamp",
 ]

@@ -16,6 +16,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
 
+from yb.download.ranges import (
+    INFO_RANGE_KEY,
+    TimeRange,
+    Timestamp,
+    range_opts,
+    ranged_filename_template,
+)
 from yb.download.requirements import with_runtime_opts
 
 PathLike = str | Path
@@ -118,6 +125,9 @@ def download_youtube_video(
     subtitle_langs: tuple[str, ...] = ("en",),
     quiet: bool = True,
     extra_opts: dict | None = None,
+    start: Timestamp | None = None,
+    end: Timestamp | None = None,
+    precise_cuts: bool = False,
 ) -> DownloadResult:
     """Download a YouTube video to ``download_dir`` (default ``~/Downloads``).
 
@@ -141,11 +151,29 @@ def download_youtube_video(
         subtitle_langs: Subtitle languages to fetch when subtitles are enabled.
         quiet: Suppress yt-dlp console output.
         extra_opts: Any additional raw yt-dlp options (merged last, so they win).
+        start, end: Download only this span: seconds (``7.9``) or a timestamp
+            (``"0:07.9"``, ``"1:02:03"``). Either may be given alone (``end``
+            only = from the beginning; ``start`` only = to the end). The span
+            is recorded in ``info["download_range"]`` as ``{"start", "end"}``
+            seconds (``end`` is ``None`` for "to the end"), and, with the
+            default ``filename_template``, in the filename (``Title (id)
+            [7.9-8.75].mp4``) so a clip never collides with the full video.
+            Needs ffmpeg (see :mod:`yb.download.ranges`).
+        precise_cuts: With ``start``/``end``, re-encode at the cuts for
+            frame-accurate bounds (slower) instead of cutting at keyframes.
 
     Returns:
         A :class:`DownloadResult` with the media path, trimmed ``info``, and any
         ``sidecars`` written.
+
+    Raises:
+        ValueError: If ``start``/``end`` is not a timestamp, or ``end`` is not
+            after ``start``. Raised before anything is fetched or written.
     """
+    time_range = TimeRange.of(start=start, end=end)
+    if time_range is None and precise_cuts:
+        raise ValueError("precise_cuts needs a start and/or end to cut at")
+
     from yt_dlp import YoutubeDL
 
     out_dir = Path(download_dir) if download_dir else default_download_dir()
@@ -165,6 +193,12 @@ def download_youtube_video(
     }
     if merge_to:
         opts["merge_output_format"] = merge_to
+    if time_range:
+        opts.update(range_opts(time_range, precise_cuts=precise_cuts))
+        if filename_template == DEFAULT_OUTTMPL:
+            opts["outtmpl"] = str(
+                out_dir / ranged_filename_template(filename_template, time_range)
+            )
     opts.update(extra_opts or {})
 
     with YoutubeDL(with_runtime_opts(opts)) as ydl:
@@ -179,7 +213,10 @@ def download_youtube_video(
         description=write_description,
         subtitles=write_subtitles or write_auto_subtitles,
     )
-    return DownloadResult(path=path, info=_trim_info(info), sidecars=sidecars)
+    trimmed = _trim_info(info)
+    if time_range:
+        trimmed[INFO_RANGE_KEY] = time_range.as_info()
+    return DownloadResult(path=path, info=trimmed, sidecars=sidecars)
 
 
 def download_youtube_audio(
@@ -200,6 +237,9 @@ def download_youtube_audio(
     subtitle_langs: tuple[str, ...] = ("en",),
     quiet: bool = True,
     extra_opts: dict | None = None,
+    start: Timestamp | None = None,
+    end: Timestamp | None = None,
+    precise_cuts: bool = False,
 ) -> DownloadResult:
     """Download only a video's audio (no video stream).
 
@@ -240,6 +280,10 @@ def download_youtube_audio(
         subtitle_langs: Subtitle languages to fetch when subtitles are enabled.
         quiet: Suppress yt-dlp console output.
         extra_opts: Any additional raw yt-dlp options (merged last, so they win).
+        start, end, precise_cuts: Download only a span, as in
+            :func:`download_youtube_video`:
+
+                >>> download_youtube_audio(url, start="0:07.9", end="0:08.75")  # doctest: +SKIP
 
     Returns:
         A :class:`DownloadResult` whose ``path`` is the audio file — converted
@@ -269,6 +313,9 @@ def download_youtube_audio(
         subtitle_langs=subtitle_langs,
         quiet=quiet,
         extra_opts=extra_opts,
+        start=start,
+        end=end,
+        precise_cuts=precise_cuts,
     )
     if audio_format is None:
         return result
