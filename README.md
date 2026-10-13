@@ -181,7 +181,9 @@ supersede(
 import warnings
 from yb.youtube import VisibilityDropWarning
 
-warnings.simplefilter("error", VisibilityDropWarning)  # supersede now raises, changing nothing
+warnings.simplefilter(
+    "error", VisibilityDropWarning
+)  # supersede now raises, changing nothing
 ```
 
 ### Read live stats & metadata

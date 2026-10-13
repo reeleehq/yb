@@ -128,6 +128,7 @@ class VisibilityDropWarning(UserWarning):
         warnings.simplefilter("error", VisibilityDropWarning)
     """
 
+
 #: The ``status`` keys a ``videos.update`` may write. The part is replaced
 #: wholesale, so everything else read back (``uploadStatus``, ``rejectionReason``,
 #: ...) must be left out of the body, and these must be carried over.
