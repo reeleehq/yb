@@ -197,7 +197,10 @@ def download_youtube_video(
         opts.update(range_opts(time_range, precise_cuts=precise_cuts))
         if filename_template == DEFAULT_OUTTMPL:
             opts["outtmpl"] = str(
-                out_dir / ranged_filename_template(filename_template, time_range)
+                out_dir
+                / ranged_filename_template(
+                    filename_template, time_range, precise_cuts=precise_cuts
+                )
             )
     opts.update(extra_opts or {})
 
@@ -214,7 +217,7 @@ def download_youtube_video(
         subtitles=write_subtitles or write_auto_subtitles,
     )
     trimmed = _trim_info(info)
-    if time_range:
+    if time_range and "download_ranges" not in (extra_opts or {}):
         trimmed[INFO_RANGE_KEY] = time_range.as_info()
     return DownloadResult(path=path, info=trimmed, sidecars=sidecars)
 
@@ -568,18 +571,23 @@ def _collect_sidecars(
     subtitles: bool,
 ) -> dict[str, Any]:
     stem = media_path.with_suffix("")
+
+    def sibling(ext: str) -> Path:
+        # Not ``stem.with_suffix``: a dot in the name ("... [7.9-8.75]") is not an extension.
+        return stem.with_name(stem.name + ext)
+
     out: dict[str, Any] = {}
     if info_json:
-        cand = stem.with_suffix(".info.json")
+        cand = sibling(".info.json")
         if cand.exists():
             out["info_json"] = cand
     if description:
-        cand = stem.with_suffix(".description")
+        cand = sibling(".description")
         if cand.exists():
             out["description"] = cand
     if thumbnail:
         for ext in (".jpg", ".webp", ".png"):
-            cand = stem.with_suffix(ext)
+            cand = sibling(ext)
             if cand.exists():
                 out["thumbnail"] = cand
                 break

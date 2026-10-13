@@ -40,11 +40,21 @@ def test_parse_timestamp(given, seconds):
 
 @pytest.mark.parametrize(
     "bad",
-    [-1, "-5", "1:-5", "abc", "", "1:2:3:4", "1::2", True, None, [1], math.inf, math.nan],
+    [
+        -1, "-5", "1:-5", "abc", "", "1:2:3:4", "1::2", True, None, [1],
+        math.inf, math.nan, 10**400, "9" * 400 + ":00:00", 1e300, "99999:00:00",
+    ],
 )
 def test_parse_timestamp_rejects_nonsense(bad):
     with pytest.raises(ValueError):
         rng.parse_timestamp(bad)
+
+
+def test_parse_timestamp_accepts_any_real_and_normalises_negative_zero():
+    from fractions import Fraction
+
+    assert rng.parse_timestamp(Fraction(5, 2)) == 2.5
+    assert math.copysign(1, rng.parse_timestamp(-0.0)) == 1
 
 
 # ---- TimeRange ------------------------------------------------------------
@@ -79,6 +89,13 @@ def test_filename_template_gets_the_range_before_the_extension():
         == "%(title)s (%(id)s) [1-2].%(ext)s"
     )
     assert rng.ranged_filename_template("fixed.mp4", tr) == "fixed.mp4"
+
+
+def test_precise_cut_is_named_apart_from_a_keyframe_cut():
+    tr = rng.TimeRange.of(start=1, end=2)
+    plain = rng.ranged_filename_template(ytdl.DEFAULT_OUTTMPL, tr)
+    precise = rng.ranged_filename_template(ytdl.DEFAULT_OUTTMPL, tr, precise_cuts=True)
+    assert plain != precise and "precise" in precise
 
 
 # ---- the options handed to yt-dlp ------------------------------------------
@@ -194,3 +211,24 @@ def test_bad_range_fails_before_anything_is_written(fake_yt_dlp, tmp_path):
     with pytest.raises(ValueError, match="precise_cuts"):
         download_youtube_video("u", download_dir=target, precise_cuts=True)
     assert not target.exists() and fake_yt_dlp.seen == []
+
+
+def test_extra_opts_range_is_not_recorded_as_provenance(fake_yt_dlp, tmp_path):
+    result = download_youtube_video(
+        "u", download_dir=tmp_path, start=1, extra_opts={"download_ranges": "mine"}
+    )
+    assert "download_range" not in result.info
+
+
+def test_fractional_range_names_keep_their_sidecars(monkeypatch, fake_yt_dlp, tmp_path):
+    media = tmp_path / "T (abc) [7.9-8.75].mp4"
+    for name in (media.name, "T (abc) [7.9-8.75].info.json", "T (abc) [7.9-8.75].jpg",
+                 "T (abc) [7.9-8.75].description"):
+        (tmp_path / name).write_text("x")
+    monkeypatch.setattr(ytdl, "_resolve_output_path", lambda *a, **k: media)
+    result = download_youtube_video(
+        "u", download_dir=tmp_path, start="0:07.9", end=8.75,
+        write_info_json=True, write_thumbnail=True, write_description=True,
+    )
+    assert set(result.sidecars) == {"info_json", "thumbnail", "description"}
+    assert result.sidecars["info_json"].name == "T (abc) [7.9-8.75].info.json"

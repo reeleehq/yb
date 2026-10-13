@@ -98,7 +98,7 @@ clip = download_youtube_audio(url, start="0:07.9", end="0:08.75")
 clip.info["download_range"]  # {"start": 7.9, "end": 8.75}, for provenance
 ```
 
-The range is cut by ffmpeg (so it needs one; to use a specific build pass `extra_opts={"ffmpeg_location": "/path/to/ffmpeg"}`, e.g. when the system ffmpeg lacks what yt-dlp asks of it). Cuts land on keyframes; `precise_cuts=True` re-encodes for frame-accurate bounds. With the default filename template the range goes in the name (`Title (id) [7.9-8.75].webm`), so a clip never collides with the full download.
+The range is cut by ffmpeg (so it needs one; to use a specific build pass `extra_opts={"ffmpeg_location": "/path/to/ffmpeg"}`, e.g. when the system ffmpeg lacks what yt-dlp asks of it). Cuts land on keyframes; `precise_cuts=True` re-encodes for frame-accurate bounds. With the default filename template the range goes in the name (`Title (id) [7.9-8.75].webm`), so a clip never collides with the full download (a `precise_cuts` clip is named apart from a keyframe cut too).
 
 The same conversion is available standalone for files you already have:
 

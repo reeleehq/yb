@@ -23,6 +23,7 @@ When the system ffmpeg is a build that lacks what yt-dlp asks of it, point
 from __future__ import annotations
 
 import math
+import numbers
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -38,6 +39,9 @@ FORCE_KEYFRAMES_OPT = "force_keyframes_at_cuts"
 #: Key under which a ranged download's span is recorded on ``DownloadResult.info``.
 INFO_RANGE_KEY = "download_range"
 
+#: Longest timestamp accepted (10 days): beyond it a typo, not a video.
+MAX_TIMESTAMP_SECONDS = 10 * 24 * 3600
+
 _CLOCK_RE = re.compile(r"^(?:(?:(\d+):)?(\d+):)?(\d+(?:\.\d+)?)$")
 _CLOCK_MAX_PARTS = 3
 
@@ -50,8 +54,11 @@ def parse_timestamp(value: Timestamp) -> float:
     """
     if isinstance(value, bool):
         raise ValueError(f"not a timestamp: {value!r}")
-    if isinstance(value, (int, float)):
-        seconds = float(value)
+    if isinstance(value, numbers.Real):
+        try:
+            seconds = float(value)
+        except OverflowError:
+            raise ValueError(f"timestamp too large: {value!r}") from None
     elif isinstance(value, str):
         text = value.strip()
         # "90", "1:30", "1:02:03.5"; minutes/seconds aren't capped at 59 (yt-dlp
@@ -62,12 +69,18 @@ def parse_timestamp(value: Timestamp) -> float:
                 f"not a timestamp: {value!r} (use seconds, 'mm:ss' or 'hh:mm:ss')"
             )
         hours, minutes, secs = match.groups()
-        seconds = int(hours or 0) * 3600 + int(minutes or 0) * 60 + float(secs)
+        try:
+            seconds = int(hours or 0) * 3600 + int(minutes or 0) * 60 + float(secs)
+        except OverflowError:
+            raise ValueError(f"timestamp too large: {value!r}") from None
     else:
         raise ValueError(f"not a timestamp: {value!r}")
-    if not math.isfinite(seconds) or seconds < 0:
-        raise ValueError(f"a timestamp must be finite and >= 0, got {value!r}")
-    return seconds
+    if not math.isfinite(seconds) or not 0 <= seconds <= MAX_TIMESTAMP_SECONDS:
+        raise ValueError(
+            f"a timestamp must be between 0 and {MAX_TIMESTAMP_SECONDS}s, "
+            f"got {value!r}"
+        )
+    return seconds + 0.0  # turns -0.0 into 0.0
 
 
 def _fmt_seconds(seconds: float) -> str:
@@ -141,15 +154,19 @@ def range_opts(
     return opts
 
 
-def ranged_filename_template(template: str, time_range: TimeRange) -> str:
+def ranged_filename_template(
+    template: str, time_range: TimeRange, *, precise_cuts: bool = False
+) -> str:
     """``template`` with the range before the extension: ``"T (id) [7.9-8.75].mp4"``.
 
     Without it a clip would share the full video's filename, and yt-dlp would
-    take one for the other ("already downloaded"). Only templates ending in
+    take one for the other ("already downloaded"). A precise cut is named
+    apart from a keyframe cut for the same reason. Only templates ending in
     ``.%(ext)s`` (the default does) are changed; one written by hand is the
     caller's to keep distinct.
     """
     tail = ".%(ext)s"
     if not template.endswith(tail):
         return template
-    return f"{template[: -len(tail)]} [{time_range.label}]{tail}"
+    label = f"{time_range.label} precise" if precise_cuts else time_range.label
+    return f"{template[: -len(tail)]} [{label}]{tail}"
