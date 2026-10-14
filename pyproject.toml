@@ -12,7 +12,7 @@ keywords = ["youtube", "podcast", "publishing", "subtitles", "chapters", "yt-dlp
 authors = [{ name = "Thor Whalen" }]
 # Core: the media engine (transcription, chapters, thumbnails, dubbing).
 # Everything platform- or transport-specific is an optional extra below.
-dependencies = ["mixing"]
+dependencies = ["mixing[media]>=0.0.56"]
 
 [project.license]
 text = "mit"
