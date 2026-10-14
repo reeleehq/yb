@@ -122,11 +122,48 @@ def default_cookies_file() -> Path | None:
         warnings.warn(
             f"${COOKIES_FILE_ENV} points to a file that does not exist; "
             "downloading without cookies.",
-            stacklevel=3,
+            stacklevel=4,
         )
         return None
     path = Path(DEFAULT_COOKIES_FILE).expanduser()
     return path if path.is_file() else None
+
+
+#: Fields on a cookie line of a Netscape cookies file (tab-separated).
+_COOKIE_FIELDS = 7
+
+
+def _malformed_cookie_lines(path: Path) -> list[int]:
+    """1-based numbers of the lines yt-dlp would reject (never their content).
+
+    yt-dlp prints a rejected line verbatim to stderr, cookie value included and
+    whatever ``quiet`` says, so yb checks the file first and reports line numbers.
+    """
+    bad = []
+    for n, line in enumerate(path.read_text(errors="replace").splitlines(), 1):
+        stripped = line.strip()
+        if not stripped or (
+            stripped.startswith("#") and not stripped.startswith("#HttpOnly_")
+        ):
+            continue
+        if len(line.split("\t")) != _COOKIE_FIELDS:
+            bad.append(n)
+    return bad
+
+
+def _usable_cookies_file(path: Path, *, explicit: bool) -> str | None:
+    """``str(path)`` if it is a well-formed cookies file, else raise / warn+``None``."""
+    bad = _malformed_cookie_lines(path)
+    if not bad:
+        return str(path)
+    msg = (
+        f"cookies file {path} is not in Netscape format "
+        f"(malformed line(s): {bad[:5]}); fields must be tab-separated."
+    )
+    if explicit:
+        raise ValueError(msg)
+    warnings.warn(msg + " Downloading without cookies.", stacklevel=4)
+    return None
 
 
 def _cookie_opts(
@@ -148,11 +185,18 @@ def _cookie_opts(
         path = Path(cookies_file).expanduser()
         if not path.is_file():
             raise FileNotFoundError(f"cookies_file not found: {path}")
-        return {"cookiefile": str(path)}
+        if cookies_from_browser or "cookiesfrombrowser" in (extra_opts or {}):
+            # yt-dlp would merge the browser's whole jar into this file on exit.
+            raise ValueError(
+                "cookies_file cannot be combined with a browser cookie source: "
+                "yt-dlp would write the browser's cookies into the file."
+            )
+        return {"cookiefile": _usable_cookies_file(path, explicit=True)}
     if cookies_from_browser or any(k in (extra_opts or {}) for k in _COOKIE_OPT_KEYS):
         return {}
     path = default_cookies_file()
-    return {"cookiefile": str(path)} if path else {}
+    usable = _usable_cookies_file(path, explicit=False) if path else None
+    return {"cookiefile": usable} if usable else {}
 
 
 def youtube_video_info(
@@ -236,7 +280,11 @@ def download_youtube_video(
             ``~/.config/yb/youtube-cookies.txt`` if it exists, else sends no
             cookies. An explicit ``cookies_from_browser`` or ``extra_opts``
             cookie option suppresses that default; ``False`` opts out of it.
-            yt-dlp may rewrite the file with refreshed cookies.
+            The file is checked first (``ValueError`` if explicit, else a
+            warning, naming only line numbers). It cannot be combined with a
+            browser cookie source. yt-dlp rewrites the file with refreshed
+            cookies on exit, so it must be writable and not shared by parallel
+            workers.
 
     Returns:
         A :class:`DownloadResult` with the media path, trimmed ``info``, and any

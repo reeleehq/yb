@@ -57,7 +57,7 @@ def ydl(monkeypatch, tmp_path):
 
 def _fake_cookies(path):
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("# Netscape HTTP Cookie File\n")  # no real cookie
+    path.write_text("# Netscape HTTP Cookie File\n.example.test\tTRUE\t/\tTRUE\t0\tSID\tfake\n")
     return path
 
 
@@ -166,3 +166,61 @@ def test_extra_opts_cookiefile_wins_over_explicit_cookies_file(ydl, tmp_path):
         extra_opts={"cookiefile": "/theirs.txt"},
     )
     assert ydl.seen[-1]["cookiefile"] == "/theirs.txt"
+
+
+SECRET = "SECRETVALUE123"
+
+
+def _bad_cookies(path):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    # space-separated instead of tab-separated: yt-dlp would echo this line
+    path.write_text(f"# Netscape HTTP Cookie File\n.youtube.com TRUE / TRUE 0 SID {SECRET}\n")
+    return path
+
+
+def test_malformed_explicit_file_fails_without_leaking_values(ydl, tmp_path):
+    bad = _bad_cookies(tmp_path / "bad.txt")
+    with pytest.raises(ValueError, match=r"\[2\]") as e:
+        download_youtube_video("u", download_dir=tmp_path, cookies_file=bad)
+    assert SECRET not in str(e.value) and ydl.seen == []
+
+
+def test_malformed_default_file_warns_without_leaking_values(ydl, tmp_path):
+    _bad_cookies(tmp_path / "home" / ".config" / "yb" / "youtube-cookies.txt")
+    with pytest.warns(UserWarning, match="Netscape") as w:
+        download_youtube_video("u", download_dir=tmp_path)
+    assert all(SECRET not in str(x.message) for x in w)
+    assert "cookiefile" not in ydl.seen[-1]
+
+
+def test_httponly_and_comment_lines_are_well_formed(ydl, tmp_path):
+    f = tmp_path / "ok.txt"
+    f.write_text(
+        "# Netscape HTTP Cookie File\n\n"
+        "#HttpOnly_.youtube.com\tTRUE\t/\tTRUE\t0\tSID\tfake\n"
+    )
+    download_youtube_video("u", download_dir=tmp_path, cookies_file=f)
+    assert ydl.seen[-1]["cookiefile"] == str(f)
+
+
+def test_explicit_cookies_file_with_a_browser_source_is_refused(ydl, tmp_path):
+    mine = _fake_cookies(tmp_path / "mine.txt")
+    with pytest.raises(ValueError, match="browser"):
+        download_youtube_playlist(
+            "list", download_dir=tmp_path, cookies_file=mine, cookies_from_browser="safari"
+        )
+    with pytest.raises(ValueError, match="browser"):
+        download_youtube_video(
+            "u",
+            download_dir=tmp_path,
+            cookies_file=mine,
+            extra_opts={"cookiesfrombrowser": ("chrome",)},
+        )
+    assert ydl.seen == []
+
+
+def test_missing_env_file_warning_points_at_the_caller(ydl, tmp_path, monkeypatch):
+    monkeypatch.setenv(ytdl.COOKIES_FILE_ENV, str(tmp_path / "typo.txt"))
+    with pytest.warns(UserWarning) as w:
+        download_youtube_video("u", download_dir=tmp_path)
+    assert w[0].filename == __file__
