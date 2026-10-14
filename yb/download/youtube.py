@@ -35,6 +35,18 @@ _ON_CONVERT_ERROR_CHOICES = frozenset({"raise", "warn"})
 #: Env var that overrides the default download directory.
 DOWNLOAD_DIR_ENV = "YB_DOWNLOAD_DIR"
 
+#: Env var naming a Netscape-format cookies file to authenticate downloads with.
+COOKIES_FILE_ENV = "YB_COOKIES_FILE"
+
+#: Cookies file used when :data:`COOKIES_FILE_ENV` is unset and this file exists.
+DEFAULT_COOKIES_FILE = "~/.config/yb/youtube-cookies.txt"
+
+#: yt-dlp options that already say where cookies come from (so no default is added).
+_COOKIE_OPT_KEYS = ("cookiefile", "cookiesfrombrowser")
+
+#: What ``cookies_file`` accepts: a path, ``None`` (look for a default), or ``False`` (none).
+CookiesFile = PathLike | Literal[False] | None
+
 #: yt-dlp output template: human title plus the stable id, e.g. "My Talk (dQw4...).mp4".
 DEFAULT_OUTTMPL = "%(title)s (%(id)s).%(ext)s"
 
@@ -95,15 +107,115 @@ class DownloadResult:
         return self.info.get("id", "")
 
 
-def youtube_video_info(url: str, *, extra_opts: dict | None = None) -> dict[str, Any]:
+def default_cookies_file() -> Path | None:
+    """The cookies file downloads use when none is passed, or ``None``.
+
+    ``$YB_COOKIES_FILE`` if set, else ``~/.config/yb/youtube-cookies.txt`` if it
+    exists. A file named by the env var that does not exist is skipped with a
+    warning (a typo should not silently fall back to anonymous downloads).
+    """
+    named = os.environ.get(COOKIES_FILE_ENV)
+    if named:
+        path = Path(named).expanduser()
+        if path.is_file():
+            return path
+        warnings.warn(
+            f"${COOKIES_FILE_ENV} points to a file that does not exist; "
+            "downloading without cookies.",
+            stacklevel=4,
+        )
+        return None
+    path = Path(DEFAULT_COOKIES_FILE).expanduser()
+    return path if path.is_file() else None
+
+
+#: Fields on a cookie line of a Netscape cookies file (tab-separated).
+_COOKIE_FIELDS = 7
+
+
+def _malformed_cookie_lines(path: Path) -> list[int]:
+    """1-based numbers of the lines yt-dlp would reject (never their content).
+
+    yt-dlp prints a rejected line verbatim to stderr, cookie value included and
+    whatever ``quiet`` says, so yb checks the file first and reports line numbers.
+    """
+    bad = []
+    for n, line in enumerate(path.read_text(errors="replace").splitlines(), 1):
+        stripped = line.strip()
+        if not stripped or (
+            stripped.startswith("#") and not stripped.startswith("#HttpOnly_")
+        ):
+            continue
+        if len(line.split("\t")) != _COOKIE_FIELDS:
+            bad.append(n)
+    return bad
+
+
+def _usable_cookies_file(path: Path, *, explicit: bool) -> str | None:
+    """``str(path)`` if it is a well-formed cookies file, else raise / warn+``None``."""
+    bad = _malformed_cookie_lines(path)
+    if not bad:
+        return str(path)
+    msg = (
+        f"cookies file {path} is not in Netscape format "
+        f"(malformed line(s): {bad[:5]}); fields must be tab-separated."
+    )
+    if explicit:
+        raise ValueError(msg)
+    warnings.warn(msg + " Downloading without cookies.", stacklevel=4)
+    return None
+
+
+def _cookie_opts(
+    cookies_file: CookiesFile,
+    *,
+    cookies_from_browser: str | tuple | None = None,
+    extra_opts: dict | None = None,
+) -> dict[str, Any]:
+    """yt-dlp cookie options for ``cookies_file`` (merge these *before* ``extra_opts``).
+
+    An explicit ``cookies_file`` is used as given (``FileNotFoundError`` if it is
+    missing). The default file (:func:`default_cookies_file`) is used only when
+    nothing else says where cookies come from: no ``cookies_from_browser`` and no
+    ``cookiefile`` / ``cookiesfrombrowser`` in ``extra_opts``. ``False`` opts out.
+    """
+    if cookies_file is False:
+        return {}
+    if cookies_file is not None:
+        path = Path(cookies_file).expanduser()
+        if not path.is_file():
+            raise FileNotFoundError(f"cookies_file not found: {path}")
+        if cookies_from_browser or "cookiesfrombrowser" in (extra_opts or {}):
+            # yt-dlp would merge the browser's whole jar into this file on exit.
+            raise ValueError(
+                "cookies_file cannot be combined with a browser cookie source: "
+                "yt-dlp would write the browser's cookies into the file."
+            )
+        return {"cookiefile": _usable_cookies_file(path, explicit=True)}
+    if cookies_from_browser or any(k in (extra_opts or {}) for k in _COOKIE_OPT_KEYS):
+        return {}
+    path = default_cookies_file()
+    usable = _usable_cookies_file(path, explicit=False) if path else None
+    return {"cookiefile": usable} if usable else {}
+
+
+def youtube_video_info(
+    url: str,
+    *,
+    extra_opts: dict | None = None,
+    cookies_file: CookiesFile = None,
+) -> dict[str, Any]:
     """Fetch a video's metadata without downloading it.
 
     Returns the trimmed info dict (see :data:`_INFO_FIELDS`). Useful to preview
     the title/duration/chapters before deciding to download.
+
+    ``cookies_file``: see :func:`download_youtube_video`.
     """
     from yt_dlp import YoutubeDL
 
     opts = {"quiet": True, "skip_download": True, "noplaylist": True}
+    opts.update(_cookie_opts(cookies_file, extra_opts=extra_opts))
     opts.update(extra_opts or {})
     with YoutubeDL(with_runtime_opts(opts)) as ydl:
         info = ydl.extract_info(url, download=False)
@@ -128,6 +240,7 @@ def download_youtube_video(
     start: Timestamp | None = None,
     end: Timestamp | None = None,
     precise_cuts: bool = False,
+    cookies_file: CookiesFile = None,
 ) -> DownloadResult:
     """Download a YouTube video to ``download_dir`` (default ``~/Downloads``).
 
@@ -161,6 +274,17 @@ def download_youtube_video(
             Needs ffmpeg (see :mod:`yb.download.ranges`).
         precise_cuts: With ``start``/``end``, re-encode at the cuts for
             frame-accurate bounds (slower) instead of cutting at keyframes.
+        cookies_file: Netscape-format cookies file to authenticate with (for
+            headless servers where ``cookies_from_browser`` cannot work). Default
+            ``None`` reads ``$YB_COOKIES_FILE``, else
+            ``~/.config/yb/youtube-cookies.txt`` if it exists, else sends no
+            cookies. An explicit ``cookies_from_browser`` or ``extra_opts``
+            cookie option suppresses that default; ``False`` opts out of it.
+            The file is checked first (``ValueError`` if explicit, else a
+            warning, naming only line numbers). It cannot be combined with a
+            browser cookie source. yt-dlp rewrites the file with refreshed
+            cookies on exit, so it must be writable and not shared by parallel
+            workers.
 
     Returns:
         A :class:`DownloadResult` with the media path, trimmed ``info``, and any
@@ -202,6 +326,7 @@ def download_youtube_video(
                     filename_template, time_range, precise_cuts=precise_cuts
                 )
             )
+    opts.update(_cookie_opts(cookies_file, extra_opts=extra_opts))
     opts.update(extra_opts or {})
 
     with YoutubeDL(with_runtime_opts(opts)) as ydl:
@@ -243,6 +368,7 @@ def download_youtube_audio(
     start: Timestamp | None = None,
     end: Timestamp | None = None,
     precise_cuts: bool = False,
+    cookies_file: CookiesFile = None,
 ) -> DownloadResult:
     """Download only a video's audio (no video stream).
 
@@ -319,6 +445,7 @@ def download_youtube_audio(
         start=start,
         end=end,
         precise_cuts=precise_cuts,
+        cookies_file=cookies_file,
     )
     if audio_format is None:
         return result
@@ -350,6 +477,7 @@ def youtube_playlist_info(
     playlist_items: str | None = None,
     flat: bool = True,
     extra_opts: dict | None = None,
+    cookies_file: CookiesFile = None,
 ) -> dict[str, Any]:
     """Fetch a playlist's per-video metadata without downloading.
 
@@ -365,6 +493,7 @@ def youtube_playlist_info(
             ``"2:"`` (all but the first), ``"2"`` (only the 2nd), ``"1:5,8"``.
         flat: Shallow vs full per-entry extraction.
         extra_opts: Additional raw yt-dlp options (merged last).
+        cookies_file: See :func:`download_youtube_video`.
     """
     from yt_dlp import YoutubeDL
 
@@ -376,6 +505,7 @@ def youtube_playlist_info(
     }
     if playlist_items:
         opts["playlist_items"] = playlist_items
+    opts.update(_cookie_opts(cookies_file, extra_opts=extra_opts))
     opts.update(extra_opts or {})
     with YoutubeDL(with_runtime_opts(opts)) as ydl:
         info = ydl.extract_info(url, download=False)
@@ -425,6 +555,7 @@ def download_youtube_playlist(
     extractor_args: dict | None = None,
     quiet: bool = True,
     extra_opts: dict | None = None,
+    cookies_file: CookiesFile = None,
 ) -> list[DownloadResult]:
     """Download all (or a selected subset of) a YouTube playlist's videos.
 
@@ -464,6 +595,8 @@ def download_youtube_playlist(
             ``{"youtube": {"player_client": ["web_safari"]}}``).
         quiet: Suppress yt-dlp console output.
         extra_opts: Any additional raw yt-dlp options (merged last, so they win).
+        cookies_file: As in :func:`download_youtube_video`; an explicit
+            ``cookies_from_browser`` takes precedence over the default file.
 
     Returns:
         A list of :class:`DownloadResult`, one per successfully-downloaded entry,
@@ -499,6 +632,13 @@ def download_youtube_playlist(
         opts["download_archive"] = str(Path(download_archive).expanduser())
     if cookies_from_browser:
         opts["cookiesfrombrowser"] = _coerce_cookies_from_browser(cookies_from_browser)
+    opts.update(
+        _cookie_opts(
+            cookies_file,
+            cookies_from_browser=cookies_from_browser,
+            extra_opts=extra_opts,
+        )
+    )
     if extractor_args:
         opts["extractor_args"] = extractor_args
     if title_reject:

@@ -17,6 +17,11 @@ Fetch media (and metadata) from YouTube via yt-dlp. Requires
 Destination defaults to `$YB_DOWNLOAD_DIR`, else `~/Downloads`, named
 `Title (video_id).ext`.
 
+Bot-blocked (headless server)? Give yb a Netscape-format cookies file:
+`$YB_COOKIES_FILE`, else `~/.config/yb/youtube-cookies.txt`, or per call
+`cookies_file=`. `cookies_from_browser=` / `extra_opts` cookie options win.
+Never commit the file.
+
 ## Get a video's audio
 
 ```python
