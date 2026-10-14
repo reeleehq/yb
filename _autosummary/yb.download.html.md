@@ -34,17 +34,17 @@ how to install it. The first download in a process runs it and warns.
 
 ### Functions
 
-| [`download_youtube_video`](#yb.download.download_youtube_video)(url, \*[, ...])      | Download a YouTube video to `download_dir` (default `~/Downloads`).           |
-|----------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
-| [`download_youtube_audio`](#yb.download.download_youtube_audio)(url, \*[, ...])      | Download only a video's audio (no video stream).                              |
-| [`youtube_video_info`](#yb.download.youtube_video_info)(url, \*[, extra_opts])   | Fetch a video's metadata without downloading it.                              |
-| [`download_youtube_playlist`](#yb.download.download_youtube_playlist)(url, \*[, ...])   | Download all (or a selected subset of) a YouTube playlist's videos.           |
-| [`youtube_playlist_info`](#yb.download.youtube_playlist_info)(url, \*[, ...])       | Fetch a playlist's per-video metadata without downloading.                    |
-| [`default_download_dir`](#yb.download.default_download_dir)()                      | Resolve the default download directory (`$YB_DOWNLOAD_DIR` or `~/Downloads`). |
-| [`convert_audio`](#yb.download.convert_audio)(src, audio_format, \*[, ...]) | Convert `src` to `audio_format`, returning the resulting path.                |
-| [`check_requirements`](#yb.download.check_requirements)(\*[, warn, which, ...])  | Check what YouTube downloads need, and say how to fix what's missing.         |
-| [`find_js_runtime`](#yb.download.find_js_runtime)(\*[, which, search_dirs])   | Find Deno on `PATH`, else in its standard install location.                   |
-| [`parse_timestamp`](#yb.download.parse_timestamp)(value)                      | Seconds from a number or a `"[[h:]m:]s[.fraction]"` string.                   |
+| [`download_youtube_video`](#yb.download.download_youtube_video)(url, \*[, ...])         | Download a YouTube video to `download_dir` (default `~/Downloads`).           |
+|-------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
+| [`download_youtube_audio`](#yb.download.download_youtube_audio)(url, \*[, ...])         | Download only a video's audio (no video stream).                              |
+| [`youtube_video_info`](#yb.download.youtube_video_info)(url, \*[, extra_opts, ...]) | Fetch a video's metadata without downloading it.                              |
+| [`download_youtube_playlist`](#yb.download.download_youtube_playlist)(url, \*[, ...])      | Download all (or a selected subset of) a YouTube playlist's videos.           |
+| [`youtube_playlist_info`](#yb.download.youtube_playlist_info)(url, \*[, ...])          | Fetch a playlist's per-video metadata without downloading.                    |
+| [`default_download_dir`](#yb.download.default_download_dir)()                         | Resolve the default download directory (`$YB_DOWNLOAD_DIR` or `~/Downloads`). |
+| [`convert_audio`](#yb.download.convert_audio)(src, audio_format, \*[, ...])    | Convert `src` to `audio_format`, returning the resulting path.                |
+| [`check_requirements`](#yb.download.check_requirements)(\*[, warn, which, ...])     | Check what YouTube downloads need, and say how to fix what's missing.         |
+| [`find_js_runtime`](#yb.download.find_js_runtime)(\*[, which, search_dirs])      | Find Deno on `PATH`, else in its standard install location.                   |
+| [`parse_timestamp`](#yb.download.parse_timestamp)(value)                         | Seconds from a number or a `"[[h:]m:]s[.fraction]"` string.                   |
 
 ### Classes
 
@@ -190,7 +190,7 @@ Resolve the default download directory (`$YB_DOWNLOAD_DIR` or `~/Downloads`).
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
-### yb.download.download_youtube_audio(url, , download_dir=None, audio_format=None, bitrate=None, keep_original=False, on_error='raise', fmt='bestaudio/best', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False)
+### yb.download.download_youtube_audio(url, , download_dir=None, audio_format=None, bitrate=None, keep_original=False, on_error='raise', fmt='bestaudio/best', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None)
 
 Download only a video’s audio (no video stream).
 
@@ -263,7 +263,7 @@ Pass `audio_format` to get a specific format instead:
   * [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `on_error` is not `"raise"` or `"warn"`.
   * [**AudioConversionError**](#yb.download.AudioConversionError) – If conversion fails and `on_error="raise"`.
 
-### yb.download.download_youtube_playlist(url, , download_dir=None, playlist_items=None, skip_first=False, title_reject=None, download_archive=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=True, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), cookies_from_browser=None, extractor_args=None, quiet=True, extra_opts=None)
+### yb.download.download_youtube_playlist(url, , download_dir=None, playlist_items=None, skip_first=False, title_reject=None, download_archive=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=True, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), cookies_from_browser=None, extractor_args=None, quiet=True, extra_opts=None, cookies_file=None)
 
 Download all (or a selected subset of) a YouTube playlist’s videos.
 
@@ -313,6 +313,8 @@ Selecting a subset (yt-dlp `--playlist-items` is **1-based**):
     `{"youtube": {"player_client": ["web_safari"]}}`).
   * **quiet** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Suppress yt-dlp console output.
   * **extra_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Any additional raw yt-dlp options (merged last, so they win).
+  * **cookies_file** (`Union`[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`False`], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – As in [`download_youtube_video()`](#yb.download.download_youtube_video); an explicit
+    `cookies_from_browser` takes precedence over the default file.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`DownloadResult`](yb.download.youtube.html.md#yb.download.youtube.DownloadResult)]
 * **Returns:**
@@ -320,7 +322,7 @@ Selecting a subset (yt-dlp `--playlist-items` is **1-based**):
   in playlist order. Entries skipped by selection/filter or that failed
   (under `ignoreerrors`) are omitted.
 
-### yb.download.download_youtube_video(url, , download_dir=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False)
+### yb.download.download_youtube_video(url, , download_dir=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None)
 
 Download a YouTube video to `download_dir` (default `~/Downloads`).
 
@@ -362,6 +364,17 @@ named `Title (video_id).mp4` in `~/Downloads`.
     Needs ffmpeg (see [`yb.download.ranges`](yb.download.ranges.html.md#module-yb.download.ranges)).
   * **precise_cuts** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – With `start`/`end`, re-encode at the cuts for
     frame-accurate bounds (slower) instead of cutting at keyframes.
+  * **cookies_file** (`Union`[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`False`], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – Netscape-format cookies file to authenticate with (for
+    headless servers where `cookies_from_browser` cannot work). Default
+    `None` reads `$YB_COOKIES_FILE`, else
+    `~/.config/yb/youtube-cookies.txt` if it exists, else sends no
+    cookies. An explicit `cookies_from_browser` or `extra_opts`
+    cookie option suppresses that default; `False` opts out of it.
+    The file is checked first (`ValueError` if explicit, else a
+    warning, naming only line numbers). It cannot be combined with a
+    browser cookie source. yt-dlp rewrites the file with refreshed
+    cookies on exit, so it must be writable and not shared by parallel
+    workers.
 * **Return type:**
   [`DownloadResult`](yb.download.youtube.html.md#yb.download.youtube.DownloadResult)
 * **Returns:**
@@ -393,7 +406,7 @@ Seconds from a number or a `"[[h:]m:]s[.fraction]"` string.
 * **Return type:**
   [`float`](https://docs.python.org/3/builtins/functions.html#float)
 
-### yb.download.youtube_playlist_info(url, , playlist_items=None, flat=True, extra_opts=None)
+### yb.download.youtube_playlist_info(url, , playlist_items=None, flat=True, extra_opts=None, cookies_file=None)
 
 Fetch a playlist’s per-video metadata without downloading.
 
@@ -409,15 +422,18 @@ and trimmed to `_INFO_FIELDS` (slower, but includes duration/fps/etc.).
     `"2:"` (all but the first), `"2"` (only the 2nd), `"1:5,8"`.
   * **flat** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Shallow vs full per-entry extraction.
   * **extra_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Additional raw yt-dlp options (merged last).
+  * **cookies_file** (`Union`[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`False`], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – See [`download_youtube_video()`](#yb.download.download_youtube_video).
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]
 
-### yb.download.youtube_video_info(url, , extra_opts=None)
+### yb.download.youtube_video_info(url, , extra_opts=None, cookies_file=None)
 
 Fetch a video’s metadata without downloading it.
 
 Returns the trimmed info dict (see `_INFO_FIELDS`). Useful to preview
 the title/duration/chapters before deciding to download.
+
+`cookies_file`: see [`download_youtube_video()`](#yb.download.download_youtube_video).
 
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]

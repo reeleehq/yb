@@ -146,7 +146,7 @@ Config file location (`$XDG_CONFIG_HOME` or `~/.config`).
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
-### yb.download_youtube_audio(url, , download_dir=None, audio_format=None, bitrate=None, keep_original=False, on_error='raise', fmt='bestaudio/best', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False)
+### yb.download_youtube_audio(url, , download_dir=None, audio_format=None, bitrate=None, keep_original=False, on_error='raise', fmt='bestaudio/best', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None)
 
 Download only a video’s audio (no video stream).
 
@@ -219,7 +219,7 @@ Pass `audio_format` to get a specific format instead:
   * [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `on_error` is not `"raise"` or `"warn"`.
   * [**AudioConversionError**](yb.audio_convert.html.md#yb.audio_convert.AudioConversionError) – If conversion fails and `on_error="raise"`.
 
-### yb.download_youtube_video(url, , download_dir=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False)
+### yb.download_youtube_video(url, , download_dir=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None)
 
 Download a YouTube video to `download_dir` (default `~/Downloads`).
 
@@ -261,6 +261,17 @@ named `Title (video_id).mp4` in `~/Downloads`.
     Needs ffmpeg (see [`yb.download.ranges`](yb.download.ranges.html.md#module-yb.download.ranges)).
   * **precise_cuts** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – With `start`/`end`, re-encode at the cuts for
     frame-accurate bounds (slower) instead of cutting at keyframes.
+  * **cookies_file** (`Union`[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`False`], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – Netscape-format cookies file to authenticate with (for
+    headless servers where `cookies_from_browser` cannot work). Default
+    `None` reads `$YB_COOKIES_FILE`, else
+    `~/.config/yb/youtube-cookies.txt` if it exists, else sends no
+    cookies. An explicit `cookies_from_browser` or `extra_opts`
+    cookie option suppresses that default; `False` opts out of it.
+    The file is checked first (`ValueError` if explicit, else a
+    warning, naming only line numbers). It cannot be combined with a
+    browser cookie source. yt-dlp rewrites the file with refreshed
+    cookies on exit, so it must be writable and not shared by parallel
+    workers.
 * **Return type:**
   [`DownloadResult`](yb.download.youtube.html.md#yb.download.youtube.DownloadResult)
 * **Returns:**
@@ -435,12 +446,14 @@ Insert a caption track, or update the existing same-language one.
 * **Returns:**
   The inserted/updated caption resource.
 
-### yb.youtube_video_info(url, , extra_opts=None)
+### yb.youtube_video_info(url, , extra_opts=None, cookies_file=None)
 
 Fetch a video’s metadata without downloading it.
 
 Returns the trimmed info dict (see `_INFO_FIELDS`). Useful to preview
 the title/duration/chapters before deciding to download.
+
+`cookies_file`: see [`download_youtube_video()`](#yb.download_youtube_video).
 
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]

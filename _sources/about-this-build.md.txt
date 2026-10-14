@@ -5,19 +5,17 @@ orphan: true
 
 # About this build
 
-This documentation was built on **2026-10-13 11:10 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/d4b8abd12eef1695161d1afd29a0eb944c9e4c30"><code>d4b8abd</code></a> on branch <code>main</code>, for **yb 0.1.17** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-10-14 04:01 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/e90d79475b0b40f6d9f8b2e8a1edf2398a006fad"><code>e90d794</code></a> on branch <code>main</code>, for **yb 0.1.18** (from <code>pyproject.toml</code>).
 
-:::{warning}
-The documentation and the package may be misaligned:
-
-- The documented version (0.1.17) is behind the latest release on PyPI (0.1.18): `pip install yb` gives newer code than these docs describe.
+:::{note}
+Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
 :::
 
 ## Source
 
 | | |
 |---|---|
-| Commit | <a href="https://github.com/reeleehq/yb/commit/d4b8abd12eef1695161d1afd29a0eb944c9e4c30"><code>d4b8abd12eef1695161d1afd29a0eb944c9e4c30</code></a> |
+| Commit | <a href="https://github.com/reeleehq/yb/commit/e90d79475b0b40f6d9f8b2e8a1edf2398a006fad"><code>e90d79475b0b40f6d9f8b2e8a1edf2398a006fad</code></a> |
 | Branch | <code>main</code> |
 | Tags at this commit | none |
 | Working tree | clean |
@@ -28,15 +26,15 @@ The documentation and the package may be misaligned:
 | | |
 |---|---|
 | Repository | <code>reeleehq/yb</code> |
-| Run | <a href="https://github.com/reeleehq/yb/actions/runs/38388189166">38388189166</a> |
+| Run | <a href="https://github.com/reeleehq/yb/actions/runs/38509106964">38509106964</a> |
 | Ref | <code>refs/heads/main</code> |
-| Event commit | <code>d4b8abd12eef1695161d1afd29a0eb944c9e4c30</code> (in the history of the built commit) |
+| Event commit | <code>e90d79475b0b40f6d9f8b2e8a1edf2398a006fad</code> (in the history of the built commit) |
 
 ## Tools
 
 | | |
 |---|---|
-| epythet | 0.2.15 |
+| epythet | 0.2.17 |
 | Sphinx | 9.1.0 |
 | docutils | 0.22.4 |
 | Python | 3.12.15 |
@@ -55,14 +53,14 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/yb/0.1.18/">0.1.18</a>, newer than the documented version (0.1.17).
+Latest release: <a href="https://pypi.org/project/yb/0.1.18/">0.1.18</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/yb && cd yb
-git checkout d4b8abd12eef1695161d1afd29a0eb944c9e4c30
-pip install "epythet==0.2.15"
+git checkout e90d79475b0b40f6d9f8b2e8a1edf2398a006fad
+pip install "epythet==0.2.17"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```
 

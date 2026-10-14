@@ -85,6 +85,15 @@ The destination defaults to `$YB_DOWNLOAD_DIR` (else `~/Downloads`). Every knob
 — format, filename template, which sidecar metadata to also save — is
 overridable, and any raw yt-dlp option can be passed via `extra_opts=`.
 
+**Cookies (headless servers).** YouTube bot-blocks anonymous downloads from many
+servers. Export a Netscape-format cookies file from a logged-in browser elsewhere
+and point yb at it with `YB_COOKIES_FILE=/path/cookies.txt` (or just put it at
+`~/.config/yb/youtube-cookies.txt`); every download and info call then uses it,
+with no extra argument. Pass `cookies_file=` to choose one per call (`False`
+turns the default off). An explicit `cookies_from_browser=` or a `cookiefile` /
+`cookiesfrombrowser` in `extra_opts=` always wins. With no file and no env var,
+nothing changes. Never commit the file.
+
 **Audio format.** `download_youtube_audio` keeps whatever the source offers by
 default (YouTube’s best audio is normally Opus in a `.webm` container). That
 default needs no ffmpeg and avoids re-encoding one lossy format into another.
@@ -183,7 +192,9 @@ supersede(
 import warnings
 from yb.youtube import VisibilityDropWarning
 
-warnings.simplefilter("error", VisibilityDropWarning)  # supersede now raises, changing nothing
+warnings.simplefilter(
+    "error", VisibilityDropWarning
+)  # supersede now raises, changing nothing
 ```
 
 ### Read live stats & metadata

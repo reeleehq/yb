@@ -10,6 +10,9 @@ yb.download.youtube
    
       OnConvertError
       DOWNLOAD_DIR_ENV
+      COOKIES_FILE_ENV
+      DEFAULT_COOKIES_FILE
+      CookiesFile
       DEFAULT_OUTTMPL
       DEFAULT_AUDIO_FMT
    
@@ -17,6 +20,7 @@ yb.download.youtube
 
    .. autosummary::
    
+      default_cookies_file
       default_download_dir
       download_youtube_audio
       download_youtube_playlist

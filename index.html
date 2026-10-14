@@ -358,6 +358,14 @@ one — the error only surfaces when you actually call that feature. You also ne
 <p>The destination defaults to <code class="docutils literal notranslate"><span class="pre">$YB_DOWNLOAD_DIR</span></code> (else <code class="docutils literal notranslate"><span class="pre">~/Downloads</span></code>). Every knob
 — format, filename template, which sidecar metadata to also save — is
 overridable, and any raw yt-dlp option can be passed via <code class="docutils literal notranslate"><span class="pre">extra_opts=</span></code>.</p>
+<p><strong>Cookies (headless servers).</strong> YouTube bot-blocks anonymous downloads from many
+servers. Export a Netscape-format cookies file from a logged-in browser elsewhere
+and point yb at it with <code class="docutils literal notranslate"><span class="pre">YB_COOKIES_FILE=/path/cookies.txt</span></code> (or just put it at
+<code class="docutils literal notranslate"><span class="pre">~/.config/yb/youtube-cookies.txt</span></code>); every download and info call then uses it,
+with no extra argument. Pass <code class="docutils literal notranslate"><span class="pre">cookies_file=</span></code> to choose one per call (<code class="docutils literal notranslate"><span class="pre">False</span></code>
+turns the default off). An explicit <code class="docutils literal notranslate"><span class="pre">cookies_from_browser=</span></code> or a <code class="docutils literal notranslate"><span class="pre">cookiefile</span></code> /
+<code class="docutils literal notranslate"><span class="pre">cookiesfrombrowser</span></code> in <code class="docutils literal notranslate"><span class="pre">extra_opts=</span></code> always wins. With no file and no env var,
+nothing changes. Never commit the file.</p>
 <p><strong>Audio format.</strong> <code class="docutils literal notranslate"><span class="pre">download_youtube_audio</span></code> keeps whatever the source offers by
 default (YouTube’s best audio is normally Opus in a <code class="docutils literal notranslate"><span class="pre">.webm</span></code> container). That
 default needs no ffmpeg and avoids re-encoding one lossy format into another.
@@ -443,7 +451,9 @@ interactive chapters. Short clips simply get none.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">yb.youtube</span><span class="w"> </span><span class="kn">import</span> <span class="n">VisibilityDropWarning</span>
 
-<span class="n">warnings</span><span class="o">.</span><span class="n">simplefilter</span><span class="p">(</span><span class="s2">"error"</span><span class="p">,</span> <span class="n">VisibilityDropWarning</span><span class="p">)</span>  <span class="c1"># supersede now raises, changing nothing</span>
+<span class="n">warnings</span><span class="o">.</span><span class="n">simplefilter</span><span class="p">(</span>
+    <span class="s2">"error"</span><span class="p">,</span> <span class="n">VisibilityDropWarning</span>
+<span class="p">)</span>  <span class="c1"># supersede now raises, changing nothing</span>
 </pre></div>
 </div>
 </section>
@@ -612,7 +622,7 @@ it, and the <code class="docutils literal notranslate"><span class="pre">music</
 </section>
 </section>
 
-<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-10-13 11:10 UTC from <a href="https://github.com/reeleehq/yb/commit/d4b8abd12eef1695161d1afd29a0eb944c9e4c30">d4b8abd</a> (main) · yb 0.1.17 · <a href="about-this-build.html">about this build</a></p>
+<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-10-14 04:01 UTC from <a href="https://github.com/reeleehq/yb/commit/e90d79475b0b40f6d9f8b2e8a1edf2398a006fad">e90d794</a> (main) · yb 0.1.18 · <a href="about-this-build.html">about this build</a></p>
         </article>
       </div>
       <footer>
@@ -682,7 +692,7 @@ it, and the <code class="docutils literal notranslate"><span class="pre">music</
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=d24e387d"></script>
+</div><script src="_static/documentation_options.js?v=7039c93a"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>

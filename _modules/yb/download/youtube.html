@@ -305,6 +305,18 @@
 <span class="c1">#: Env var that overrides the default download directory.</span>
 <span class="n">DOWNLOAD_DIR_ENV</span> <span class="o">=</span> <span class="s2">"YB_DOWNLOAD_DIR"</span>
 
+<span class="c1">#: Env var naming a Netscape-format cookies file to authenticate downloads with.</span>
+<span class="n">COOKIES_FILE_ENV</span> <span class="o">=</span> <span class="s2">"YB_COOKIES_FILE"</span>
+
+<span class="c1">#: Cookies file used when :data:`COOKIES_FILE_ENV` is unset and this file exists.</span>
+<span class="n">DEFAULT_COOKIES_FILE</span> <span class="o">=</span> <span class="s2">"~/.config/yb/youtube-cookies.txt"</span>
+
+<span class="c1">#: yt-dlp options that already say where cookies come from (so no default is added).</span>
+<span class="n">_COOKIE_OPT_KEYS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"cookiefile"</span><span class="p">,</span> <span class="s2">"cookiesfrombrowser"</span><span class="p">)</span>
+
+<span class="c1">#: What ``cookies_file`` accepts: a path, ``None`` (look for a default), or ``False`` (none).</span>
+<span class="n">CookiesFile</span> <span class="o">=</span> <span class="n">PathLike</span> <span class="o">|</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">False</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span>
+
 <span class="c1">#: yt-dlp output template: human title plus the stable id, e.g. "My Talk (dQw4...).mp4".</span>
 <span class="n">DEFAULT_OUTTMPL</span> <span class="o">=</span> <span class="s2">"</span><span class="si">%(title)s</span><span class="s2"> (</span><span class="si">%(id)s</span><span class="s2">).</span><span class="si">%(ext)s</span><span class="s2">"</span>
 
@@ -371,17 +383,120 @@
 
 
 
+<div class="viewcode-block" id="default_cookies_file">
+<a class="viewcode-back" href="../../../_autosummary/yb.download.youtube.html#yb.default_cookies_file">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">default_cookies_file</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The cookies file downloads use when none is passed, or ``None``.</span>
+
+<span class="sd">    ``$YB_COOKIES_FILE`` if set, else ``~/.config/yb/youtube-cookies.txt`` if it</span>
+<span class="sd">    exists. A file named by the env var that does not exist is skipped with a</span>
+<span class="sd">    warning (a typo should not silently fall back to anonymous downloads).</span>
+<span class="sd">    """</span>
+    <span class="n">named</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">COOKIES_FILE_ENV</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">named</span><span class="p">:</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">named</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+            <span class="k">return</span> <span class="n">path</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"$</span><span class="si">{</span><span class="n">COOKIES_FILE_ENV</span><span class="si">}</span><span class="s2"> points to a file that does not exist; "</span>
+            <span class="s2">"downloading without cookies."</span><span class="p">,</span>
+            <span class="n">stacklevel</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">DEFAULT_COOKIES_FILE</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">path</span> <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">()</span> <span class="k">else</span> <span class="kc">None</span></div>
+
+
+
+<span class="c1">#: Fields on a cookie line of a Netscape cookies file (tab-separated).</span>
+<span class="n">_COOKIE_FIELDS</span> <span class="o">=</span> <span class="mi">7</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_malformed_cookie_lines</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""1-based numbers of the lines yt-dlp would reject (never their content).</span>
+
+<span class="sd">    yt-dlp prints a rejected line verbatim to stderr, cookie value included and</span>
+<span class="sd">    whatever ``quiet`` says, so yb checks the file first and reports line numbers.</span>
+<span class="sd">    """</span>
+    <span class="n">bad</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">errors</span><span class="o">=</span><span class="s2">"replace"</span><span class="p">)</span><span class="o">.</span><span class="n">splitlines</span><span class="p">(),</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">stripped</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">stripped</span> <span class="ow">or</span> <span class="p">(</span>
+            <span class="n">stripped</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"#"</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">stripped</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"#HttpOnly_"</span><span class="p">)</span>
+        <span class="p">):</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"</span><span class="se">\t</span><span class="s2">"</span><span class="p">))</span> <span class="o">!=</span> <span class="n">_COOKIE_FIELDS</span><span class="p">:</span>
+            <span class="n">bad</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">bad</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_usable_cookies_file</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">explicit</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""``str(path)`` if it is a well-formed cookies file, else raise / warn+``None``."""</span>
+    <span class="n">bad</span> <span class="o">=</span> <span class="n">_malformed_cookie_lines</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">bad</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="sa">f</span><span class="s2">"cookies file </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> is not in Netscape format "</span>
+        <span class="sa">f</span><span class="s2">"(malformed line(s): </span><span class="si">{</span><span class="n">bad</span><span class="p">[:</span><span class="mi">5</span><span class="p">]</span><span class="si">}</span><span class="s2">); fields must be tab-separated."</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">explicit</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">msg</span> <span class="o">+</span> <span class="s2">" Downloading without cookies."</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+    <span class="k">return</span> <span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_cookie_opts</span><span class="p">(</span>
+    <span class="n">cookies_file</span><span class="p">:</span> <span class="n">CookiesFile</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">cookies_from_browser</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">tuple</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">extra_opts</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""yt-dlp cookie options for ``cookies_file`` (merge these *before* ``extra_opts``).</span>
+
+<span class="sd">    An explicit ``cookies_file`` is used as given (``FileNotFoundError`` if it is</span>
+<span class="sd">    missing). The default file (:func:`default_cookies_file`) is used only when</span>
+<span class="sd">    nothing else says where cookies come from: no ``cookies_from_browser`` and no</span>
+<span class="sd">    ``cookiefile`` / ``cookiesfrombrowser`` in ``extra_opts``. ``False`` opts out.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">cookies_file</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="n">cookies_file</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">cookies_file</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"cookies_file not found: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">cookies_from_browser</span> <span class="ow">or</span> <span class="s2">"cookiesfrombrowser"</span> <span class="ow">in</span> <span class="p">(</span><span class="n">extra_opts</span> <span class="ow">or</span> <span class="p">{}):</span>
+            <span class="c1"># yt-dlp would merge the browser's whole jar into this file on exit.</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">"cookies_file cannot be combined with a browser cookie source: "</span>
+                <span class="s2">"yt-dlp would write the browser's cookies into the file."</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">"cookiefile"</span><span class="p">:</span> <span class="n">_usable_cookies_file</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">explicit</span><span class="o">=</span><span class="kc">True</span><span class="p">)}</span>
+    <span class="k">if</span> <span class="n">cookies_from_browser</span> <span class="ow">or</span> <span class="nb">any</span><span class="p">(</span><span class="n">k</span> <span class="ow">in</span> <span class="p">(</span><span class="n">extra_opts</span> <span class="ow">or</span> <span class="p">{})</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">_COOKIE_OPT_KEYS</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{}</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">default_cookies_file</span><span class="p">()</span>
+    <span class="n">usable</span> <span class="o">=</span> <span class="n">_usable_cookies_file</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">explicit</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="k">if</span> <span class="n">path</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">"cookiefile"</span><span class="p">:</span> <span class="n">usable</span><span class="p">}</span> <span class="k">if</span> <span class="n">usable</span> <span class="k">else</span> <span class="p">{}</span>
+
+
 <div class="viewcode-block" id="youtube_video_info">
 <a class="viewcode-back" href="../../../_autosummary/yb.download.youtube.html#yb.youtube_video_info">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">youtube_video_info</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">extra_opts</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">youtube_video_info</span><span class="p">(</span>
+    <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">extra_opts</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">cookies_file</span><span class="p">:</span> <span class="n">CookiesFile</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""Fetch a video's metadata without downloading it.</span>
 
 <span class="sd">    Returns the trimmed info dict (see :data:`_INFO_FIELDS`). Useful to preview</span>
 <span class="sd">    the title/duration/chapters before deciding to download.</span>
+
+<span class="sd">    ``cookies_file``: see :func:`download_youtube_video`.</span>
 <span class="sd">    """</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">yt_dlp</span><span class="w"> </span><span class="kn">import</span> <span class="n">YoutubeDL</span>
 
     <span class="n">opts</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"quiet"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"skip_download"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"noplaylist"</span><span class="p">:</span> <span class="kc">True</span><span class="p">}</span>
+    <span class="n">opts</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_cookie_opts</span><span class="p">(</span><span class="n">cookies_file</span><span class="p">,</span> <span class="n">extra_opts</span><span class="o">=</span><span class="n">extra_opts</span><span class="p">))</span>
     <span class="n">opts</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">extra_opts</span> <span class="ow">or</span> <span class="p">{})</span>
     <span class="k">with</span> <span class="n">YoutubeDL</span><span class="p">(</span><span class="n">with_runtime_opts</span><span class="p">(</span><span class="n">opts</span><span class="p">))</span> <span class="k">as</span> <span class="n">ydl</span><span class="p">:</span>
         <span class="n">info</span> <span class="o">=</span> <span class="n">ydl</span><span class="o">.</span><span class="n">extract_info</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
@@ -409,6 +524,7 @@
     <span class="n">start</span><span class="p">:</span> <span class="n">Timestamp</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">end</span><span class="p">:</span> <span class="n">Timestamp</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">precise_cuts</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">cookies_file</span><span class="p">:</span> <span class="n">CookiesFile</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DownloadResult</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Download a YouTube video to ``download_dir`` (default ``~/Downloads``).</span>
 
@@ -442,6 +558,17 @@
 <span class="sd">            Needs ffmpeg (see :mod:`yb.download.ranges`).</span>
 <span class="sd">        precise_cuts: With ``start``/``end``, re-encode at the cuts for</span>
 <span class="sd">            frame-accurate bounds (slower) instead of cutting at keyframes.</span>
+<span class="sd">        cookies_file: Netscape-format cookies file to authenticate with (for</span>
+<span class="sd">            headless servers where ``cookies_from_browser`` cannot work). Default</span>
+<span class="sd">            ``None`` reads ``$YB_COOKIES_FILE``, else</span>
+<span class="sd">            ``~/.config/yb/youtube-cookies.txt`` if it exists, else sends no</span>
+<span class="sd">            cookies. An explicit ``cookies_from_browser`` or ``extra_opts``</span>
+<span class="sd">            cookie option suppresses that default; ``False`` opts out of it.</span>
+<span class="sd">            The file is checked first (``ValueError`` if explicit, else a</span>
+<span class="sd">            warning, naming only line numbers). It cannot be combined with a</span>
+<span class="sd">            browser cookie source. yt-dlp rewrites the file with refreshed</span>
+<span class="sd">            cookies on exit, so it must be writable and not shared by parallel</span>
+<span class="sd">            workers.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        A :class:`DownloadResult` with the media path, trimmed ``info``, and any</span>
@@ -483,6 +610,7 @@
                     <span class="n">filename_template</span><span class="p">,</span> <span class="n">time_range</span><span class="p">,</span> <span class="n">precise_cuts</span><span class="o">=</span><span class="n">precise_cuts</span>
                 <span class="p">)</span>
             <span class="p">)</span>
+    <span class="n">opts</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_cookie_opts</span><span class="p">(</span><span class="n">cookies_file</span><span class="p">,</span> <span class="n">extra_opts</span><span class="o">=</span><span class="n">extra_opts</span><span class="p">))</span>
     <span class="n">opts</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">extra_opts</span> <span class="ow">or</span> <span class="p">{})</span>
 
     <span class="k">with</span> <span class="n">YoutubeDL</span><span class="p">(</span><span class="n">with_runtime_opts</span><span class="p">(</span><span class="n">opts</span><span class="p">))</span> <span class="k">as</span> <span class="n">ydl</span><span class="p">:</span>
@@ -527,6 +655,7 @@
     <span class="n">start</span><span class="p">:</span> <span class="n">Timestamp</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">end</span><span class="p">:</span> <span class="n">Timestamp</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">precise_cuts</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">cookies_file</span><span class="p">:</span> <span class="n">CookiesFile</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DownloadResult</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Download only a video's audio (no video stream).</span>
 
@@ -603,6 +732,7 @@
         <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">,</span>
         <span class="n">end</span><span class="o">=</span><span class="n">end</span><span class="p">,</span>
         <span class="n">precise_cuts</span><span class="o">=</span><span class="n">precise_cuts</span><span class="p">,</span>
+        <span class="n">cookies_file</span><span class="o">=</span><span class="n">cookies_file</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="k">if</span> <span class="n">audio_format</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">result</span>
@@ -637,6 +767,7 @@
     <span class="n">playlist_items</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">flat</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">extra_opts</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">cookies_file</span><span class="p">:</span> <span class="n">CookiesFile</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""Fetch a playlist's per-video metadata without downloading.</span>
 
@@ -652,6 +783,7 @@
 <span class="sd">            ``"2:"`` (all but the first), ``"2"`` (only the 2nd), ``"1:5,8"``.</span>
 <span class="sd">        flat: Shallow vs full per-entry extraction.</span>
 <span class="sd">        extra_opts: Additional raw yt-dlp options (merged last).</span>
+<span class="sd">        cookies_file: See :func:`download_youtube_video`.</span>
 <span class="sd">    """</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">yt_dlp</span><span class="w"> </span><span class="kn">import</span> <span class="n">YoutubeDL</span>
 
@@ -663,6 +795,7 @@
     <span class="p">}</span>
     <span class="k">if</span> <span class="n">playlist_items</span><span class="p">:</span>
         <span class="n">opts</span><span class="p">[</span><span class="s2">"playlist_items"</span><span class="p">]</span> <span class="o">=</span> <span class="n">playlist_items</span>
+    <span class="n">opts</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_cookie_opts</span><span class="p">(</span><span class="n">cookies_file</span><span class="p">,</span> <span class="n">extra_opts</span><span class="o">=</span><span class="n">extra_opts</span><span class="p">))</span>
     <span class="n">opts</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">extra_opts</span> <span class="ow">or</span> <span class="p">{})</span>
     <span class="k">with</span> <span class="n">YoutubeDL</span><span class="p">(</span><span class="n">with_runtime_opts</span><span class="p">(</span><span class="n">opts</span><span class="p">))</span> <span class="k">as</span> <span class="n">ydl</span><span class="p">:</span>
         <span class="n">info</span> <span class="o">=</span> <span class="n">ydl</span><span class="o">.</span><span class="n">extract_info</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
@@ -715,6 +848,7 @@
     <span class="n">extractor_args</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">quiet</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">extra_opts</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">cookies_file</span><span class="p">:</span> <span class="n">CookiesFile</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">DownloadResult</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""Download all (or a selected subset of) a YouTube playlist's videos.</span>
 
@@ -754,6 +888,8 @@
 <span class="sd">            ``{"youtube": {"player_client": ["web_safari"]}}``).</span>
 <span class="sd">        quiet: Suppress yt-dlp console output.</span>
 <span class="sd">        extra_opts: Any additional raw yt-dlp options (merged last, so they win).</span>
+<span class="sd">        cookies_file: As in :func:`download_youtube_video`; an explicit</span>
+<span class="sd">            ``cookies_from_browser`` takes precedence over the default file.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        A list of :class:`DownloadResult`, one per successfully-downloaded entry,</span>
@@ -789,6 +925,13 @@
         <span class="n">opts</span><span class="p">[</span><span class="s2">"download_archive"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">download_archive</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">())</span>
     <span class="k">if</span> <span class="n">cookies_from_browser</span><span class="p">:</span>
         <span class="n">opts</span><span class="p">[</span><span class="s2">"cookiesfrombrowser"</span><span class="p">]</span> <span class="o">=</span> <span class="n">_coerce_cookies_from_browser</span><span class="p">(</span><span class="n">cookies_from_browser</span><span class="p">)</span>
+    <span class="n">opts</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+        <span class="n">_cookie_opts</span><span class="p">(</span>
+            <span class="n">cookies_file</span><span class="p">,</span>
+            <span class="n">cookies_from_browser</span><span class="o">=</span><span class="n">cookies_from_browser</span><span class="p">,</span>
+            <span class="n">extra_opts</span><span class="o">=</span><span class="n">extra_opts</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
     <span class="k">if</span> <span class="n">extractor_args</span><span class="p">:</span>
         <span class="n">opts</span><span class="p">[</span><span class="s2">"extractor_args"</span><span class="p">]</span> <span class="o">=</span> <span class="n">extractor_args</span>
     <span class="k">if</span> <span class="n">title_reject</span><span class="p">:</span>
@@ -936,7 +1079,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=d24e387d"></script>
+</div><script src="../../../_static/documentation_options.js?v=7039c93a"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

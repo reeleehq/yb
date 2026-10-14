@@ -1,4 +1,4 @@
-> built 2026-10-13 11:10 UTC from d4b8abd (main) · yb 0.1.17. Details: build_info.json
+> built 2026-10-14 04:01 UTC from e90d794 (main) · yb 0.1.18. Details: build_info.json
 
 # index.html.md
 
@@ -88,6 +88,15 @@ download_youtube_audio(url, audio_format="mp3", bitrate="320k")
 The destination defaults to `$YB_DOWNLOAD_DIR` (else `~/Downloads`). Every knob
 — format, filename template, which sidecar metadata to also save — is
 overridable, and any raw yt-dlp option can be passed via `extra_opts=`.
+
+**Cookies (headless servers).** YouTube bot-blocks anonymous downloads from many
+servers. Export a Netscape-format cookies file from a logged-in browser elsewhere
+and point yb at it with `YB_COOKIES_FILE=/path/cookies.txt` (or just put it at
+`~/.config/yb/youtube-cookies.txt`); every download and info call then uses it,
+with no extra argument. Pass `cookies_file=` to choose one per call (`False`
+turns the default off). An explicit `cookies_from_browser=` or a `cookiefile` /
+`cookiesfrombrowser` in `extra_opts=` always wins. With no file and no env var,
+nothing changes. Never commit the file.
 
 **Audio format.** `download_youtube_audio` keeps whatever the source offers by
 default (YouTube’s best audio is normally Opus in a `.webm` container). That
@@ -187,7 +196,9 @@ supersede(
 import warnings
 from yb.youtube import VisibilityDropWarning
 
-warnings.simplefilter("error", VisibilityDropWarning)  # supersede now raises, changing nothing
+warnings.simplefilter(
+    "error", VisibilityDropWarning
+)  # supersede now raises, changing nothing
 ```
 
 ### Read live stats & metadata
@@ -714,17 +725,17 @@ how to install it. The first download in a process runs it and warns.
 
 ### Functions
 
-| [`download_youtube_video`](_autosummary/yb.download.html.md#yb.download.download_youtube_video)(url, \*[, ...])      | Download a YouTube video to `download_dir` (default `~/Downloads`).           |
-|----------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
-| [`download_youtube_audio`](_autosummary/yb.download.html.md#yb.download.download_youtube_audio)(url, \*[, ...])      | Download only a video's audio (no video stream).                              |
-| [`youtube_video_info`](_autosummary/yb.download.html.md#yb.download.youtube_video_info)(url, \*[, extra_opts])   | Fetch a video's metadata without downloading it.                              |
-| [`download_youtube_playlist`](_autosummary/yb.download.html.md#yb.download.download_youtube_playlist)(url, \*[, ...])   | Download all (or a selected subset of) a YouTube playlist's videos.           |
-| [`youtube_playlist_info`](_autosummary/yb.download.html.md#yb.download.youtube_playlist_info)(url, \*[, ...])       | Fetch a playlist's per-video metadata without downloading.                    |
-| [`default_download_dir`](_autosummary/yb.download.html.md#yb.download.default_download_dir)()                      | Resolve the default download directory (`$YB_DOWNLOAD_DIR` or `~/Downloads`). |
-| [`convert_audio`](_autosummary/yb.download.html.md#yb.download.convert_audio)(src, audio_format, \*[, ...]) | Convert `src` to `audio_format`, returning the resulting path.                |
-| [`check_requirements`](_autosummary/yb.download.html.md#yb.download.check_requirements)(\*[, warn, which, ...])  | Check what YouTube downloads need, and say how to fix what's missing.         |
-| [`find_js_runtime`](_autosummary/yb.download.html.md#yb.download.find_js_runtime)(\*[, which, search_dirs])   | Find Deno on `PATH`, else in its standard install location.                   |
-| [`parse_timestamp`](_autosummary/yb.download.html.md#yb.download.parse_timestamp)(value)                      | Seconds from a number or a `"[[h:]m:]s[.fraction]"` string.                   |
+| [`download_youtube_video`](_autosummary/yb.download.html.md#yb.download.download_youtube_video)(url, \*[, ...])         | Download a YouTube video to `download_dir` (default `~/Downloads`).           |
+|-------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
+| [`download_youtube_audio`](_autosummary/yb.download.html.md#yb.download.download_youtube_audio)(url, \*[, ...])         | Download only a video's audio (no video stream).                              |
+| [`youtube_video_info`](_autosummary/yb.download.html.md#yb.download.youtube_video_info)(url, \*[, extra_opts, ...]) | Fetch a video's metadata without downloading it.                              |
+| [`download_youtube_playlist`](_autosummary/yb.download.html.md#yb.download.download_youtube_playlist)(url, \*[, ...])      | Download all (or a selected subset of) a YouTube playlist's videos.           |
+| [`youtube_playlist_info`](_autosummary/yb.download.html.md#yb.download.youtube_playlist_info)(url, \*[, ...])          | Fetch a playlist's per-video metadata without downloading.                    |
+| [`default_download_dir`](_autosummary/yb.download.html.md#yb.download.default_download_dir)()                         | Resolve the default download directory (`$YB_DOWNLOAD_DIR` or `~/Downloads`). |
+| [`convert_audio`](_autosummary/yb.download.html.md#yb.download.convert_audio)(src, audio_format, \*[, ...])    | Convert `src` to `audio_format`, returning the resulting path.                |
+| [`check_requirements`](_autosummary/yb.download.html.md#yb.download.check_requirements)(\*[, warn, which, ...])     | Check what YouTube downloads need, and say how to fix what's missing.         |
+| [`find_js_runtime`](_autosummary/yb.download.html.md#yb.download.find_js_runtime)(\*[, which, search_dirs])      | Find Deno on `PATH`, else in its standard install location.                   |
+| [`parse_timestamp`](_autosummary/yb.download.html.md#yb.download.parse_timestamp)(value)                         | Seconds from a number or a `"[[h:]m:]s[.fraction]"` string.                   |
 
 ### Classes
 
@@ -870,7 +881,7 @@ Resolve the default download directory (`$YB_DOWNLOAD_DIR` or `~/Downloads`).
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
-### yb.download.download_youtube_audio(url, , download_dir=None, audio_format=None, bitrate=None, keep_original=False, on_error='raise', fmt='bestaudio/best', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False)
+### yb.download.download_youtube_audio(url, , download_dir=None, audio_format=None, bitrate=None, keep_original=False, on_error='raise', fmt='bestaudio/best', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None)
 
 Download only a video’s audio (no video stream).
 
@@ -943,7 +954,7 @@ Pass `audio_format` to get a specific format instead:
   * [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `on_error` is not `"raise"` or `"warn"`.
   * [**AudioConversionError**](_autosummary/yb.download.html.md#yb.download.AudioConversionError) – If conversion fails and `on_error="raise"`.
 
-### yb.download.download_youtube_playlist(url, , download_dir=None, playlist_items=None, skip_first=False, title_reject=None, download_archive=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=True, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), cookies_from_browser=None, extractor_args=None, quiet=True, extra_opts=None)
+### yb.download.download_youtube_playlist(url, , download_dir=None, playlist_items=None, skip_first=False, title_reject=None, download_archive=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=True, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), cookies_from_browser=None, extractor_args=None, quiet=True, extra_opts=None, cookies_file=None)
 
 Download all (or a selected subset of) a YouTube playlist’s videos.
 
@@ -993,6 +1004,8 @@ Selecting a subset (yt-dlp `--playlist-items` is **1-based**):
     `{"youtube": {"player_client": ["web_safari"]}}`).
   * **quiet** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Suppress yt-dlp console output.
   * **extra_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Any additional raw yt-dlp options (merged last, so they win).
+  * **cookies_file** (`Union`[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`False`], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – As in [`download_youtube_video()`](_autosummary/yb.download.html.md#yb.download.download_youtube_video); an explicit
+    `cookies_from_browser` takes precedence over the default file.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`DownloadResult`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DownloadResult)]
 * **Returns:**
@@ -1000,7 +1013,7 @@ Selecting a subset (yt-dlp `--playlist-items` is **1-based**):
   in playlist order. Entries skipped by selection/filter or that failed
   (under `ignoreerrors`) are omitted.
 
-### yb.download.download_youtube_video(url, , download_dir=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False)
+### yb.download.download_youtube_video(url, , download_dir=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None)
 
 Download a YouTube video to `download_dir` (default `~/Downloads`).
 
@@ -1042,6 +1055,17 @@ named `Title (video_id).mp4` in `~/Downloads`.
     Needs ffmpeg (see [`yb.download.ranges`](_autosummary/yb.download.ranges.html.md#module-yb.download.ranges)).
   * **precise_cuts** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – With `start`/`end`, re-encode at the cuts for
     frame-accurate bounds (slower) instead of cutting at keyframes.
+  * **cookies_file** (`Union`[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`False`], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – Netscape-format cookies file to authenticate with (for
+    headless servers where `cookies_from_browser` cannot work). Default
+    `None` reads `$YB_COOKIES_FILE`, else
+    `~/.config/yb/youtube-cookies.txt` if it exists, else sends no
+    cookies. An explicit `cookies_from_browser` or `extra_opts`
+    cookie option suppresses that default; `False` opts out of it.
+    The file is checked first (`ValueError` if explicit, else a
+    warning, naming only line numbers). It cannot be combined with a
+    browser cookie source. yt-dlp rewrites the file with refreshed
+    cookies on exit, so it must be writable and not shared by parallel
+    workers.
 * **Return type:**
   [`DownloadResult`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DownloadResult)
 * **Returns:**
@@ -1073,7 +1097,7 @@ Seconds from a number or a `"[[h:]m:]s[.fraction]"` string.
 * **Return type:**
   [`float`](https://docs.python.org/3/builtins/functions.html#float)
 
-### yb.download.youtube_playlist_info(url, , playlist_items=None, flat=True, extra_opts=None)
+### yb.download.youtube_playlist_info(url, , playlist_items=None, flat=True, extra_opts=None, cookies_file=None)
 
 Fetch a playlist’s per-video metadata without downloading.
 
@@ -1089,15 +1113,18 @@ and trimmed to `_INFO_FIELDS` (slower, but includes duration/fps/etc.).
     `"2:"` (all but the first), `"2"` (only the 2nd), `"1:5,8"`.
   * **flat** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Shallow vs full per-entry extraction.
   * **extra_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Additional raw yt-dlp options (merged last).
+  * **cookies_file** (`Union`[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`False`], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – See [`download_youtube_video()`](_autosummary/yb.download.html.md#yb.download.download_youtube_video).
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]
 
-### yb.download.youtube_video_info(url, , extra_opts=None)
+### yb.download.youtube_video_info(url, , extra_opts=None, cookies_file=None)
 
 Fetch a video’s metadata without downloading it.
 
 Returns the trimmed info dict (see `_INFO_FIELDS`). Useful to preview
 the title/duration/chapters before deciding to download.
+
+`cookies_file`: see [`download_youtube_video()`](_autosummary/yb.download.html.md#yb.download.download_youtube_video).
 
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]
@@ -1498,31 +1525,52 @@ The destination defaults to `$YB_DOWNLOAD_DIR` when set, else `~/Downloads`.
 
 ### Module Attributes
 
-| [`OnConvertError`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.OnConvertError)    | What [`download_youtube_audio()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_audio) does when a format conversion fails.   |
-|--------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------|
-| [`DOWNLOAD_DIR_ENV`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DOWNLOAD_DIR_ENV)  | Env var that overrides the default download directory.                                                                |
-| [`DEFAULT_OUTTMPL`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DEFAULT_OUTTMPL)   | human title plus the stable id, e.g. "My Talk (dQw4...).mp4".                                                         |
-| [`DEFAULT_AUDIO_FMT`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DEFAULT_AUDIO_FMT) | yt-dlp format selector for the best audio-only stream.                                                                |
+| [`OnConvertError`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.OnConvertError)       | What [`download_youtube_audio()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_audio) does when a format conversion fails.     |
+|-----------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
+| [`DOWNLOAD_DIR_ENV`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DOWNLOAD_DIR_ENV)     | Env var that overrides the default download directory.                                                                  |
+| [`COOKIES_FILE_ENV`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.COOKIES_FILE_ENV)     | Env var naming a Netscape-format cookies file to authenticate downloads with.                                           |
+| [`DEFAULT_COOKIES_FILE`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DEFAULT_COOKIES_FILE) | Cookies file used when [`COOKIES_FILE_ENV`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.COOKIES_FILE_ENV) is unset and this file exists. |
+| [`CookiesFile`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.CookiesFile)          | a path, `None` (look for a default), or `False` (none).                                                                 |
+| [`DEFAULT_OUTTMPL`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DEFAULT_OUTTMPL)      | human title plus the stable id, e.g. "My Talk (dQw4...).mp4".                                                           |
+| [`DEFAULT_AUDIO_FMT`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DEFAULT_AUDIO_FMT)    | yt-dlp format selector for the best audio-only stream.                                                                  |
 
 ### Functions
 
-| [`default_download_dir`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.default_download_dir)()                    | Resolve the default download directory (`$YB_DOWNLOAD_DIR` or `~/Downloads`).   |
-|--------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------|
-| [`download_youtube_audio`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_audio)(url, \*[, ...])    | Download only a video's audio (no video stream).                                |
-| [`download_youtube_playlist`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_playlist)(url, \*[, ...]) | Download all (or a selected subset of) a YouTube playlist's videos.             |
-| [`download_youtube_video`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_video)(url, \*[, ...])    | Download a YouTube video to `download_dir` (default `~/Downloads`).             |
-| [`glob_escape`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.glob_escape)(name)                         | Escape glob metacharacters in a literal filename stem.                          |
-| [`youtube_playlist_info`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.youtube_playlist_info)(url, \*[, ...])     | Fetch a playlist's per-video metadata without downloading.                      |
-| [`youtube_video_info`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.youtube_video_info)(url, \*[, extra_opts]) | Fetch a video's metadata without downloading it.                                |
+| [`default_cookies_file`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.default_cookies_file)()                         | The cookies file downloads use when none is passed, or `None`.                |
+|-------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
+| [`default_download_dir`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.default_download_dir)()                         | Resolve the default download directory (`$YB_DOWNLOAD_DIR` or `~/Downloads`). |
+| [`download_youtube_audio`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_audio)(url, \*[, ...])         | Download only a video's audio (no video stream).                              |
+| [`download_youtube_playlist`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_playlist)(url, \*[, ...])      | Download all (or a selected subset of) a YouTube playlist's videos.           |
+| [`download_youtube_video`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_video)(url, \*[, ...])         | Download a YouTube video to `download_dir` (default `~/Downloads`).           |
+| [`glob_escape`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.glob_escape)(name)                              | Escape glob metacharacters in a literal filename stem.                        |
+| [`youtube_playlist_info`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.youtube_playlist_info)(url, \*[, ...])          | Fetch a playlist's per-video metadata without downloading.                    |
+| [`youtube_video_info`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.youtube_video_info)(url, \*[, extra_opts, ...]) | Fetch a video's metadata without downloading it.                              |
 
 ### Classes
 
 | [`DownloadResult`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DownloadResult)(path, info[, sidecars])   | Outcome of a download.   |
 |-------------------------------------------------------------------------------------------|--------------------------|
 
+### yb.download.youtube.COOKIES_FILE_ENV *= 'YB_COOKIES_FILE'*
+
+Env var naming a Netscape-format cookies file to authenticate downloads with.
+
+### yb.download.youtube.CookiesFile
+
+a path, `None` (look for a default), or `False` (none).
+
+* **Type:**
+  What `cookies_file` accepts
+
+alias of [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path) | [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[False] | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
 ### yb.download.youtube.DEFAULT_AUDIO_FMT *= 'bestaudio/best'*
 
 yt-dlp format selector for the best audio-only stream.
+
+### yb.download.youtube.DEFAULT_COOKIES_FILE *= '~/.config/yb/youtube-cookies.txt'*
+
+Cookies file used when [`COOKIES_FILE_ENV`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.COOKIES_FILE_ENV) is unset and this file exists.
 
 ### yb.download.youtube.DEFAULT_OUTTMPL *= '%(title)s (%(id)s).%(ext)s'*
 
@@ -1564,6 +1612,17 @@ What [`download_youtube_audio()`](_autosummary/yb.download.youtube.html.md#yb.do
 
 alias of [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[‘raise’, ‘warn’]
 
+### yb.download.youtube.default_cookies_file()
+
+The cookies file downloads use when none is passed, or `None`.
+
+`$YB_COOKIES_FILE` if set, else `~/.config/yb/youtube-cookies.txt` if it
+exists. A file named by the env var that does not exist is skipped with a
+warning (a typo should not silently fall back to anonymous downloads).
+
+* **Return type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
 ### yb.download.youtube.default_download_dir()
 
 Resolve the default download directory (`$YB_DOWNLOAD_DIR` or `~/Downloads`).
@@ -1571,7 +1630,7 @@ Resolve the default download directory (`$YB_DOWNLOAD_DIR` or `~/Downloads`).
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
-### yb.download.youtube.download_youtube_audio(url, , download_dir=None, audio_format=None, bitrate=None, keep_original=False, on_error='raise', fmt='bestaudio/best', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False)
+### yb.download.youtube.download_youtube_audio(url, , download_dir=None, audio_format=None, bitrate=None, keep_original=False, on_error='raise', fmt='bestaudio/best', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None)
 
 Download only a video’s audio (no video stream).
 
@@ -1644,7 +1703,7 @@ Pass `audio_format` to get a specific format instead:
   * [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `on_error` is not `"raise"` or `"warn"`.
   * [**AudioConversionError**](_autosummary/yb.audio_convert.html.md#yb.audio_convert.AudioConversionError) – If conversion fails and `on_error="raise"`.
 
-### yb.download.youtube.download_youtube_playlist(url, , download_dir=None, playlist_items=None, skip_first=False, title_reject=None, download_archive=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=True, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), cookies_from_browser=None, extractor_args=None, quiet=True, extra_opts=None)
+### yb.download.youtube.download_youtube_playlist(url, , download_dir=None, playlist_items=None, skip_first=False, title_reject=None, download_archive=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=True, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), cookies_from_browser=None, extractor_args=None, quiet=True, extra_opts=None, cookies_file=None)
 
 Download all (or a selected subset of) a YouTube playlist’s videos.
 
@@ -1694,6 +1753,8 @@ Selecting a subset (yt-dlp `--playlist-items` is **1-based**):
     `{"youtube": {"player_client": ["web_safari"]}}`).
   * **quiet** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Suppress yt-dlp console output.
   * **extra_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Any additional raw yt-dlp options (merged last, so they win).
+  * **cookies_file** (`Union`[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`False`], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – As in [`download_youtube_video()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_video); an explicit
+    `cookies_from_browser` takes precedence over the default file.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`DownloadResult`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DownloadResult)]
 * **Returns:**
@@ -1701,7 +1762,7 @@ Selecting a subset (yt-dlp `--playlist-items` is **1-based**):
   in playlist order. Entries skipped by selection/filter or that failed
   (under `ignoreerrors`) are omitted.
 
-### yb.download.youtube.download_youtube_video(url, , download_dir=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False)
+### yb.download.youtube.download_youtube_video(url, , download_dir=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None)
 
 Download a YouTube video to `download_dir` (default `~/Downloads`).
 
@@ -1743,6 +1804,17 @@ named `Title (video_id).mp4` in `~/Downloads`.
     Needs ffmpeg (see [`yb.download.ranges`](_autosummary/yb.download.ranges.html.md#module-yb.download.ranges)).
   * **precise_cuts** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – With `start`/`end`, re-encode at the cuts for
     frame-accurate bounds (slower) instead of cutting at keyframes.
+  * **cookies_file** (`Union`[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`False`], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – Netscape-format cookies file to authenticate with (for
+    headless servers where `cookies_from_browser` cannot work). Default
+    `None` reads `$YB_COOKIES_FILE`, else
+    `~/.config/yb/youtube-cookies.txt` if it exists, else sends no
+    cookies. An explicit `cookies_from_browser` or `extra_opts`
+    cookie option suppresses that default; `False` opts out of it.
+    The file is checked first (`ValueError` if explicit, else a
+    warning, naming only line numbers). It cannot be combined with a
+    browser cookie source. yt-dlp rewrites the file with refreshed
+    cookies on exit, so it must be writable and not shared by parallel
+    workers.
 * **Return type:**
   [`DownloadResult`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DownloadResult)
 * **Returns:**
@@ -1759,7 +1831,7 @@ Escape glob metacharacters in a literal filename stem.
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
-### yb.download.youtube.youtube_playlist_info(url, , playlist_items=None, flat=True, extra_opts=None)
+### yb.download.youtube.youtube_playlist_info(url, , playlist_items=None, flat=True, extra_opts=None, cookies_file=None)
 
 Fetch a playlist’s per-video metadata without downloading.
 
@@ -1775,15 +1847,18 @@ and trimmed to `_INFO_FIELDS` (slower, but includes duration/fps/etc.).
     `"2:"` (all but the first), `"2"` (only the 2nd), `"1:5,8"`.
   * **flat** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Shallow vs full per-entry extraction.
   * **extra_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Additional raw yt-dlp options (merged last).
+  * **cookies_file** (`Union`[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`False`], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – See [`download_youtube_video()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_video).
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]
 
-### yb.download.youtube.youtube_video_info(url, , extra_opts=None)
+### yb.download.youtube.youtube_video_info(url, , extra_opts=None, cookies_file=None)
 
 Fetch a video’s metadata without downloading it.
 
 Returns the trimmed info dict (see `_INFO_FIELDS`). Useful to preview
 the title/duration/chapters before deciding to download.
+
+`cookies_file`: see [`download_youtube_video()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_video).
 
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]
@@ -1939,7 +2014,7 @@ Config file location (`$XDG_CONFIG_HOME` or `~/.config`).
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
-### yb.download_youtube_audio(url, , download_dir=None, audio_format=None, bitrate=None, keep_original=False, on_error='raise', fmt='bestaudio/best', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False)
+### yb.download_youtube_audio(url, , download_dir=None, audio_format=None, bitrate=None, keep_original=False, on_error='raise', fmt='bestaudio/best', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None)
 
 Download only a video’s audio (no video stream).
 
@@ -2012,7 +2087,7 @@ Pass `audio_format` to get a specific format instead:
   * [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `on_error` is not `"raise"` or `"warn"`.
   * [**AudioConversionError**](_autosummary/yb.audio_convert.html.md#yb.audio_convert.AudioConversionError) – If conversion fails and `on_error="raise"`.
 
-### yb.download_youtube_video(url, , download_dir=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False)
+### yb.download_youtube_video(url, , download_dir=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None)
 
 Download a YouTube video to `download_dir` (default `~/Downloads`).
 
@@ -2054,6 +2129,17 @@ named `Title (video_id).mp4` in `~/Downloads`.
     Needs ffmpeg (see [`yb.download.ranges`](_autosummary/yb.download.ranges.html.md#module-yb.download.ranges)).
   * **precise_cuts** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – With `start`/`end`, re-encode at the cuts for
     frame-accurate bounds (slower) instead of cutting at keyframes.
+  * **cookies_file** (`Union`[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`False`], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – Netscape-format cookies file to authenticate with (for
+    headless servers where `cookies_from_browser` cannot work). Default
+    `None` reads `$YB_COOKIES_FILE`, else
+    `~/.config/yb/youtube-cookies.txt` if it exists, else sends no
+    cookies. An explicit `cookies_from_browser` or `extra_opts`
+    cookie option suppresses that default; `False` opts out of it.
+    The file is checked first (`ValueError` if explicit, else a
+    warning, naming only line numbers). It cannot be combined with a
+    browser cookie source. yt-dlp rewrites the file with refreshed
+    cookies on exit, so it must be writable and not shared by parallel
+    workers.
 * **Return type:**
   [`DownloadResult`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DownloadResult)
 * **Returns:**
@@ -2228,12 +2314,14 @@ Insert a caption track, or update the existing same-language one.
 * **Returns:**
   The inserted/updated caption resource.
 
-### yb.youtube_video_info(url, , extra_opts=None)
+### yb.youtube_video_info(url, , extra_opts=None, cookies_file=None)
 
 Fetch a video’s metadata without downloading it.
 
 Returns the trimmed info dict (see `_INFO_FIELDS`). Useful to preview
 the title/duration/chapters before deciding to download.
+
+`cookies_file`: see [`download_youtube_video()`](_autosummary/yb.html.md#yb.download_youtube_video).
 
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]
@@ -4500,18 +4588,16 @@ Fetch a video’s live metadata & engagement numbers.
 
 # About this build
 
-This documentation was built on **2026-10-13 11:10 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/d4b8abd12eef1695161d1afd29a0eb944c9e4c30"><code>d4b8abd</code></a> on branch <code>main</code>, for **yb 0.1.17** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-10-14 04:01 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/e90d79475b0b40f6d9f8b2e8a1edf2398a006fad"><code>e90d794</code></a> on branch <code>main</code>, for **yb 0.1.18** (from <code>pyproject.toml</code>).
 
-#### WARNING
-The documentation and the package may be misaligned:
-
-- The documented version (0.1.17) is behind the latest release on PyPI (0.1.18): `pip install yb` gives newer code than these docs describe.
+#### NOTE
+Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
 
 ## Source
 
 |                     |                                                                                                                                                    |
 |---------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/yb/commit/d4b8abd12eef1695161d1afd29a0eb944c9e4c30"><code>d4b8abd12eef1695161d1afd29a0eb944c9e4c30</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/yb/commit/e90d79475b0b40f6d9f8b2e8a1edf2398a006fad"><code>e90d79475b0b40f6d9f8b2e8a1edf2398a006fad</code></a> |
 | Branch              | <code>main</code>                                                                                                                                  |
 | Tags at this commit | none                                                                                                                                               |
 | Working tree        | clean                                                                                                                                              |
@@ -4522,15 +4608,15 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/yb</code>                                                                   |
-| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/38388189166">38388189166</a>          |
+| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/38509106964">38509106964</a>          |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>d4b8abd12eef1695161d1afd29a0eb944c9e4c30</code> (in the history of the built commit) |
+| Event commit | <code>e90d79475b0b40f6d9f8b2e8a1edf2398a006fad</code> (in the history of the built commit) |
 
 ## Tools
 
 |          |         |
 |----------|---------|
-| epythet  | 0.2.15  |
+| epythet  | 0.2.17  |
 | Sphinx   | 9.1.0   |
 | docutils | 0.22.4  |
 | Python   | 3.12.15 |
@@ -4549,14 +4635,14 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/yb/0.1.18/">0.1.18</a>, newer than the documented version (0.1.17).
+Latest release: <a href="https://pypi.org/project/yb/0.1.18/">0.1.18</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/yb && cd yb
-git checkout d4b8abd12eef1695161d1afd29a0eb944c9e4c30
-pip install "epythet==0.2.15"
+git checkout e90d79475b0b40f6d9f8b2e8a1edf2398a006fad
+pip install "epythet==0.2.17"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```
 
