@@ -1,7 +1,7 @@
 """Cookies file for downloads: ``cookies_file`` / ``$YB_COOKIES_FILE`` / the default path.
 
 Offline: yt-dlp is replaced by a recorder and the cookies files are fakes made in
-``tmp_path`` (never a real cookie). HOME is pointed at ``tmp_path`` so the
+``tmp_path`` (never a real cookie). HOME/USERPROFILE are pointed at ``tmp_path`` so the
 developer's own ``~/.config/yb`` cannot leak into a test.
 """
 
@@ -49,6 +49,7 @@ def ydl(monkeypatch, tmp_path):
     monkeypatch.setattr(req, "find_js_runtime", lambda: None)
     req._preflight_opts.cache_clear()
     monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path / "home"))  # Windows expanduser
     monkeypatch.delenv(ytdl.COOKIES_FILE_ENV, raising=False)
     _FakeYDL.seen = []
     yield _FakeYDL
