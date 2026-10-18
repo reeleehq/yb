@@ -38,6 +38,7 @@ from yb.download.youtube import (
     DEFAULT_OUTTMPL,
     DEFAULT_AUDIO_FMT,
 )
+from yb.download.pacing import Pace, PACE_PRESETS, RateLimitedError
 from yb.download.ranges import TimeRange, parse_timestamp
 from yb.download.requirements import (
     check_requirements,
@@ -63,6 +64,9 @@ __all__ = [
     "find_js_runtime",
     "DownloadRequirementWarning",
     "JsRuntime",
+    "Pace",
+    "PACE_PRESETS",
+    "RateLimitedError",
     "TimeRange",
     "parse_timestamp",
 ]

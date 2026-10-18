@@ -64,6 +64,24 @@ Sidecars (`write_info_json`, `write_thumbnail`, `write_description`,
 reported in `result.sidecars`. Playlists: `youtube_playlist_info` /
 `download_youtube_playlist`. Any raw yt-dlp option passes through `extra_opts=`.
 
+Long playlists, politely (audio only, resumable, one folder per item):
+
+```python
+download_youtube_playlist(
+    url, fmt="bestaudio/best", merge_to=None,  # source stream, no re-encode
+    pace="polite",                  # sleep 20-60 s, 1 s between requests, 4 MB/s
+    download_archive="archive.txt", # re-run skips finished ids
+    playlist_items="1-42",          # also title_reject="PV"
+    item_folders=True,              # 001_<id>/<id>.m4a + sidecars
+    embed_metadata=True,
+)
+```
+
+`pace=` also exists on the video/audio downloaders (default `None` = no change).
+HTTP 429 or a "confirm you're not a bot" wall raises `RateLimitedError` with a
+backoff hint: wait hours, then retry paced, with the archive, cookies, and fewer
+items per run.
+
 ## Convert audio you already have
 
 ```python

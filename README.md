@@ -109,6 +109,29 @@ clip.info["download_range"]  # {"start": 7.9, "end": 8.75}, for provenance
 
 The range is cut by ffmpeg (so it needs one; to use a specific build pass `extra_opts={"ffmpeg_location": "/path/to/ffmpeg"}`, e.g. when the system ffmpeg lacks what yt-dlp asks of it). Cuts land on keyframes; `precise_cuts=True` re-encodes for frame-accurate bounds. With the default filename template the range goes in the name (`Title (id) [7.9-8.75].webm`), so a clip never collides with the full download (a `precise_cuts` clip is named apart from a keyframe cut too).
 
+**A long playlist, politely.** `download_youtube_playlist` takes `pace=` (`"polite"` sleeps 20-60 s between items and 1 s between requests, and caps the rate at 4 MB/s; or pass a `Pace(...)`), `download_archive=` (finished ids are skipped on re-run), `playlist_items="1-42"` and `title_reject=` for selection, and `item_folders=True` for one `001_<id>/` folder per item with the media and its sidecars side by side. For audio only, keep the source stream with `fmt="bestaudio/best", merge_to=None`:
+
+```python
+from yb.download import download_youtube_playlist
+
+download_youtube_playlist(
+    url,
+    download_dir="~/tapes",
+    fmt="bestaudio/best",  # audio only, not re-encoded (.m4a)
+    merge_to=None,
+    pace="polite",
+    download_archive="~/tapes/archive.txt",  # re-run to resume
+    playlist_items="1-42",
+    item_folders=True,  # ~/tapes/001_<id>/<id>.m4a, .info.json, ...
+    write_description=True,
+    write_thumbnail=True,
+    write_subtitles=True,
+    embed_metadata=True,
+)
+```
+
+When YouTube answers HTTP 429 or "confirm you're not a bot", yb raises `yb.download.RateLimitedError` with a backoff hint (wait, then retry with `pace="polite"`, an archive, cookies and fewer items per run). `pace` also works on `download_youtube_video` and `download_youtube_audio`; the default `None` changes nothing, and raw `extra_opts` still win.
+
 The same conversion is available standalone for files you already have:
 
 ```python

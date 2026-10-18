@@ -23,6 +23,7 @@ from yb.download.ranges import (
     range_opts,
     ranged_filename_template,
 )
+from yb.download.pacing import Pace, explain_rate_limit, pace_opts
 from yb.download.requirements import with_runtime_opts
 
 PathLike = str | Path
@@ -49,6 +50,9 @@ CookiesFile = PathLike | Literal[False] | None
 
 #: yt-dlp output template: human title plus the stable id, e.g. "My Talk (dQw4...).mp4".
 DEFAULT_OUTTMPL = "%(title)s (%(id)s).%(ext)s"
+
+#: Template for ``item_folders=True``: ``001_<id>/<id>.<ext>``, sidecars beside it.
+ITEM_FOLDER_OUTTMPL = "%(playlist_index)03d_%(id)s/%(id)s.%(ext)s"
 
 #: yt-dlp format selector for the best audio-only stream.
 DEFAULT_AUDIO_FMT = "bestaudio/best"
@@ -241,6 +245,7 @@ def download_youtube_video(
     end: Timestamp | None = None,
     precise_cuts: bool = False,
     cookies_file: CookiesFile = None,
+    pace: Pace | str | None = None,
 ) -> DownloadResult:
     """Download a YouTube video to ``download_dir`` (default ``~/Downloads``).
 
@@ -285,6 +290,10 @@ def download_youtube_video(
             browser cookie source. yt-dlp rewrites the file with refreshed
             cookies on exit, so it must be writable and not shared by parallel
             workers.
+        pace: Be gentle with YouTube: a :class:`~yb.download.pacing.Pace` or a
+            preset name (``"polite"``: sleep 20-60 s between items, 1 s between
+            requests, 4 MB/s cap). Default ``None`` adds nothing. Raw yt-dlp
+            options in ``extra_opts`` win over it.
 
     Returns:
         A :class:`DownloadResult` with the media path, trimmed ``info``, and any
@@ -327,9 +336,10 @@ def download_youtube_video(
                 )
             )
     opts.update(_cookie_opts(cookies_file, extra_opts=extra_opts))
+    opts.update(pace_opts(pace))
     opts.update(extra_opts or {})
 
-    with YoutubeDL(with_runtime_opts(opts)) as ydl:
+    with explain_rate_limit(), YoutubeDL(with_runtime_opts(opts)) as ydl:
         info = ydl.extract_info(url, download=True)
 
     path = _resolve_output_path(info, ydl, out_dir, merge_to)
@@ -369,6 +379,7 @@ def download_youtube_audio(
     end: Timestamp | None = None,
     precise_cuts: bool = False,
     cookies_file: CookiesFile = None,
+    pace: Pace | str | None = None,
 ) -> DownloadResult:
     """Download only a video's audio (no video stream).
 
@@ -409,6 +420,7 @@ def download_youtube_audio(
         subtitle_langs: Subtitle languages to fetch when subtitles are enabled.
         quiet: Suppress yt-dlp console output.
         extra_opts: Any additional raw yt-dlp options (merged last, so they win).
+        pace: As in :func:`download_youtube_video`.
         start, end, precise_cuts: Download only a span, as in
             :func:`download_youtube_video`:
 
@@ -446,6 +458,7 @@ def download_youtube_audio(
         end=end,
         precise_cuts=precise_cuts,
         cookies_file=cookies_file,
+        pace=pace,
     )
     if audio_format is None:
         return result
@@ -556,6 +569,9 @@ def download_youtube_playlist(
     quiet: bool = True,
     extra_opts: dict | None = None,
     cookies_file: CookiesFile = None,
+    pace: Pace | str | None = None,
+    item_folders: bool = False,
+    embed_metadata: bool = False,
 ) -> list[DownloadResult]:
     """Download all (or a selected subset of) a YouTube playlist's videos.
 
@@ -597,6 +613,23 @@ def download_youtube_playlist(
         extra_opts: Any additional raw yt-dlp options (merged last, so they win).
         cookies_file: As in :func:`download_youtube_video`; an explicit
             ``cookies_from_browser`` takes precedence over the default file.
+        pace: Be gentle with YouTube: a :class:`~yb.download.pacing.Pace` or a
+            preset name (``"polite"``: sleep 20-60 s between items, 1 s between
+            requests, 4 MB/s cap). Default ``None`` adds nothing. Raw yt-dlp
+            options in ``extra_opts`` win over it.
+        item_folders: Put each item in its own folder ``001_<id>/<id>.<ext>``
+            (the number is the 1-based playlist position, stable under
+            ``playlist_items``), sidecars beside it under flat id-keyed names.
+            Incompatible with a custom ``filename_template``.
+        embed_metadata: Write title/artist/etc. into the media file (yt-dlp
+            ``--embed-metadata``; needs ffmpeg).
+
+    Audio only: pass ``fmt="bestaudio/best", merge_to=None`` (keeps the source
+    stream, e.g. ``.m4a``, without re-encoding).
+
+    Raises:
+        RateLimitedError: On HTTP 429 or a "confirm you're not a bot" wall, with
+            a backoff hint. (Per-item failures under ``ignoreerrors`` are skipped.)
 
     Returns:
         A list of :class:`DownloadResult`, one per successfully-downloaded entry,
@@ -610,6 +643,13 @@ def download_youtube_playlist(
 
     if playlist_items is None and skip_first:
         playlist_items = "2:"
+    if item_folders:
+        if filename_template != DEFAULT_OUTTMPL:
+            raise ValueError(
+                "item_folders=True sets the filename template; "
+                "drop filename_template (or drop item_folders)"
+            )
+        filename_template = ITEM_FOLDER_OUTTMPL
 
     opts: dict[str, Any] = {
         "format": fmt,
@@ -641,11 +681,17 @@ def download_youtube_playlist(
     )
     if extractor_args:
         opts["extractor_args"] = extractor_args
+    opts.update(pace_opts(pace))
     if title_reject:
         opts["match_filter"] = _reject_title_filter(title_reject)
+    if embed_metadata:
+        opts["postprocessors"] = [
+            *opts.get("postprocessors", []),
+            {"key": "FFmpegMetadata", "add_metadata": True},
+        ]
     opts.update(extra_opts or {})
 
-    with YoutubeDL(with_runtime_opts(opts)) as ydl:
+    with explain_rate_limit(), YoutubeDL(with_runtime_opts(opts)) as ydl:
         info = ydl.extract_info(url, download=True)
 
     results: list[DownloadResult] = []
