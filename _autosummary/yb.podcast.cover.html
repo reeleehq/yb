@@ -13,6 +13,7 @@
         <title>yb.podcast.cover - yb</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d75fae25" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
     
@@ -208,6 +209,7 @@
 <li class="toctree-l3"><a class="reference internal" href="yb.config.html">yb.config</a></li>
 <li class="toctree-l3"><a class="reference internal" href="yb.content.html">yb.content</a></li>
 <li class="toctree-l3 has-children"><a class="reference internal" href="yb.download.html">yb.download</a><input aria-label="Toggle navigation of yb.download" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="yb.download.pacing.html">yb.download.pacing</a></li>
 <li class="toctree-l4"><a class="reference internal" href="yb.download.ranges.html">yb.download.ranges</a></li>
 <li class="toctree-l4"><a class="reference internal" href="yb.download.requirements.html">yb.download.requirements</a></li>
 <li class="toctree-l4"><a class="reference internal" href="yb.download.youtube.html">yb.download.youtube</a></li>
@@ -306,18 +308,18 @@ looks deliberate at 1080p.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>audio</strong> (<span class="sphinx_autodoc_typehints-type">PathLike</span>) – The episode audio file.</p></li>
-<li><p><strong>image</strong> (<span class="sphinx_autodoc_typehints-type">PathLike</span>) – Cover image to display.</p></li>
-<li><p><strong>saveas</strong> (<span class="sphinx_autodoc_typehints-type">PathLike | None</span>) – Output path (defaults to <code class="docutils literal notranslate"><span class="pre">&lt;audio-stem&gt;.cover.mp4</span></code>).</p></li>
-<li><p><strong>ken_burns</strong> (<span class="sphinx_autodoc_typehints-type">bool</span>) – Apply a slow pan/zoom (rendered by <code class="docutils literal notranslate"><span class="pre">burns</span></code>) instead of a
+<li><p><strong>audio</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">PathLike</span></code></span>) – The episode audio file.</p></li>
+<li><p><strong>image</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">PathLike</span></code></span>) – Cover image to display.</p></li>
+<li><p><strong>saveas</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<code class="xref py py-class docutils literal notranslate"><span class="pre">PathLike</span></code>]</span>) – Output path (defaults to <code class="docutils literal notranslate"><span class="pre">&lt;audio-stem&gt;.cover.mp4</span></code>).</p></li>
+<li><p><strong>ken_burns</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></span>) – Apply a slow pan/zoom (rendered by <code class="docutils literal notranslate"><span class="pre">burns</span></code>) instead of a
 static image. Much slower than the static path.</p></li>
-<li><p><strong>size</strong> (<span class="sphinx_autodoc_typehints-type">tuple[int, int] | None</span>) – Output resolution (width, height); defaults to 1080p.</p></li>
-<li><p><strong>fps</strong> (<span class="sphinx_autodoc_typehints-type">int | None</span>) – Output frame rate; defaults to muvid’s default.</p></li>
-<li><p><strong>layout</strong> (<span class="sphinx_autodoc_typehints-type">CoverLayout | None</span>) – How the cover sits on the canvas.</p></li>
+<li><p><strong>size</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>, <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>] | <span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code></a></span></span>) – Output resolution (width, height); defaults to 1080p.</p></li>
+<li><p><strong>fps</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a> | <span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code></a></span></span>) – Output frame rate; defaults to muvid’s default.</p></li>
+<li><p><strong>layout</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<code class="xref py py-class docutils literal notranslate"><span class="pre">CoverLayout</span></code>]</span>) – How the cover sits on the canvas.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type">Path</span></p>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a></span></p>
 </dd>
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>Path to the rendered mp4.</p>
@@ -398,7 +400,7 @@ static image. Much slower than the static path.</p></li>
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=d979bd5c"></script>
+</div><script src="../_static/documentation_options.js?v=0d95f3a7"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>

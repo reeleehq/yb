@@ -63,18 +63,30 @@ Resolved publishing defaults.
 Privacy a new upload gets (`unlisted` | `private` |
 `public`) when the call doesn’t override it.
 
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
 #### playlist
 
 Title of a playlist every upload is added to (`None` = none).
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 #### create_playlist_if_missing
 
 Create `playlist` if no playlist of that
 title exists yet, rather than erroring.
 
+* **Type:**
+  [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
+
 #### playlist_privacy_status
 
 Privacy for an auto-created playlist.
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 #### *classmethod* from_mapping(mapping)
 

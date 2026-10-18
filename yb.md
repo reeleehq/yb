@@ -1,4 +1,4 @@
-> built 2026-10-14 12:40 UTC from 9062594 (main) · yb 0.1.19. Details: build_info.json
+> built 2026-10-18 01:53 UTC from eeebe59 (main) · yb 0.1.20. Details: build_info.json
 
 # index.html.md
 
@@ -114,6 +114,29 @@ clip.info["download_range"]  # {"start": 7.9, "end": 8.75}, for provenance
 ```
 
 The range is cut by ffmpeg (so it needs one; to use a specific build pass `extra_opts={"ffmpeg_location": "/path/to/ffmpeg"}`, e.g. when the system ffmpeg lacks what yt-dlp asks of it). Cuts land on keyframes; `precise_cuts=True` re-encodes for frame-accurate bounds. With the default filename template the range goes in the name (`Title (id) [7.9-8.75].webm`), so a clip never collides with the full download (a `precise_cuts` clip is named apart from a keyframe cut too).
+
+**A long playlist, politely.** `download_youtube_playlist` takes `pace=` (`"polite"` sleeps 20-60 s between items and 1 s between requests, and caps the rate at 4 MB/s; or pass a `Pace(...)`), `download_archive=` (finished ids are skipped on re-run), `playlist_items="1-42"` and `title_reject=` for selection, and `item_folders=True` for one `001_<id>/` folder per item with the media and its sidecars side by side. For audio only, keep the source stream with `fmt="bestaudio/best", merge_to=None`:
+
+```python
+from yb.download import download_youtube_playlist
+
+download_youtube_playlist(
+    url,
+    download_dir="~/tapes",
+    fmt="bestaudio/best",  # audio only, not re-encoded (.m4a)
+    merge_to=None,
+    pace="polite",
+    download_archive="~/tapes/archive.txt",  # re-run to resume
+    playlist_items="1-42",
+    item_folders=True,  # ~/tapes/001_<id>/<id>.m4a, .info.json, ...
+    write_description=True,
+    write_thumbnail=True,
+    write_subtitles=True,
+    embed_metadata=True,
+)
+```
+
+When YouTube answers HTTP 429 or “confirm you’re not a bot”, yb raises `yb.download.RateLimitedError` with a backoff hint (wait, then retry with `pace="polite"`, an archive, cookies and fewer items per run). `pace` also works on `download_youtube_video` and `download_youtube_audio`; the default `None` changes nothing, and raw `extra_opts` still win.
 
 The same conversion is available standalone for files you already have:
 
@@ -433,13 +456,13 @@ Normalize a format spec to a bare lowercase extension.
 
 Accepts it with or without the leading dot, in any case:
 
-* **Return type:**
-  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
-
 ```pycon
 >>> normalize_format("mp3"), normalize_format(".MP3"), normalize_format(" .Wav ")
 ('mp3', 'mp3', 'wav')
 ```
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 
 # _autosummary/yb.config.html.md
@@ -509,18 +532,30 @@ Resolved publishing defaults.
 Privacy a new upload gets (`unlisted` | `private` |
 `public`) when the call doesn’t override it.
 
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
 #### playlist
 
 Title of a playlist every upload is added to (`None` = none).
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 #### create_playlist_if_missing
 
 Create `playlist` if no playlist of that
 title exists yet, rather than erroring.
 
+* **Type:**
+  [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
+
 #### playlist_privacy_status
 
 Privacy for an auto-created playlist.
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 #### *classmethod* from_mapping(mapping)
 
@@ -576,13 +611,13 @@ keywords) is LLM-backed via `aix` and pluggable.
 |----------------------------------------------------------------------------------------------------|----------------------------------------------------------------------|
 | [`PublicationContent`](_autosummary/yb.content.html.md#yb.content.PublicationContent)(media[, title, ...])           | Everything needed to publish a piece of media, destination-agnostic. |
 
-### *class* yb.content.ContentMetadata(title, description, keywords=<factory>)
+### *class* yb.content.ContentMetadata(title, description, keywords=list())
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 Platform-neutral copy: a title, a description, and keywords.
 
-### *class* yb.content.PublicationContent(media, title='', description='', keywords=<factory>, chapters=<factory>, language=None, audio_language=None, srt_path=None, thumbnail=None, duration=None)
+### *class* yb.content.PublicationContent(media, title='', description='', keywords=list(), chapters=list(), language=None, audio_language=None, srt_path=None, thumbnail=None, duration=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -592,41 +627,71 @@ Everything needed to publish a piece of media, destination-agnostic.
 
 Path to the audio/video file.
 
+* **Type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
+
 #### title
 
 Headline/title.
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 #### description
 
 Long-form description / show notes body.
 
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
 #### keywords
 
 Topical keywords/tags.
+
+* **Type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
 
 #### chapters
 
 Ordered chapter markers (`mixing.chapters.Chapter`).
 
+* **Type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[`Chapter`]
+
 #### language
 
 BCP-47 code of the metadata text (e.g. `"en"`).
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 #### audio_language
 
 BCP-47 code of the spoken audio (e.g. `"fr"`).
 
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
 #### srt_path
 
 Path to the SRT subtitle/caption file, if any.
+
+* **Type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 #### thumbnail
 
 Path to a thumbnail/cover image, if any.
 
+* **Type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
 #### duration
 
 Media duration in seconds, if known.
+
+* **Type:**
+  [`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 #### description_with_chapters()
 
@@ -739,16 +804,18 @@ how to install it. The first download in a process runs it and warns.
 
 ### Classes
 
-| [`DownloadResult`](_autosummary/yb.download.html.md#yb.download.DownloadResult)(path, info[, sidecars])   | Outcome of a download.                 |
-|-------------------------------------------------------------------------------------------|----------------------------------------|
-| [`JsRuntime`](_autosummary/yb.download.html.md#yb.download.JsRuntime)(name, path, on_path)           | A JavaScript runtime found for yt-dlp. |
-| [`TimeRange`](_autosummary/yb.download.html.md#yb.download.TimeRange)([start, end])                  | A span of a video, in seconds.         |
+| [`DownloadResult`](_autosummary/yb.download.html.md#yb.download.DownloadResult)(path, info[, sidecars])          | Outcome of a download.                 |
+|--------------------------------------------------------------------------------------------------|----------------------------------------|
+| [`JsRuntime`](_autosummary/yb.download.html.md#yb.download.JsRuntime)(name, path, on_path)                  | A JavaScript runtime found for yt-dlp. |
+| [`Pace`](_autosummary/yb.download.html.md#yb.download.Pace)([sleep_interval, max_sleep_interval, ...]) | How gently to talk to YouTube.         |
+| [`TimeRange`](_autosummary/yb.download.html.md#yb.download.TimeRange)([start, end])                         | A span of a video, in seconds.         |
 
 ### Exceptions
 
-| [`AudioConversionError`](_autosummary/yb.download.html.md#yb.download.AudioConversionError)       | Raised when audio could not be converted to the requested format.   |
-|-----------------------------------------------------------------------------|---------------------------------------------------------------------|
-| [`DownloadRequirementWarning`](_autosummary/yb.download.html.md#yb.download.DownloadRequirementWarning) | A download prerequisite (JS runtime, solver scripts) looks missing. |
+| [`AudioConversionError`](_autosummary/yb.download.html.md#yb.download.AudioConversionError)       | Raised when audio could not be converted to the requested format.            |
+|-----------------------------------------------------------------------------|------------------------------------------------------------------------------|
+| [`DownloadRequirementWarning`](_autosummary/yb.download.html.md#yb.download.DownloadRequirementWarning) | A download prerequisite (JS runtime, solver scripts) looks missing.          |
+| [`RateLimitedError`](_autosummary/yb.download.html.md#yb.download.RateLimitedError)           | YouTube refused the request (HTTP 429 or a "confirm you're not a bot" wall). |
 
 ### *exception* yb.download.AudioConversionError
 
@@ -762,7 +829,7 @@ Bases: [`UserWarning`](https://docs.python.org/3/builtins/exceptions.html#UserWa
 
 A download prerequisite (JS runtime, solver scripts) looks missing.
 
-### *class* yb.download.DownloadResult(path, info, sidecars=<factory>)
+### *class* yb.download.DownloadResult(path, info, sidecars=dict())
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -772,14 +839,23 @@ Outcome of a download.
 
 The downloaded media file.
 
+* **Type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
+
 #### info
 
 A trimmed metadata dict (see `_INFO_FIELDS`).
+
+* **Type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]
 
 #### sidecars
 
 Map of extra artifacts written (`info_json`, `thumbnail`,
 `description`, `subtitles` → path(s)).
+
+* **Type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]
 
 #### *property* video_id *: [str](https://docs.python.org/3/builtins/stdtypes.html#str)*
 
@@ -795,13 +871,65 @@ A JavaScript runtime found for yt-dlp.
 
 yt-dlp’s key for the runtime (e.g. `"deno"`).
 
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
 #### path
 
 The executable.
 
+* **Type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
+
 #### on_path
 
 Whether yt-dlp would find it by name on `PATH` unaided.
+
+* **Type:**
+  [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
+
+### *class* yb.download.Pace(sleep_interval=None, max_sleep_interval=None, sleep_requests=None, limit_rate=None)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+How gently to talk to YouTube.
+
+#### sleep_interval
+
+Seconds to sleep before each download (yt-dlp
+`sleep_interval`); with `max_sleep_interval` a random value in
+between is used.
+
+* **Type:**
+  [`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+#### max_sleep_interval
+
+Upper bound of the random sleep.
+
+* **Type:**
+  [`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+#### sleep_requests
+
+Seconds to sleep between metadata requests
+(yt-dlp `sleep_interval_requests`).
+
+* **Type:**
+  [`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+#### limit_rate
+
+Maximum download rate, e.g. `"4M"` or `"500K"` (bytes/s).
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+### *exception* yb.download.RateLimitedError
+
+Bases: [`RuntimeError`](https://docs.python.org/3/builtins/exceptions.html#RuntimeError)
+
+YouTube refused the request (HTTP 429 or a “confirm you’re not a bot” wall).
 
 ### *class* yb.download.TimeRange(start=0.0, end=None)
 
@@ -881,7 +1009,7 @@ Resolve the default download directory (`$YB_DOWNLOAD_DIR` or `~/Downloads`).
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
-### yb.download.download_youtube_audio(url, , download_dir=None, audio_format=None, bitrate=None, keep_original=False, on_error='raise', fmt='bestaudio/best', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None)
+### yb.download.download_youtube_audio(url, , download_dir=None, audio_format=None, bitrate=None, keep_original=False, on_error='raise', fmt='bestaudio/best', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None, pace=None)
 
 Download only a video’s audio (no video stream).
 
@@ -924,6 +1052,7 @@ Pass `audio_format` to get a specific format instead:
   * **subtitle_langs** ([`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis)]) – Subtitle languages to fetch when subtitles are enabled.
   * **quiet** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Suppress yt-dlp console output.
   * **extra_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Any additional raw yt-dlp options (merged last, so they win).
+  * **pace** ([`Pace`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.Pace) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – As in [`download_youtube_video()`](_autosummary/yb.download.html.md#yb.download.download_youtube_video).
   * **start** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`float`](https://docs.python.org/3/builtins/functions.html#float) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – 
 
     Download only a span, as in
@@ -954,7 +1083,7 @@ Pass `audio_format` to get a specific format instead:
   * [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `on_error` is not `"raise"` or `"warn"`.
   * [**AudioConversionError**](_autosummary/yb.download.html.md#yb.download.AudioConversionError) – If conversion fails and `on_error="raise"`.
 
-### yb.download.download_youtube_playlist(url, , download_dir=None, playlist_items=None, skip_first=False, title_reject=None, download_archive=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=True, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), cookies_from_browser=None, extractor_args=None, quiet=True, extra_opts=None, cookies_file=None)
+### yb.download.download_youtube_playlist(url, , download_dir=None, playlist_items=None, skip_first=False, title_reject=None, download_archive=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=True, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), cookies_from_browser=None, extractor_args=None, quiet=True, extra_opts=None, cookies_file=None, pace=None, item_folders=False, embed_metadata=False)
 
 Download all (or a selected subset of) a YouTube playlist’s videos.
 
@@ -1004,8 +1133,27 @@ Selecting a subset (yt-dlp `--playlist-items` is **1-based**):
     `{"youtube": {"player_client": ["web_safari"]}}`).
   * **quiet** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Suppress yt-dlp console output.
   * **extra_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Any additional raw yt-dlp options (merged last, so they win).
-  * **cookies_file** (`Union`[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`False`], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – As in [`download_youtube_video()`](_autosummary/yb.download.html.md#yb.download.download_youtube_video); an explicit
+  * **cookies_file** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[[`False`](https://docs.python.org/3/builtins/constants.html#False)], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – As in [`download_youtube_video()`](_autosummary/yb.download.html.md#yb.download.download_youtube_video); an explicit
     `cookies_from_browser` takes precedence over the default file.
+  * **pace** ([`Pace`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.Pace) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Be gentle with YouTube: a [`Pace`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.Pace) or a
+    preset name (`"polite"`: sleep 20-60 s between items, 1 s between
+    requests, 4 MB/s cap). Default `None` adds nothing. Raw yt-dlp
+    options in `extra_opts` win over it.
+  * **item_folders** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Put each item in its own folder `001_<id>/<id>.<ext>`
+    (the number is the 1-based playlist position, stable under
+    `playlist_items`), sidecars beside it under flat id-keyed names.
+    Incompatible with a custom `filename_template`.
+  * **embed_metadata** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Write title/artist/etc. into the media file (yt-dlp
+    `--embed-metadata`; needs ffmpeg).
+* **Return type:**
+  [*list*](https://docs.python.org/3/builtins/stdtypes.html#list)[[*DownloadResult*](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DownloadResult)]
+
+Audio only: pass `fmt="bestaudio/best", merge_to=None` (keeps the source
+stream, e.g. `.m4a`, without re-encoding).
+
+* **Raises:**
+  [**RateLimitedError**](_autosummary/yb.download.html.md#yb.download.RateLimitedError) – On HTTP 429 or a “confirm you’re not a bot” wall, with
+      a backoff hint. (Per-item failures under `ignoreerrors` are skipped.)
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`DownloadResult`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DownloadResult)]
 * **Returns:**
@@ -1013,7 +1161,7 @@ Selecting a subset (yt-dlp `--playlist-items` is **1-based**):
   in playlist order. Entries skipped by selection/filter or that failed
   (under `ignoreerrors`) are omitted.
 
-### yb.download.download_youtube_video(url, , download_dir=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None)
+### yb.download.download_youtube_video(url, , download_dir=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None, pace=None)
 
 Download a YouTube video to `download_dir` (default `~/Downloads`).
 
@@ -1055,7 +1203,7 @@ named `Title (video_id).mp4` in `~/Downloads`.
     Needs ffmpeg (see [`yb.download.ranges`](_autosummary/yb.download.ranges.html.md#module-yb.download.ranges)).
   * **precise_cuts** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – With `start`/`end`, re-encode at the cuts for
     frame-accurate bounds (slower) instead of cutting at keyframes.
-  * **cookies_file** (`Union`[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`False`], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – Netscape-format cookies file to authenticate with (for
+  * **cookies_file** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[[`False`](https://docs.python.org/3/builtins/constants.html#False)], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – Netscape-format cookies file to authenticate with (for
     headless servers where `cookies_from_browser` cannot work). Default
     `None` reads `$YB_COOKIES_FILE`, else
     `~/.config/yb/youtube-cookies.txt` if it exists, else sends no
@@ -1066,6 +1214,10 @@ named `Title (video_id).mp4` in `~/Downloads`.
     browser cookie source. yt-dlp rewrites the file with refreshed
     cookies on exit, so it must be writable and not shared by parallel
     workers.
+  * **pace** ([`Pace`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.Pace) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Be gentle with YouTube: a [`Pace`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.Pace) or a
+    preset name (`"polite"`: sleep 20-60 s between items, 1 s between
+    requests, 4 MB/s cap). Default `None` adds nothing. Raw yt-dlp
+    options in `extra_opts` win over it.
 * **Return type:**
   [`DownloadResult`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DownloadResult)
 * **Returns:**
@@ -1113,7 +1265,7 @@ and trimmed to `_INFO_FIELDS` (slower, but includes duration/fps/etc.).
     `"2:"` (all but the first), `"2"` (only the 2nd), `"1:5,8"`.
   * **flat** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Shallow vs full per-entry extraction.
   * **extra_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Additional raw yt-dlp options (merged last).
-  * **cookies_file** (`Union`[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`False`], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – See [`download_youtube_video()`](_autosummary/yb.download.html.md#yb.download.download_youtube_video).
+  * **cookies_file** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[[`False`](https://docs.python.org/3/builtins/constants.html#False)], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – See [`download_youtube_video()`](_autosummary/yb.download.html.md#yb.download.download_youtube_video).
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]
 
@@ -1131,10 +1283,133 @@ the title/duration/chapters before deciding to download.
 
 ### Modules
 
-| [`ranges`](_autosummary/yb.download.ranges.html.md#module-yb.download.ranges)             | Download just a time range of a video: parse start/end, build yt-dlp's options.   |
-|-----------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
-| [`requirements`](_autosummary/yb.download.requirements.html.md#module-yb.download.requirements) | Preflight for downloading: does yt-dlp have what YouTube now demands?             |
-| [`youtube`](_autosummary/yb.download.youtube.html.md#module-yb.download.youtube)           | Download YouTube videos (and their metadata) via yt-dlp.                          |
+| [`pacing`](_autosummary/yb.download.pacing.html.md#module-yb.download.pacing)             | Polite pacing for yt-dlp downloads, and a useful message when YouTube pushes back.   |
+|-----------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------|
+| [`ranges`](_autosummary/yb.download.ranges.html.md#module-yb.download.ranges)             | Download just a time range of a video: parse start/end, build yt-dlp's options.      |
+| [`requirements`](_autosummary/yb.download.requirements.html.md#module-yb.download.requirements) | Preflight for downloading: does yt-dlp have what YouTube now demands?                |
+| [`youtube`](_autosummary/yb.download.youtube.html.md#module-yb.download.youtube)           | Download YouTube videos (and their metadata) via yt-dlp.                             |
+
+
+# _autosummary/yb.download.pacing.html.md
+
+# yb.download.pacing
+
+Polite pacing for yt-dlp downloads, and a useful message when YouTube pushes back.
+
+`pace="polite"` (or a [`Pace`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.Pace)) maps to yt-dlp’s sleep and rate-limit
+options, so a long playlist can be fetched without hammering YouTube. The
+default everywhere is `pace=None`: no options are added and behaviour is
+unchanged. A raw yt-dlp option in `extra_opts` still wins over a pace.
+
+```pycon
+>>> pace_opts("polite")["sleep_interval"]
+20
+>>> pace_opts(None)
+{}
+```
+
+### Module Attributes
+
+| [`PACE_PRESETS`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.PACE_PRESETS)   | Named paces accepted wherever `pace=` is.   |
+|-----------------------------------------------------------------|---------------------------------------------|
+
+### Functions
+
+| [`explain_rate_limit`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.explain_rate_limit)()   | Re-raise yt-dlp errors that look like a block as [`RateLimitedError`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.RateLimitedError).   |
+|-------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------|
+| [`pace_opts`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.pace_opts)(pace)        | The yt-dlp options for `pace` (empty for `None`).                                                                     |
+| [`parse_rate`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.parse_rate)(rate)       | Parse a rate such as `"4M"` or `"500k"` into bytes per second.                                                        |
+| [`resolve_pace`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.resolve_pace)(pace)     | Turn a preset name, a [`Pace`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.Pace) or `None` into a `Pace` (or `None`).      |
+
+### Classes
+
+| [`Pace`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.Pace)([sleep_interval, max_sleep_interval, ...])   | How gently to talk to YouTube.   |
+|----------------------------------------------------------------------------------------------------|----------------------------------|
+
+### Exceptions
+
+| [`RateLimitedError`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.RateLimitedError)   | YouTube refused the request (HTTP 429 or a "confirm you're not a bot" wall).   |
+|---------------------------------------------------------------------|--------------------------------------------------------------------------------|
+
+### yb.download.pacing.PACE_PRESETS *: [dict](https://docs.python.org/3/builtins/stdtypes.html#dict)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [Pace](_autosummary/yb.download.pacing.html.md#yb.download.pacing.Pace)]* *= {'polite': Pace(sleep_interval=20, max_sleep_interval=60, sleep_requests=1, limit_rate='4M')}*
+
+Named paces accepted wherever `pace=` is.
+
+### *class* yb.download.pacing.Pace(sleep_interval=None, max_sleep_interval=None, sleep_requests=None, limit_rate=None)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+How gently to talk to YouTube.
+
+#### sleep_interval
+
+Seconds to sleep before each download (yt-dlp
+`sleep_interval`); with `max_sleep_interval` a random value in
+between is used.
+
+* **Type:**
+  [`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+#### max_sleep_interval
+
+Upper bound of the random sleep.
+
+* **Type:**
+  [`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+#### sleep_requests
+
+Seconds to sleep between metadata requests
+(yt-dlp `sleep_interval_requests`).
+
+* **Type:**
+  [`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+#### limit_rate
+
+Maximum download rate, e.g. `"4M"` or `"500K"` (bytes/s).
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+### *exception* yb.download.pacing.RateLimitedError
+
+Bases: [`RuntimeError`](https://docs.python.org/3/builtins/exceptions.html#RuntimeError)
+
+YouTube refused the request (HTTP 429 or a “confirm you’re not a bot” wall).
+
+### yb.download.pacing.explain_rate_limit()
+
+Re-raise yt-dlp errors that look like a block as [`RateLimitedError`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.RateLimitedError).
+
+* **Return type:**
+  [`Iterator`](https://docs.python.org/3/library/typing.html#typing.Iterator)[[`None`](https://docs.python.org/3/builtins/constants.html#None)]
+
+### yb.download.pacing.pace_opts(pace)
+
+The yt-dlp options for `pace` (empty for `None`).
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
+
+### yb.download.pacing.parse_rate(rate)
+
+Parse a rate such as `"4M"` or `"500k"` into bytes per second.
+
+```pycon
+>>> parse_rate("4M")
+4194304
+```
+
+* **Return type:**
+  [`int`](https://docs.python.org/3/builtins/functions.html#int)
+
+### yb.download.pacing.resolve_pace(pace)
+
+Turn a preset name, a [`Pace`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.Pace) or `None` into a `Pace` (or `None`).
+
+* **Return type:**
+  [`Pace`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.Pace) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 
 # _autosummary/yb.download.ranges.html.md
@@ -1397,13 +1672,22 @@ A JavaScript runtime found for yt-dlp.
 
 yt-dlp’s key for the runtime (e.g. `"deno"`).
 
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
 #### path
 
 The executable.
 
+* **Type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
+
 #### on_path
 
 Whether yt-dlp would find it by name on `PATH` unaided.
+
+* **Type:**
+  [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
 
 ### yb.download.requirements.YT_DLP_MODULE *= 'yt_dlp'*
 
@@ -1532,6 +1816,7 @@ The destination defaults to `$YB_DOWNLOAD_DIR` when set, else `~/Downloads`.
 | [`DEFAULT_COOKIES_FILE`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DEFAULT_COOKIES_FILE) | Cookies file used when [`COOKIES_FILE_ENV`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.COOKIES_FILE_ENV) is unset and this file exists. |
 | [`CookiesFile`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.CookiesFile)          | a path, `None` (look for a default), or `False` (none).                                                                 |
 | [`DEFAULT_OUTTMPL`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DEFAULT_OUTTMPL)      | human title plus the stable id, e.g. "My Talk (dQw4...).mp4".                                                           |
+| [`ITEM_FOLDER_OUTTMPL`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.ITEM_FOLDER_OUTTMPL)  | `001_<id>/<id>.<ext>`, sidecars beside it.                                                                              |
 | [`DEFAULT_AUDIO_FMT`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DEFAULT_AUDIO_FMT)    | yt-dlp format selector for the best audio-only stream.                                                                  |
 
 ### Functions
@@ -1583,7 +1868,7 @@ human title plus the stable id, e.g. “My Talk (dQw4…).mp4”.
 
 Env var that overrides the default download directory.
 
-### *class* yb.download.youtube.DownloadResult(path, info, sidecars=<factory>)
+### *class* yb.download.youtube.DownloadResult(path, info, sidecars=dict())
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -1593,18 +1878,34 @@ Outcome of a download.
 
 The downloaded media file.
 
+* **Type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
+
 #### info
 
 A trimmed metadata dict (see `_INFO_FIELDS`).
+
+* **Type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]
 
 #### sidecars
 
 Map of extra artifacts written (`info_json`, `thumbnail`,
 `description`, `subtitles` → path(s)).
 
+* **Type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]
+
 #### *property* video_id *: [str](https://docs.python.org/3/builtins/stdtypes.html#str)*
 
 The YouTube video id.
+
+### yb.download.youtube.ITEM_FOLDER_OUTTMPL *= '%(playlist_index)03d_%(id)s/%(id)s.%(ext)s'*
+
+`001_<id>/<id>.<ext>`, sidecars beside it.
+
+* **Type:**
+  Template for `item_folders=True`
 
 ### yb.download.youtube.OnConvertError
 
@@ -1630,7 +1931,7 @@ Resolve the default download directory (`$YB_DOWNLOAD_DIR` or `~/Downloads`).
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
-### yb.download.youtube.download_youtube_audio(url, , download_dir=None, audio_format=None, bitrate=None, keep_original=False, on_error='raise', fmt='bestaudio/best', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None)
+### yb.download.youtube.download_youtube_audio(url, , download_dir=None, audio_format=None, bitrate=None, keep_original=False, on_error='raise', fmt='bestaudio/best', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None, pace=None)
 
 Download only a video’s audio (no video stream).
 
@@ -1673,6 +1974,7 @@ Pass `audio_format` to get a specific format instead:
   * **subtitle_langs** ([`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis)]) – Subtitle languages to fetch when subtitles are enabled.
   * **quiet** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Suppress yt-dlp console output.
   * **extra_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Any additional raw yt-dlp options (merged last, so they win).
+  * **pace** ([`Pace`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.Pace) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – As in [`download_youtube_video()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_video).
   * **start** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`float`](https://docs.python.org/3/builtins/functions.html#float) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – 
 
     Download only a span, as in
@@ -1703,7 +2005,7 @@ Pass `audio_format` to get a specific format instead:
   * [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `on_error` is not `"raise"` or `"warn"`.
   * [**AudioConversionError**](_autosummary/yb.audio_convert.html.md#yb.audio_convert.AudioConversionError) – If conversion fails and `on_error="raise"`.
 
-### yb.download.youtube.download_youtube_playlist(url, , download_dir=None, playlist_items=None, skip_first=False, title_reject=None, download_archive=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=True, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), cookies_from_browser=None, extractor_args=None, quiet=True, extra_opts=None, cookies_file=None)
+### yb.download.youtube.download_youtube_playlist(url, , download_dir=None, playlist_items=None, skip_first=False, title_reject=None, download_archive=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=True, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), cookies_from_browser=None, extractor_args=None, quiet=True, extra_opts=None, cookies_file=None, pace=None, item_folders=False, embed_metadata=False)
 
 Download all (or a selected subset of) a YouTube playlist’s videos.
 
@@ -1753,8 +2055,27 @@ Selecting a subset (yt-dlp `--playlist-items` is **1-based**):
     `{"youtube": {"player_client": ["web_safari"]}}`).
   * **quiet** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Suppress yt-dlp console output.
   * **extra_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Any additional raw yt-dlp options (merged last, so they win).
-  * **cookies_file** (`Union`[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`False`], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – As in [`download_youtube_video()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_video); an explicit
+  * **cookies_file** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[[`False`](https://docs.python.org/3/builtins/constants.html#False)], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – As in [`download_youtube_video()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_video); an explicit
     `cookies_from_browser` takes precedence over the default file.
+  * **pace** ([`Pace`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.Pace) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Be gentle with YouTube: a [`Pace`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.Pace) or a
+    preset name (`"polite"`: sleep 20-60 s between items, 1 s between
+    requests, 4 MB/s cap). Default `None` adds nothing. Raw yt-dlp
+    options in `extra_opts` win over it.
+  * **item_folders** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Put each item in its own folder `001_<id>/<id>.<ext>`
+    (the number is the 1-based playlist position, stable under
+    `playlist_items`), sidecars beside it under flat id-keyed names.
+    Incompatible with a custom `filename_template`.
+  * **embed_metadata** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Write title/artist/etc. into the media file (yt-dlp
+    `--embed-metadata`; needs ffmpeg).
+* **Return type:**
+  [*list*](https://docs.python.org/3/builtins/stdtypes.html#list)[[*DownloadResult*](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DownloadResult)]
+
+Audio only: pass `fmt="bestaudio/best", merge_to=None` (keeps the source
+stream, e.g. `.m4a`, without re-encoding).
+
+* **Raises:**
+  [**RateLimitedError**](_autosummary/yb.download.html.md#yb.download.RateLimitedError) – On HTTP 429 or a “confirm you’re not a bot” wall, with
+      a backoff hint. (Per-item failures under `ignoreerrors` are skipped.)
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`DownloadResult`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DownloadResult)]
 * **Returns:**
@@ -1762,7 +2083,7 @@ Selecting a subset (yt-dlp `--playlist-items` is **1-based**):
   in playlist order. Entries skipped by selection/filter or that failed
   (under `ignoreerrors`) are omitted.
 
-### yb.download.youtube.download_youtube_video(url, , download_dir=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None)
+### yb.download.youtube.download_youtube_video(url, , download_dir=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None, pace=None)
 
 Download a YouTube video to `download_dir` (default `~/Downloads`).
 
@@ -1804,7 +2125,7 @@ named `Title (video_id).mp4` in `~/Downloads`.
     Needs ffmpeg (see [`yb.download.ranges`](_autosummary/yb.download.ranges.html.md#module-yb.download.ranges)).
   * **precise_cuts** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – With `start`/`end`, re-encode at the cuts for
     frame-accurate bounds (slower) instead of cutting at keyframes.
-  * **cookies_file** (`Union`[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`False`], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – Netscape-format cookies file to authenticate with (for
+  * **cookies_file** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[[`False`](https://docs.python.org/3/builtins/constants.html#False)], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – Netscape-format cookies file to authenticate with (for
     headless servers where `cookies_from_browser` cannot work). Default
     `None` reads `$YB_COOKIES_FILE`, else
     `~/.config/yb/youtube-cookies.txt` if it exists, else sends no
@@ -1815,6 +2136,10 @@ named `Title (video_id).mp4` in `~/Downloads`.
     browser cookie source. yt-dlp rewrites the file with refreshed
     cookies on exit, so it must be writable and not shared by parallel
     workers.
+  * **pace** ([`Pace`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.Pace) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Be gentle with YouTube: a [`Pace`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.Pace) or a
+    preset name (`"polite"`: sleep 20-60 s between items, 1 s between
+    requests, 4 MB/s cap). Default `None` adds nothing. Raw yt-dlp
+    options in `extra_opts` win over it.
 * **Return type:**
   [`DownloadResult`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DownloadResult)
 * **Returns:**
@@ -1847,7 +2172,7 @@ and trimmed to `_INFO_FIELDS` (slower, but includes duration/fps/etc.).
     `"2:"` (all but the first), `"2"` (only the 2nd), `"1:5,8"`.
   * **flat** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Shallow vs full per-entry extraction.
   * **extra_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Additional raw yt-dlp options (merged last).
-  * **cookies_file** (`Union`[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`False`], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – See [`download_youtube_video()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_video).
+  * **cookies_file** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[[`False`](https://docs.python.org/3/builtins/constants.html#False)], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – See [`download_youtube_video()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_video).
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]
 
@@ -1901,13 +2226,13 @@ missing extra — the error surfaces only when you actually use that feature.
 >>> yb.prepare_and_publish(r.path, privacy_status="unlisted")        # needs yb[youtube]
 ```
 
-### *class* yb.ContentMetadata(title, description, keywords=<factory>)
+### *class* yb.ContentMetadata(title, description, keywords=list())
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 Platform-neutral copy: a title, a description, and keywords.
 
-### *class* yb.PublicationContent(media, title='', description='', keywords=<factory>, chapters=<factory>, language=None, audio_language=None, srt_path=None, thumbnail=None, duration=None)
+### *class* yb.PublicationContent(media, title='', description='', keywords=list(), chapters=list(), language=None, audio_language=None, srt_path=None, thumbnail=None, duration=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -1917,41 +2242,71 @@ Everything needed to publish a piece of media, destination-agnostic.
 
 Path to the audio/video file.
 
+* **Type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
+
 #### title
 
 Headline/title.
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 #### description
 
 Long-form description / show notes body.
 
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
 #### keywords
 
 Topical keywords/tags.
+
+* **Type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
 
 #### chapters
 
 Ordered chapter markers (`mixing.chapters.Chapter`).
 
+* **Type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[`Chapter`]
+
 #### language
 
 BCP-47 code of the metadata text (e.g. `"en"`).
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 #### audio_language
 
 BCP-47 code of the spoken audio (e.g. `"fr"`).
 
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
 #### srt_path
 
 Path to the SRT subtitle/caption file, if any.
+
+* **Type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 #### thumbnail
 
 Path to a thumbnail/cover image, if any.
 
+* **Type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
 #### duration
 
 Media duration in seconds, if known.
+
+* **Type:**
+  [`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 #### description_with_chapters()
 
@@ -1971,18 +2326,30 @@ Resolved publishing defaults.
 Privacy a new upload gets (`unlisted` | `private` |
 `public`) when the call doesn’t override it.
 
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
 #### playlist
 
 Title of a playlist every upload is added to (`None` = none).
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 #### create_playlist_if_missing
 
 Create `playlist` if no playlist of that
 title exists yet, rather than erroring.
 
+* **Type:**
+  [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
+
 #### playlist_privacy_status
 
 Privacy for an auto-created playlist.
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 #### *classmethod* from_mapping(mapping)
 
@@ -2014,7 +2381,7 @@ Config file location (`$XDG_CONFIG_HOME` or `~/.config`).
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
-### yb.download_youtube_audio(url, , download_dir=None, audio_format=None, bitrate=None, keep_original=False, on_error='raise', fmt='bestaudio/best', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None)
+### yb.download_youtube_audio(url, , download_dir=None, audio_format=None, bitrate=None, keep_original=False, on_error='raise', fmt='bestaudio/best', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None, pace=None)
 
 Download only a video’s audio (no video stream).
 
@@ -2057,6 +2424,7 @@ Pass `audio_format` to get a specific format instead:
   * **subtitle_langs** ([`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis)]) – Subtitle languages to fetch when subtitles are enabled.
   * **quiet** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Suppress yt-dlp console output.
   * **extra_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Any additional raw yt-dlp options (merged last, so they win).
+  * **pace** ([`Pace`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.Pace) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – As in [`download_youtube_video()`](_autosummary/yb.html.md#yb.download_youtube_video).
   * **start** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`float`](https://docs.python.org/3/builtins/functions.html#float) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – 
 
     Download only a span, as in
@@ -2087,7 +2455,7 @@ Pass `audio_format` to get a specific format instead:
   * [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `on_error` is not `"raise"` or `"warn"`.
   * [**AudioConversionError**](_autosummary/yb.audio_convert.html.md#yb.audio_convert.AudioConversionError) – If conversion fails and `on_error="raise"`.
 
-### yb.download_youtube_video(url, , download_dir=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None)
+### yb.download_youtube_video(url, , download_dir=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None, pace=None)
 
 Download a YouTube video to `download_dir` (default `~/Downloads`).
 
@@ -2129,7 +2497,7 @@ named `Title (video_id).mp4` in `~/Downloads`.
     Needs ffmpeg (see [`yb.download.ranges`](_autosummary/yb.download.ranges.html.md#module-yb.download.ranges)).
   * **precise_cuts** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – With `start`/`end`, re-encode at the cuts for
     frame-accurate bounds (slower) instead of cutting at keyframes.
-  * **cookies_file** (`Union`[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`False`], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – Netscape-format cookies file to authenticate with (for
+  * **cookies_file** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[[`False`](https://docs.python.org/3/builtins/constants.html#False)], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – Netscape-format cookies file to authenticate with (for
     headless servers where `cookies_from_browser` cannot work). Default
     `None` reads `$YB_COOKIES_FILE`, else
     `~/.config/yb/youtube-cookies.txt` if it exists, else sends no
@@ -2140,6 +2508,10 @@ named `Title (video_id).mp4` in `~/Downloads`.
     browser cookie source. yt-dlp rewrites the file with refreshed
     cookies on exit, so it must be writable and not shared by parallel
     workers.
+  * **pace** ([`Pace`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.Pace) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Be gentle with YouTube: a [`Pace`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.Pace) or a
+    preset name (`"polite"`: sleep 20-60 s between items, 1 s between
+    requests, 4 MB/s cap). Default `None` adds nothing. Raw yt-dlp
+    options in `extra_opts` win over it.
 * **Return type:**
   [`DownloadResult`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DownloadResult)
 * **Returns:**
@@ -2419,16 +2791,16 @@ copy of itself rather than black bars — so square or portrait art still
 looks deliberate at 1080p.
 
 * **Parameters:**
-  * **audio** (PathLike) – The episode audio file.
-  * **image** (PathLike) – Cover image to display.
-  * **saveas** (PathLike | None) – Output path (defaults to `<audio-stem>.cover.mp4`).
-  * **ken_burns** (bool) – Apply a slow pan/zoom (rendered by `burns`) instead of a
+  * **audio** (`PathLike`) – The episode audio file.
+  * **image** (`PathLike`) – Cover image to display.
+  * **saveas** ([`Optional`](https://docs.python.org/3/library/typing.html#typing.Optional)[`PathLike`]) – Output path (defaults to `<audio-stem>.cover.mp4`).
+  * **ken_burns** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Apply a slow pan/zoom (rendered by `burns`) instead of a
     static image. Much slower than the static path.
-  * **size** (tuple[int, int] | None) – Output resolution (width, height); defaults to 1080p.
-  * **fps** (int | None) – Output frame rate; defaults to muvid’s default.
-  * **layout** (CoverLayout | None) – How the cover sits on the canvas.
+  * **size** ([`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`int`](https://docs.python.org/3/builtins/functions.html#int), [`int`](https://docs.python.org/3/builtins/functions.html#int)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Output resolution (width, height); defaults to 1080p.
+  * **fps** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Output frame rate; defaults to muvid’s default.
+  * **layout** ([`Optional`](https://docs.python.org/3/library/typing.html#typing.Optional)[`CoverLayout`]) – How the cover sits on the canvas.
 * **Return type:**
-  Path
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 * **Returns:**
   Path to the rendered mp4.
 * **Raises:**
@@ -2467,7 +2839,7 @@ Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 One episode’s feed entry.
 
-### *class* yb.podcast.feed.PodcastChannel(title, link, description, author, email, image_url=None, language='en', categories=<factory>, explicit=False)
+### *class* yb.podcast.feed.PodcastChannel(title, link, description, author, email, image_url=None, language='en', categories=list(), explicit=False)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -2522,13 +2894,13 @@ Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 One episode’s feed entry.
 
-### *class* yb.podcast.PodcastChannel(title, link, description, author, email, image_url=None, language='en', categories=<factory>, explicit=False)
+### *class* yb.podcast.PodcastChannel(title, link, description, author, email, image_url=None, language='en', categories=list(), explicit=False)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 Podcast-level (show) metadata.
 
-### *class* yb.podcast.PodcastEpisode(audio, show_notes, chapters_psc=None, chapters_json=None, cover_video=None, content=None, extras=<factory>)
+### *class* yb.podcast.PodcastEpisode(audio, show_notes, chapters_psc=None, chapters_json=None, cover_video=None, content=None, extras=dict())
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -2552,16 +2924,16 @@ copy of itself rather than black bars — so square or portrait art still
 looks deliberate at 1080p.
 
 * **Parameters:**
-  * **audio** (PathLike) – The episode audio file.
-  * **image** (PathLike) – Cover image to display.
-  * **saveas** (PathLike | None) – Output path (defaults to `<audio-stem>.cover.mp4`).
-  * **ken_burns** (bool) – Apply a slow pan/zoom (rendered by `burns`) instead of a
+  * **audio** (`PathLike`) – The episode audio file.
+  * **image** (`PathLike`) – Cover image to display.
+  * **saveas** ([`Optional`](https://docs.python.org/3/library/typing.html#typing.Optional)[`PathLike`]) – Output path (defaults to `<audio-stem>.cover.mp4`).
+  * **ken_burns** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Apply a slow pan/zoom (rendered by `burns`) instead of a
     static image. Much slower than the static path.
-  * **size** (tuple[int, int] | None) – Output resolution (width, height); defaults to 1080p.
-  * **fps** (int | None) – Output frame rate; defaults to muvid’s default.
-  * **layout** (CoverLayout | None) – How the cover sits on the canvas.
+  * **size** ([`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`int`](https://docs.python.org/3/builtins/functions.html#int), [`int`](https://docs.python.org/3/builtins/functions.html#int)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Output resolution (width, height); defaults to 1080p.
+  * **fps** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Output frame rate; defaults to muvid’s default.
+  * **layout** ([`Optional`](https://docs.python.org/3/library/typing.html#typing.Optional)[`CoverLayout`]) – How the cover sits on the canvas.
 * **Return type:**
-  Path
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 * **Returns:**
   Path to the rendered mp4.
 * **Raises:**
@@ -2661,7 +3033,7 @@ and a ready-to-use [`yb.podcast.feed.EpisodeFeedItem`](_autosummary/yb.podcast.f
 | [`PodcastEpisode`](_autosummary/yb.podcast.publish.html.md#yb.podcast.publish.PodcastEpisode)(audio, show_notes[, ...])   | Paths to the generated episode assets.   |
 |---------------------------------------------------------------------------------------------|------------------------------------------|
 
-### *class* yb.podcast.publish.PodcastEpisode(audio, show_notes, chapters_psc=None, chapters_json=None, cover_video=None, content=None, extras=<factory>)
+### *class* yb.podcast.publish.PodcastEpisode(audio, show_notes, chapters_psc=None, chapters_json=None, cover_video=None, content=None, extras=dict())
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -3056,17 +3428,29 @@ A caption track to attach to a video.
 
 Path to an `.srt` (or `.vtt`) file.
 
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
+
 #### language
 
 BCP-47 language code, e.g. `"en"` or `"fr"`.
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 #### name
 
 Track name shown in the YouTube UI (e.g. `"English"`).
 
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
 #### is_draft
 
 When `True`, uploaded but not published to viewers.
+
+* **Type:**
+  [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
 
 ### yb.youtube.captions.delete_caption(caption_id, , service=None, \*\*cred_kwargs)
 
@@ -3216,17 +3600,29 @@ A caption track to attach to a video.
 
 Path to an `.srt` (or `.vtt`) file.
 
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
+
 #### language
 
 BCP-47 language code, e.g. `"en"` or `"fr"`.
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 #### name
 
 Track name shown in the YouTube UI (e.g. `"English"`).
 
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
 #### is_draft
 
 When `True`, uploaded but not published to viewers.
+
+* **Type:**
+  [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
 
 ### *exception* yb.youtube.ConsentPending(url, , redirect_uri)
 
@@ -3281,7 +3677,7 @@ remaining steps target the saved `video_id`.
 `result` is plain JSON-able data, and the exception pickles (so a worker
 process can hand it back); `__cause__` does not survive pickling.
 
-### *class* yb.youtube.VideoMetadata(title, description, tags=<factory>, category_id='28', default_language=None, default_audio_language=None, contains_synthetic_media=None)
+### *class* yb.youtube.VideoMetadata(title, description, tags=list(), category_id='28', default_language=None, default_audio_language=None, contains_synthetic_media=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -3291,25 +3687,43 @@ YouTube-specific video metadata.
 
 Title (<= 100 chars).
 
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
 #### description
 
 Description (<= 5000 chars), chapters already embedded.
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 #### tags
 
 Keyword tags (combined length kept under 500 chars).
 
+* **Type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
+
 #### category_id
 
 YouTube category id (default Science & Technology).
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 #### default_language
 
 BCP-47 language of the metadata text.
 
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
 #### default_audio_language
 
 BCP-47 language of the audio.
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 #### contains_synthetic_media
 
@@ -3318,6 +3732,9 @@ altered or synthetic content. YouTube’s disclosure rule turns on
 *realism*, not on whether AI was involved: it applies when a viewer
 could mistake the content for a real person, place, or event —
 not to stylised artwork or a visualizer. Left unset when `None`.
+
+* **Type:**
+  [`bool`](https://docs.python.org/3/builtins/functions.html#bool) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 #### *classmethod* from_content(content, , category_id='28', with_chapters=True)
 
@@ -3863,7 +4280,7 @@ Insert a caption track, or update the existing same-language one.
 Fetch a video’s live metadata & engagement numbers.
 
 * **Parameters:**
-  * **video_id** (`Union`[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Iterable`](https://docs.python.org/3/library/typing.html#typing.Iterable)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]) – A single video id or an iterable of ids (batched, ≤50/call).
+  * **video_id** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Iterable`](https://docs.python.org/3/library/typing.html#typing.Iterable)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]) – A single video id or an iterable of ids (batched, ≤50/call).
   * **group** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Name of a preset field set from `FIELD_GROUPS`
     (e.g. `"engagement"`). Ignored if `fields` is given.
   * **fields** ([`Optional`](https://docs.python.org/3/library/typing.html#typing.Optional)[[`Sequence`](https://docs.python.org/3/library/typing.html#typing.Sequence)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]) – Explicit ordered field names to keep (overrides `group`).
@@ -3919,7 +4336,7 @@ timestamps when the first is `0:00`).
 
 A useful subset of YouTube video category ids.
 
-### *class* yb.youtube.metadata.VideoMetadata(title, description, tags=<factory>, category_id='28', default_language=None, default_audio_language=None, contains_synthetic_media=None)
+### *class* yb.youtube.metadata.VideoMetadata(title, description, tags=list(), category_id='28', default_language=None, default_audio_language=None, contains_synthetic_media=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -3929,25 +4346,43 @@ YouTube-specific video metadata.
 
 Title (<= 100 chars).
 
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
 #### description
 
 Description (<= 5000 chars), chapters already embedded.
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 #### tags
 
 Keyword tags (combined length kept under 500 chars).
 
+* **Type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
+
 #### category_id
 
 YouTube category id (default Science & Technology).
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 #### default_language
 
 BCP-47 language of the metadata text.
 
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
 #### default_audio_language
 
 BCP-47 language of the audio.
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 #### contains_synthetic_media
 
@@ -3956,6 +4391,9 @@ altered or synthetic content. YouTube’s disclosure rule turns on
 *realism*, not on whether AI was involved: it applies when a viewer
 could mistake the content for a real person, place, or event —
 not to stylised artwork or a visualizer. Left unset when `None`.
+
+* **Type:**
+  [`bool`](https://docs.python.org/3/builtins/functions.html#bool) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 #### *classmethod* from_content(content, , category_id='28', with_chapters=True)
 
@@ -4565,7 +5003,7 @@ Return an ordered subset of `flat` per `fields`/`group`.
 Fetch a video’s live metadata & engagement numbers.
 
 * **Parameters:**
-  * **video_id** (`Union`[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Iterable`](https://docs.python.org/3/library/typing.html#typing.Iterable)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]) – A single video id or an iterable of ids (batched, ≤50/call).
+  * **video_id** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Iterable`](https://docs.python.org/3/library/typing.html#typing.Iterable)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]) – A single video id or an iterable of ids (batched, ≤50/call).
   * **group** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Name of a preset field set from [`FIELD_GROUPS`](_autosummary/yb.youtube.stats.html.md#yb.youtube.stats.FIELD_GROUPS)
     (e.g. `"engagement"`). Ignored if `fields` is given.
   * **fields** ([`Optional`](https://docs.python.org/3/library/typing.html#typing.Optional)[[`Sequence`](https://docs.python.org/3/library/typing.html#typing.Sequence)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]) – Explicit ordered field names to keep (overrides `group`).
@@ -4588,18 +5026,18 @@ Fetch a video’s live metadata & engagement numbers.
 
 # About this build
 
-This documentation was built on **2026-10-14 12:40 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/90625947263aaaee33fc256e400c8ce8727288be"><code>9062594</code></a> on branch <code>main</code>, for **yb 0.1.19** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-10-18 01:53 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/eeebe593afa35950093b42472fbf638e39651a62"><code>eeebe59</code></a> on branch <code>main</code>, for **yb 0.1.20** (from <code>pyproject.toml</code>).
 
 #### WARNING
 The documentation and the package may be misaligned:
 
-- The documented version (0.1.19) is behind the latest release on PyPI (0.1.20): `pip install yb` gives newer code than these docs describe.
+- The documented version (0.1.20) is behind the latest release on PyPI (0.1.21): `pip install yb` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                    |
 |---------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/yb/commit/90625947263aaaee33fc256e400c8ce8727288be"><code>90625947263aaaee33fc256e400c8ce8727288be</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/yb/commit/eeebe593afa35950093b42472fbf638e39651a62"><code>eeebe593afa35950093b42472fbf638e39651a62</code></a> |
 | Branch              | <code>main</code>                                                                                                                                  |
 | Tags at this commit | none                                                                                                                                               |
 | Working tree        | clean                                                                                                                                              |
@@ -4610,9 +5048,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/yb</code>                                                                   |
-| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/38565400673">38565400673</a>          |
+| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/39088003591">39088003591</a>          |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>90625947263aaaee33fc256e400c8ce8727288be</code> (in the history of the built commit) |
+| Event commit | <code>eeebe593afa35950093b42472fbf638e39651a62</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -4637,13 +5075,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/yb/0.1.20/">0.1.20</a>, newer than the documented version (0.1.19).
+Latest release: <a href="https://pypi.org/project/yb/0.1.21/">0.1.21</a>, newer than the documented version (0.1.20).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/yb && cd yb
-git checkout 90625947263aaaee33fc256e400c8ce8727288be
+git checkout eeebe593afa35950093b42472fbf638e39651a62
 pip install "epythet==0.2.17"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

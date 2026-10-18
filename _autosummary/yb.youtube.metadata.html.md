@@ -22,7 +22,7 @@ timestamps when the first is `0:00`).
 
 A useful subset of YouTube video category ids.
 
-### *class* yb.youtube.metadata.VideoMetadata(title, description, tags=<factory>, category_id='28', default_language=None, default_audio_language=None, contains_synthetic_media=None)
+### *class* yb.youtube.metadata.VideoMetadata(title, description, tags=list(), category_id='28', default_language=None, default_audio_language=None, contains_synthetic_media=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -32,25 +32,43 @@ YouTube-specific video metadata.
 
 Title (<= 100 chars).
 
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
 #### description
 
 Description (<= 5000 chars), chapters already embedded.
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 #### tags
 
 Keyword tags (combined length kept under 500 chars).
 
+* **Type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
+
 #### category_id
 
 YouTube category id (default Science & Technology).
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 #### default_language
 
 BCP-47 language of the metadata text.
 
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
 #### default_audio_language
 
 BCP-47 language of the audio.
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 #### contains_synthetic_media
 
@@ -59,6 +77,9 @@ altered or synthetic content. YouTube’s disclosure rule turns on
 *realism*, not on whether AI was involved: it applies when a viewer
 could mistake the content for a real person, place, or event —
 not to stylised artwork or a visualizer. Left unset when `None`.
+
+* **Type:**
+  [`bool`](https://docs.python.org/3/builtins/functions.html#bool) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 #### *classmethod* from_content(content, , category_id='28', with_chapters=True)
 

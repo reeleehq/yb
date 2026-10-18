@@ -13,6 +13,7 @@
         <title>yb.youtube.captions - yb</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d75fae25" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
     
@@ -208,6 +209,7 @@
 <li class="toctree-l3"><a class="reference internal" href="yb.config.html">yb.config</a></li>
 <li class="toctree-l3"><a class="reference internal" href="yb.content.html">yb.content</a></li>
 <li class="toctree-l3 has-children"><a class="reference internal" href="yb.download.html">yb.download</a><input aria-label="Toggle navigation of yb.download" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="yb.download.pacing.html">yb.download.pacing</a></li>
 <li class="toctree-l4"><a class="reference internal" href="yb.download.ranges.html">yb.download.ranges</a></li>
 <li class="toctree-l4"><a class="reference internal" href="yb.download.requirements.html">yb.download.requirements</a></li>
 <li class="toctree-l4"><a class="reference internal" href="yb.download.youtube.html">yb.download.youtube</a></li>
@@ -334,24 +336,44 @@ these helpers operate on uploaded <code class="docutils literal notranslate"><sp
 <dt class="sig sig-object py" id="yb.youtube.captions.CaptionTrack.path">
 <span class="sig-name descname"><span class="pre">path</span></span><a class="headerlink" href="#yb.youtube.captions.CaptionTrack.path" title="Link to this definition">¶</a></dt>
 <dd><p>Path to an <code class="docutils literal notranslate"><span class="pre">.srt</span></code> (or <code class="docutils literal notranslate"><span class="pre">.vtt</span></code>) file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a> | <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a></span></p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="yb.youtube.captions.CaptionTrack.language">
 <span class="sig-name descname"><span class="pre">language</span></span><a class="headerlink" href="#yb.youtube.captions.CaptionTrack.language" title="Link to this definition">¶</a></dt>
 <dd><p>BCP-47 language code, e.g. <code class="docutils literal notranslate"><span class="pre">&quot;en&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;fr&quot;</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span></p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="yb.youtube.captions.CaptionTrack.name">
 <span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#yb.youtube.captions.CaptionTrack.name" title="Link to this definition">¶</a></dt>
 <dd><p>Track name shown in the YouTube UI (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;English&quot;</span></code>).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span></p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="yb.youtube.captions.CaptionTrack.is_draft">
 <span class="sig-name descname"><span class="pre">is_draft</span></span><a class="headerlink" href="#yb.youtube.captions.CaptionTrack.is_draft" title="Link to this definition">¶</a></dt>
 <dd><p>When <code class="docutils literal notranslate"><span class="pre">True</span></code>, uploaded but not published to viewers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></span></p>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>
@@ -362,7 +384,7 @@ these helpers operate on uploaded <code class="docutils literal notranslate"><sp
 <dd><p>Delete a caption track (<code class="docutils literal notranslate"><span class="pre">captions.delete</span></code>).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span></p>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code></a></span></span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -511,7 +533,7 @@ these helpers operate on uploaded <code class="docutils literal notranslate"><sp
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=d979bd5c"></script>
+</div><script src="../_static/documentation_options.js?v=0d95f3a7"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>

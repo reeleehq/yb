@@ -94,17 +94,29 @@ A caption track to attach to a video.
 
 Path to an `.srt` (or `.vtt`) file.
 
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
+
 #### language
 
 BCP-47 language code, e.g. `"en"` or `"fr"`.
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 #### name
 
 Track name shown in the YouTube UI (e.g. `"English"`).
 
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
 #### is_draft
 
 When `True`, uploaded but not published to viewers.
+
+* **Type:**
+  [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
 
 ### *exception* yb.youtube.ConsentPending(url, , redirect_uri)
 
@@ -159,7 +171,7 @@ remaining steps target the saved `video_id`.
 `result` is plain JSON-able data, and the exception pickles (so a worker
 process can hand it back); `__cause__` does not survive pickling.
 
-### *class* yb.youtube.VideoMetadata(title, description, tags=<factory>, category_id='28', default_language=None, default_audio_language=None, contains_synthetic_media=None)
+### *class* yb.youtube.VideoMetadata(title, description, tags=list(), category_id='28', default_language=None, default_audio_language=None, contains_synthetic_media=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -169,25 +181,43 @@ YouTube-specific video metadata.
 
 Title (<= 100 chars).
 
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
 #### description
 
 Description (<= 5000 chars), chapters already embedded.
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 #### tags
 
 Keyword tags (combined length kept under 500 chars).
 
+* **Type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
+
 #### category_id
 
 YouTube category id (default Science & Technology).
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 #### default_language
 
 BCP-47 language of the metadata text.
 
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
 #### default_audio_language
 
 BCP-47 language of the audio.
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 #### contains_synthetic_media
 
@@ -196,6 +226,9 @@ altered or synthetic content. YouTube’s disclosure rule turns on
 *realism*, not on whether AI was involved: it applies when a viewer
 could mistake the content for a real person, place, or event —
 not to stylised artwork or a visualizer. Left unset when `None`.
+
+* **Type:**
+  [`bool`](https://docs.python.org/3/builtins/functions.html#bool) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 #### *classmethod* from_content(content, , category_id='28', with_chapters=True)
 
@@ -741,7 +774,7 @@ Insert a caption track, or update the existing same-language one.
 Fetch a video’s live metadata & engagement numbers.
 
 * **Parameters:**
-  * **video_id** (`Union`[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Iterable`](https://docs.python.org/3/library/typing.html#typing.Iterable)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]) – A single video id or an iterable of ids (batched, ≤50/call).
+  * **video_id** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Iterable`](https://docs.python.org/3/library/typing.html#typing.Iterable)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]) – A single video id or an iterable of ids (batched, ≤50/call).
   * **group** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Name of a preset field set from `FIELD_GROUPS`
     (e.g. `"engagement"`). Ignored if `fields` is given.
   * **fields** ([`Optional`](https://docs.python.org/3/library/typing.html#typing.Optional)[[`Sequence`](https://docs.python.org/3/library/typing.html#typing.Sequence)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]) – Explicit ordered field names to keep (overrides `group`).

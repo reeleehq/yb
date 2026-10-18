@@ -116,13 +116,22 @@ A JavaScript runtime found for yt-dlp.
 
 yt-dlp’s key for the runtime (e.g. `"deno"`).
 
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
 #### path
 
 The executable.
 
+* **Type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
+
 #### on_path
 
 Whether yt-dlp would find it by name on `PATH` unaided.
+
+* **Type:**
+  [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
 
 ### yb.download.requirements.YT_DLP_MODULE *= 'yt_dlp'*
 

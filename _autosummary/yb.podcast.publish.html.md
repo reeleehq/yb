@@ -18,7 +18,7 @@ and a ready-to-use [`yb.podcast.feed.EpisodeFeedItem`](yb.podcast.feed.html.md#y
 | [`PodcastEpisode`](#yb.podcast.publish.PodcastEpisode)(audio, show_notes[, ...])   | Paths to the generated episode assets.   |
 |---------------------------------------------------------------------------------------------|------------------------------------------|
 
-### *class* yb.podcast.publish.PodcastEpisode(audio, show_notes, chapters_psc=None, chapters_json=None, cover_video=None, content=None, extras=<factory>)
+### *class* yb.podcast.publish.PodcastEpisode(audio, show_notes, chapters_psc=None, chapters_json=None, cover_video=None, content=None, extras=dict())
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 

@@ -1,0 +1,33 @@
+yb.download.pacing
+==================
+
+.. automodule:: yb.download.pacing
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      PACE_PRESETS
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      explain_rate_limit
+      pace_opts
+      parse_rate
+      resolve_pace
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      Pace
+   
+   .. rubric:: Exceptions
+
+   .. autosummary::
+   
+      RateLimitedError
+   

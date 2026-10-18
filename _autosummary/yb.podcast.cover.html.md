@@ -25,16 +25,16 @@ copy of itself rather than black bars — so square or portrait art still
 looks deliberate at 1080p.
 
 * **Parameters:**
-  * **audio** (PathLike) – The episode audio file.
-  * **image** (PathLike) – Cover image to display.
-  * **saveas** (PathLike | None) – Output path (defaults to `<audio-stem>.cover.mp4`).
-  * **ken_burns** (bool) – Apply a slow pan/zoom (rendered by `burns`) instead of a
+  * **audio** (`PathLike`) – The episode audio file.
+  * **image** (`PathLike`) – Cover image to display.
+  * **saveas** ([`Optional`](https://docs.python.org/3/library/typing.html#typing.Optional)[`PathLike`]) – Output path (defaults to `<audio-stem>.cover.mp4`).
+  * **ken_burns** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Apply a slow pan/zoom (rendered by `burns`) instead of a
     static image. Much slower than the static path.
-  * **size** (tuple[int, int] | None) – Output resolution (width, height); defaults to 1080p.
-  * **fps** (int | None) – Output frame rate; defaults to muvid’s default.
-  * **layout** (CoverLayout | None) – How the cover sits on the canvas.
+  * **size** ([`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`int`](https://docs.python.org/3/builtins/functions.html#int), [`int`](https://docs.python.org/3/builtins/functions.html#int)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Output resolution (width, height); defaults to 1080p.
+  * **fps** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Output frame rate; defaults to muvid’s default.
+  * **layout** ([`Optional`](https://docs.python.org/3/library/typing.html#typing.Optional)[`CoverLayout`]) – How the cover sits on the canvas.
 * **Return type:**
-  Path
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 * **Returns:**
   Path to the rendered mp4.
 * **Raises:**

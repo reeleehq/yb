@@ -18,6 +18,7 @@ The destination defaults to `$YB_DOWNLOAD_DIR` when set, else `~/Downloads`.
 | [`DEFAULT_COOKIES_FILE`](#yb.download.youtube.DEFAULT_COOKIES_FILE) | Cookies file used when [`COOKIES_FILE_ENV`](#yb.download.youtube.COOKIES_FILE_ENV) is unset and this file exists. |
 | [`CookiesFile`](#yb.download.youtube.CookiesFile)          | a path, `None` (look for a default), or `False` (none).                                                                 |
 | [`DEFAULT_OUTTMPL`](#yb.download.youtube.DEFAULT_OUTTMPL)      | human title plus the stable id, e.g. "My Talk (dQw4...).mp4".                                                           |
+| [`ITEM_FOLDER_OUTTMPL`](#yb.download.youtube.ITEM_FOLDER_OUTTMPL)  | `001_<id>/<id>.<ext>`, sidecars beside it.                                                                              |
 | [`DEFAULT_AUDIO_FMT`](#yb.download.youtube.DEFAULT_AUDIO_FMT)    | yt-dlp format selector for the best audio-only stream.                                                                  |
 
 ### Functions
@@ -69,7 +70,7 @@ human title plus the stable id, e.g. “My Talk (dQw4…).mp4”.
 
 Env var that overrides the default download directory.
 
-### *class* yb.download.youtube.DownloadResult(path, info, sidecars=<factory>)
+### *class* yb.download.youtube.DownloadResult(path, info, sidecars=dict())
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -79,18 +80,34 @@ Outcome of a download.
 
 The downloaded media file.
 
+* **Type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
+
 #### info
 
 A trimmed metadata dict (see `_INFO_FIELDS`).
+
+* **Type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]
 
 #### sidecars
 
 Map of extra artifacts written (`info_json`, `thumbnail`,
 `description`, `subtitles` → path(s)).
 
+* **Type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]
+
 #### *property* video_id *: [str](https://docs.python.org/3/builtins/stdtypes.html#str)*
 
 The YouTube video id.
+
+### yb.download.youtube.ITEM_FOLDER_OUTTMPL *= '%(playlist_index)03d_%(id)s/%(id)s.%(ext)s'*
+
+`001_<id>/<id>.<ext>`, sidecars beside it.
+
+* **Type:**
+  Template for `item_folders=True`
 
 ### yb.download.youtube.OnConvertError
 
@@ -116,7 +133,7 @@ Resolve the default download directory (`$YB_DOWNLOAD_DIR` or `~/Downloads`).
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
-### yb.download.youtube.download_youtube_audio(url, , download_dir=None, audio_format=None, bitrate=None, keep_original=False, on_error='raise', fmt='bestaudio/best', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None)
+### yb.download.youtube.download_youtube_audio(url, , download_dir=None, audio_format=None, bitrate=None, keep_original=False, on_error='raise', fmt='bestaudio/best', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None, pace=None)
 
 Download only a video’s audio (no video stream).
 
@@ -159,6 +176,7 @@ Pass `audio_format` to get a specific format instead:
   * **subtitle_langs** ([`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis)]) – Subtitle languages to fetch when subtitles are enabled.
   * **quiet** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Suppress yt-dlp console output.
   * **extra_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Any additional raw yt-dlp options (merged last, so they win).
+  * **pace** ([`Pace`](yb.download.pacing.html.md#yb.download.pacing.Pace) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – As in [`download_youtube_video()`](#yb.download.youtube.download_youtube_video).
   * **start** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`float`](https://docs.python.org/3/builtins/functions.html#float) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – 
 
     Download only a span, as in
@@ -189,7 +207,7 @@ Pass `audio_format` to get a specific format instead:
   * [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `on_error` is not `"raise"` or `"warn"`.
   * [**AudioConversionError**](yb.audio_convert.html.md#yb.audio_convert.AudioConversionError) – If conversion fails and `on_error="raise"`.
 
-### yb.download.youtube.download_youtube_playlist(url, , download_dir=None, playlist_items=None, skip_first=False, title_reject=None, download_archive=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=True, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), cookies_from_browser=None, extractor_args=None, quiet=True, extra_opts=None, cookies_file=None)
+### yb.download.youtube.download_youtube_playlist(url, , download_dir=None, playlist_items=None, skip_first=False, title_reject=None, download_archive=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=True, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), cookies_from_browser=None, extractor_args=None, quiet=True, extra_opts=None, cookies_file=None, pace=None, item_folders=False, embed_metadata=False)
 
 Download all (or a selected subset of) a YouTube playlist’s videos.
 
@@ -239,8 +257,27 @@ Selecting a subset (yt-dlp `--playlist-items` is **1-based**):
     `{"youtube": {"player_client": ["web_safari"]}}`).
   * **quiet** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Suppress yt-dlp console output.
   * **extra_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Any additional raw yt-dlp options (merged last, so they win).
-  * **cookies_file** (`Union`[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`False`], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – As in [`download_youtube_video()`](#yb.download.youtube.download_youtube_video); an explicit
+  * **cookies_file** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[[`False`](https://docs.python.org/3/builtins/constants.html#False)], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – As in [`download_youtube_video()`](#yb.download.youtube.download_youtube_video); an explicit
     `cookies_from_browser` takes precedence over the default file.
+  * **pace** ([`Pace`](yb.download.pacing.html.md#yb.download.pacing.Pace) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Be gentle with YouTube: a [`Pace`](yb.download.pacing.html.md#yb.download.pacing.Pace) or a
+    preset name (`"polite"`: sleep 20-60 s between items, 1 s between
+    requests, 4 MB/s cap). Default `None` adds nothing. Raw yt-dlp
+    options in `extra_opts` win over it.
+  * **item_folders** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Put each item in its own folder `001_<id>/<id>.<ext>`
+    (the number is the 1-based playlist position, stable under
+    `playlist_items`), sidecars beside it under flat id-keyed names.
+    Incompatible with a custom `filename_template`.
+  * **embed_metadata** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Write title/artist/etc. into the media file (yt-dlp
+    `--embed-metadata`; needs ffmpeg).
+* **Return type:**
+  [*list*](https://docs.python.org/3/builtins/stdtypes.html#list)[[*DownloadResult*](#yb.download.youtube.DownloadResult)]
+
+Audio only: pass `fmt="bestaudio/best", merge_to=None` (keeps the source
+stream, e.g. `.m4a`, without re-encoding).
+
+* **Raises:**
+  [**RateLimitedError**](yb.download.html.md#yb.download.RateLimitedError) – On HTTP 429 or a “confirm you’re not a bot” wall, with
+      a backoff hint. (Per-item failures under `ignoreerrors` are skipped.)
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`DownloadResult`](#yb.download.youtube.DownloadResult)]
 * **Returns:**
@@ -248,7 +285,7 @@ Selecting a subset (yt-dlp `--playlist-items` is **1-based**):
   in playlist order. Entries skipped by selection/filter or that failed
   (under `ignoreerrors`) are omitted.
 
-### yb.download.youtube.download_youtube_video(url, , download_dir=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None)
+### yb.download.youtube.download_youtube_video(url, , download_dir=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None, pace=None)
 
 Download a YouTube video to `download_dir` (default `~/Downloads`).
 
@@ -290,7 +327,7 @@ named `Title (video_id).mp4` in `~/Downloads`.
     Needs ffmpeg (see [`yb.download.ranges`](yb.download.ranges.html.md#module-yb.download.ranges)).
   * **precise_cuts** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – With `start`/`end`, re-encode at the cuts for
     frame-accurate bounds (slower) instead of cutting at keyframes.
-  * **cookies_file** (`Union`[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`False`], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – Netscape-format cookies file to authenticate with (for
+  * **cookies_file** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[[`False`](https://docs.python.org/3/builtins/constants.html#False)], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – Netscape-format cookies file to authenticate with (for
     headless servers where `cookies_from_browser` cannot work). Default
     `None` reads `$YB_COOKIES_FILE`, else
     `~/.config/yb/youtube-cookies.txt` if it exists, else sends no
@@ -301,6 +338,10 @@ named `Title (video_id).mp4` in `~/Downloads`.
     browser cookie source. yt-dlp rewrites the file with refreshed
     cookies on exit, so it must be writable and not shared by parallel
     workers.
+  * **pace** ([`Pace`](yb.download.pacing.html.md#yb.download.pacing.Pace) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Be gentle with YouTube: a [`Pace`](yb.download.pacing.html.md#yb.download.pacing.Pace) or a
+    preset name (`"polite"`: sleep 20-60 s between items, 1 s between
+    requests, 4 MB/s cap). Default `None` adds nothing. Raw yt-dlp
+    options in `extra_opts` win over it.
 * **Return type:**
   [`DownloadResult`](#yb.download.youtube.DownloadResult)
 * **Returns:**
@@ -333,7 +374,7 @@ and trimmed to `_INFO_FIELDS` (slower, but includes duration/fps/etc.).
     `"2:"` (all but the first), `"2"` (only the 2nd), `"1:5,8"`.
   * **flat** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Shallow vs full per-entry extraction.
   * **extra_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Additional raw yt-dlp options (merged last).
-  * **cookies_file** (`Union`[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`False`], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – See [`download_youtube_video()`](#yb.download.youtube.download_youtube_video).
+  * **cookies_file** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[[`False`](https://docs.python.org/3/builtins/constants.html#False)], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – See [`download_youtube_video()`](#yb.download.youtube.download_youtube_video).
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]
 

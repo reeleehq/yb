@@ -13,6 +13,7 @@
         <title>yb</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d75fae25" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
     
@@ -208,6 +209,7 @@
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/yb.config.html">yb.config</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/yb.content.html">yb.content</a></li>
 <li class="toctree-l3 has-children"><a class="reference internal" href="_autosummary/yb.download.html">yb.download</a><input aria-label="Toggle navigation of yb.download" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="_autosummary/yb.download.pacing.html">yb.download.pacing</a></li>
 <li class="toctree-l4"><a class="reference internal" href="_autosummary/yb.download.ranges.html">yb.download.ranges</a></li>
 <li class="toctree-l4"><a class="reference internal" href="_autosummary/yb.download.requirements.html">yb.download.requirements</a></li>
 <li class="toctree-l4"><a class="reference internal" href="_autosummary/yb.download.youtube.html">yb.download.youtube</a></li>
@@ -379,6 +381,26 @@ pass <code class="docutils literal notranslate"><span class="pre">on_error=&quot
 </pre></div>
 </div>
 <p>The range is cut by ffmpeg (so it needs one; to use a specific build pass <code class="docutils literal notranslate"><span class="pre">extra_opts={&quot;ffmpeg_location&quot;:</span> <span class="pre">&quot;/path/to/ffmpeg&quot;}</span></code>, e.g. when the system ffmpeg lacks what yt-dlp asks of it). Cuts land on keyframes; <code class="docutils literal notranslate"><span class="pre">precise_cuts=True</span></code> re-encodes for frame-accurate bounds. With the default filename template the range goes in the name (<code class="docutils literal notranslate"><span class="pre">Title</span> <span class="pre">(id)</span> <span class="pre">[7.9-8.75].webm</span></code>), so a clip never collides with the full download (a <code class="docutils literal notranslate"><span class="pre">precise_cuts</span></code> clip is named apart from a keyframe cut too).</p>
+<p><strong>A long playlist, politely.</strong> <code class="docutils literal notranslate"><span class="pre">download_youtube_playlist</span></code> takes <code class="docutils literal notranslate"><span class="pre">pace=</span></code> (<code class="docutils literal notranslate"><span class="pre">&quot;polite&quot;</span></code> sleeps 20-60 s between items and 1 s between requests, and caps the rate at 4 MB/s; or pass a <code class="docutils literal notranslate"><span class="pre">Pace(...)</span></code>), <code class="docutils literal notranslate"><span class="pre">download_archive=</span></code> (finished ids are skipped on re-run), <code class="docutils literal notranslate"><span class="pre">playlist_items=&quot;1-42&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">title_reject=</span></code> for selection, and <code class="docutils literal notranslate"><span class="pre">item_folders=True</span></code> for one <code class="docutils literal notranslate"><span class="pre">001_&lt;id&gt;/</span></code> folder per item with the media and its sidecars side by side. For audio only, keep the source stream with <code class="docutils literal notranslate"><span class="pre">fmt=&quot;bestaudio/best&quot;,</span> <span class="pre">merge_to=None</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">yb.download</span><span class="w"> </span><span class="kn">import</span> <span class="n">download_youtube_playlist</span>
+
+<span class="n">download_youtube_playlist</span><span class="p">(</span>
+    <span class="n">url</span><span class="p">,</span>
+    <span class="n">download_dir</span><span class="o">=</span><span class="s2">"~/tapes"</span><span class="p">,</span>
+    <span class="n">fmt</span><span class="o">=</span><span class="s2">"bestaudio/best"</span><span class="p">,</span>  <span class="c1"># audio only, not re-encoded (.m4a)</span>
+    <span class="n">merge_to</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">pace</span><span class="o">=</span><span class="s2">"polite"</span><span class="p">,</span>
+    <span class="n">download_archive</span><span class="o">=</span><span class="s2">"~/tapes/archive.txt"</span><span class="p">,</span>  <span class="c1"># re-run to resume</span>
+    <span class="n">playlist_items</span><span class="o">=</span><span class="s2">"1-42"</span><span class="p">,</span>
+    <span class="n">item_folders</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>  <span class="c1"># ~/tapes/001_&lt;id&gt;/&lt;id&gt;.m4a, .info.json, ...</span>
+    <span class="n">write_description</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">write_thumbnail</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">write_subtitles</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">embed_metadata</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>When YouTube answers HTTP 429 or “confirm you’re not a bot”, yb raises <code class="docutils literal notranslate"><span class="pre">yb.download.RateLimitedError</span></code> with a backoff hint (wait, then retry with <code class="docutils literal notranslate"><span class="pre">pace=&quot;polite&quot;</span></code>, an archive, cookies and fewer items per run). <code class="docutils literal notranslate"><span class="pre">pace</span></code> also works on <code class="docutils literal notranslate"><span class="pre">download_youtube_video</span></code> and <code class="docutils literal notranslate"><span class="pre">download_youtube_audio</span></code>; the default <code class="docutils literal notranslate"><span class="pre">None</span></code> changes nothing, and raw <code class="docutils literal notranslate"><span class="pre">extra_opts</span></code> still win.</p>
 <p>The same conversion is available standalone for files you already have:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">yb.audio_convert</span><span class="w"> </span><span class="kn">import</span> <span class="n">convert_audio</span>
 
@@ -622,7 +644,7 @@ it, and the <code class="docutils literal notranslate"><span class="pre">music</
 </section>
 </section>
 
-<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-10-14 12:40 UTC from <a href="https://github.com/reeleehq/yb/commit/90625947263aaaee33fc256e400c8ce8727288be">9062594</a> (main) · yb 0.1.19 · <a href="about-this-build.html">about this build</a></p>
+<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-10-18 01:53 UTC from <a href="https://github.com/reeleehq/yb/commit/eeebe593afa35950093b42472fbf638e39651a62">eeebe59</a> (main) · yb 0.1.20 · <a href="about-this-build.html">about this build</a></p>
         </article>
       </div>
       <footer>
@@ -692,7 +714,7 @@ it, and the <code class="docutils literal notranslate"><span class="pre">music</
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=d979bd5c"></script>
+</div><script src="_static/documentation_options.js?v=0d95f3a7"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>

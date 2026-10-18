@@ -24,13 +24,13 @@ keywords) is LLM-backed via `aix` and pluggable.
 |----------------------------------------------------------------------------------------------------|----------------------------------------------------------------------|
 | [`PublicationContent`](#yb.content.PublicationContent)(media[, title, ...])           | Everything needed to publish a piece of media, destination-agnostic. |
 
-### *class* yb.content.ContentMetadata(title, description, keywords=<factory>)
+### *class* yb.content.ContentMetadata(title, description, keywords=list())
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 Platform-neutral copy: a title, a description, and keywords.
 
-### *class* yb.content.PublicationContent(media, title='', description='', keywords=<factory>, chapters=<factory>, language=None, audio_language=None, srt_path=None, thumbnail=None, duration=None)
+### *class* yb.content.PublicationContent(media, title='', description='', keywords=list(), chapters=list(), language=None, audio_language=None, srt_path=None, thumbnail=None, duration=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -40,41 +40,71 @@ Everything needed to publish a piece of media, destination-agnostic.
 
 Path to the audio/video file.
 
+* **Type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
+
 #### title
 
 Headline/title.
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 #### description
 
 Long-form description / show notes body.
 
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
 #### keywords
 
 Topical keywords/tags.
+
+* **Type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
 
 #### chapters
 
 Ordered chapter markers (`mixing.chapters.Chapter`).
 
+* **Type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[`Chapter`]
+
 #### language
 
 BCP-47 code of the metadata text (e.g. `"en"`).
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 #### audio_language
 
 BCP-47 code of the spoken audio (e.g. `"fr"`).
 
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
 #### srt_path
 
 Path to the SRT subtitle/caption file, if any.
+
+* **Type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 #### thumbnail
 
 Path to a thumbnail/cover image, if any.
 
+* **Type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
 #### duration
 
 Media duration in seconds, if known.
+
+* **Type:**
+  [`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 #### description_with_chapters()
 

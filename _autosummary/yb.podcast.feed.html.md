@@ -26,7 +26,7 @@ Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 One episode’s feed entry.
 
-### *class* yb.podcast.feed.PodcastChannel(title, link, description, author, email, image_url=None, language='en', categories=<factory>, explicit=False)
+### *class* yb.podcast.feed.PodcastChannel(title, link, description, author, email, image_url=None, language='en', categories=list(), explicit=False)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 

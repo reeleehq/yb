@@ -110,7 +110,7 @@ Return an ordered subset of `flat` per `fields`/`group`.
 Fetch a video’s live metadata & engagement numbers.
 
 * **Parameters:**
-  * **video_id** (`Union`[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Iterable`](https://docs.python.org/3/library/typing.html#typing.Iterable)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]) – A single video id or an iterable of ids (batched, ≤50/call).
+  * **video_id** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Iterable`](https://docs.python.org/3/library/typing.html#typing.Iterable)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]) – A single video id or an iterable of ids (batched, ≤50/call).
   * **group** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Name of a preset field set from [`FIELD_GROUPS`](#yb.youtube.stats.FIELD_GROUPS)
     (e.g. `"engagement"`). Ignored if `fields` is given.
   * **fields** ([`Optional`](https://docs.python.org/3/library/typing.html#typing.Optional)[[`Sequence`](https://docs.python.org/3/library/typing.html#typing.Sequence)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]) – Explicit ordered field names to keep (overrides `group`).

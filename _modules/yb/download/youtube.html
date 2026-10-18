@@ -10,6 +10,7 @@
         <title>yb.download.youtube - yb</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=d75fae25" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
     
@@ -205,6 +206,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../../../_autosummary/yb.config.html">yb.config</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../_autosummary/yb.content.html">yb.content</a></li>
 <li class="toctree-l3 has-children"><a class="reference internal" href="../../../_autosummary/yb.download.html">yb.download</a><input aria-label="Toggle navigation of yb.download" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.pacing.html">yb.download.pacing</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.ranges.html">yb.download.ranges</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.requirements.html">yb.download.requirements</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.youtube.html">yb.download.youtube</a></li>
@@ -293,6 +295,7 @@
     <span class="n">range_opts</span><span class="p">,</span>
     <span class="n">ranged_filename_template</span><span class="p">,</span>
 <span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">yb.download.pacing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pace</span><span class="p">,</span> <span class="n">explain_rate_limit</span><span class="p">,</span> <span class="n">pace_opts</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">yb.download.requirements</span><span class="w"> </span><span class="kn">import</span> <span class="n">with_runtime_opts</span>
 
 <span class="n">PathLike</span> <span class="o">=</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span>
@@ -319,6 +322,9 @@
 
 <span class="c1">#: yt-dlp output template: human title plus the stable id, e.g. "My Talk (dQw4...).mp4".</span>
 <span class="n">DEFAULT_OUTTMPL</span> <span class="o">=</span> <span class="s2">"</span><span class="si">%(title)s</span><span class="s2"> (</span><span class="si">%(id)s</span><span class="s2">).</span><span class="si">%(ext)s</span><span class="s2">"</span>
+
+<span class="c1">#: Template for ``item_folders=True``: ``001_&lt;id&gt;/&lt;id&gt;.&lt;ext&gt;``, sidecars beside it.</span>
+<span class="n">ITEM_FOLDER_OUTTMPL</span> <span class="o">=</span> <span class="s2">"</span><span class="si">%(playlist_index)03d</span><span class="s2">_</span><span class="si">%(id)s</span><span class="s2">/</span><span class="si">%(id)s</span><span class="s2">.</span><span class="si">%(ext)s</span><span class="s2">"</span>
 
 <span class="c1">#: yt-dlp format selector for the best audio-only stream.</span>
 <span class="n">DEFAULT_AUDIO_FMT</span> <span class="o">=</span> <span class="s2">"bestaudio/best"</span>
@@ -525,6 +531,7 @@
     <span class="n">end</span><span class="p">:</span> <span class="n">Timestamp</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">precise_cuts</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">cookies_file</span><span class="p">:</span> <span class="n">CookiesFile</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">pace</span><span class="p">:</span> <span class="n">Pace</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DownloadResult</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Download a YouTube video to ``download_dir`` (default ``~/Downloads``).</span>
 
@@ -569,6 +576,10 @@
 <span class="sd">            browser cookie source. yt-dlp rewrites the file with refreshed</span>
 <span class="sd">            cookies on exit, so it must be writable and not shared by parallel</span>
 <span class="sd">            workers.</span>
+<span class="sd">        pace: Be gentle with YouTube: a :class:`~yb.download.pacing.Pace` or a</span>
+<span class="sd">            preset name (``"polite"``: sleep 20-60 s between items, 1 s between</span>
+<span class="sd">            requests, 4 MB/s cap). Default ``None`` adds nothing. Raw yt-dlp</span>
+<span class="sd">            options in ``extra_opts`` win over it.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        A :class:`DownloadResult` with the media path, trimmed ``info``, and any</span>
@@ -611,9 +622,10 @@
                 <span class="p">)</span>
             <span class="p">)</span>
     <span class="n">opts</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_cookie_opts</span><span class="p">(</span><span class="n">cookies_file</span><span class="p">,</span> <span class="n">extra_opts</span><span class="o">=</span><span class="n">extra_opts</span><span class="p">))</span>
+    <span class="n">opts</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">pace_opts</span><span class="p">(</span><span class="n">pace</span><span class="p">))</span>
     <span class="n">opts</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">extra_opts</span> <span class="ow">or</span> <span class="p">{})</span>
 
-    <span class="k">with</span> <span class="n">YoutubeDL</span><span class="p">(</span><span class="n">with_runtime_opts</span><span class="p">(</span><span class="n">opts</span><span class="p">))</span> <span class="k">as</span> <span class="n">ydl</span><span class="p">:</span>
+    <span class="k">with</span> <span class="n">explain_rate_limit</span><span class="p">(),</span> <span class="n">YoutubeDL</span><span class="p">(</span><span class="n">with_runtime_opts</span><span class="p">(</span><span class="n">opts</span><span class="p">))</span> <span class="k">as</span> <span class="n">ydl</span><span class="p">:</span>
         <span class="n">info</span> <span class="o">=</span> <span class="n">ydl</span><span class="o">.</span><span class="n">extract_info</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
     <span class="n">path</span> <span class="o">=</span> <span class="n">_resolve_output_path</span><span class="p">(</span><span class="n">info</span><span class="p">,</span> <span class="n">ydl</span><span class="p">,</span> <span class="n">out_dir</span><span class="p">,</span> <span class="n">merge_to</span><span class="p">)</span>
@@ -656,6 +668,7 @@
     <span class="n">end</span><span class="p">:</span> <span class="n">Timestamp</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">precise_cuts</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">cookies_file</span><span class="p">:</span> <span class="n">CookiesFile</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">pace</span><span class="p">:</span> <span class="n">Pace</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DownloadResult</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Download only a video's audio (no video stream).</span>
 
@@ -696,6 +709,7 @@
 <span class="sd">        subtitle_langs: Subtitle languages to fetch when subtitles are enabled.</span>
 <span class="sd">        quiet: Suppress yt-dlp console output.</span>
 <span class="sd">        extra_opts: Any additional raw yt-dlp options (merged last, so they win).</span>
+<span class="sd">        pace: As in :func:`download_youtube_video`.</span>
 <span class="sd">        start, end, precise_cuts: Download only a span, as in</span>
 <span class="sd">            :func:`download_youtube_video`:</span>
 
@@ -733,6 +747,7 @@
         <span class="n">end</span><span class="o">=</span><span class="n">end</span><span class="p">,</span>
         <span class="n">precise_cuts</span><span class="o">=</span><span class="n">precise_cuts</span><span class="p">,</span>
         <span class="n">cookies_file</span><span class="o">=</span><span class="n">cookies_file</span><span class="p">,</span>
+        <span class="n">pace</span><span class="o">=</span><span class="n">pace</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="k">if</span> <span class="n">audio_format</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">result</span>
@@ -849,6 +864,9 @@
     <span class="n">quiet</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">extra_opts</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">cookies_file</span><span class="p">:</span> <span class="n">CookiesFile</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">pace</span><span class="p">:</span> <span class="n">Pace</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">item_folders</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">embed_metadata</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">DownloadResult</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""Download all (or a selected subset of) a YouTube playlist's videos.</span>
 
@@ -890,6 +908,23 @@
 <span class="sd">        extra_opts: Any additional raw yt-dlp options (merged last, so they win).</span>
 <span class="sd">        cookies_file: As in :func:`download_youtube_video`; an explicit</span>
 <span class="sd">            ``cookies_from_browser`` takes precedence over the default file.</span>
+<span class="sd">        pace: Be gentle with YouTube: a :class:`~yb.download.pacing.Pace` or a</span>
+<span class="sd">            preset name (``"polite"``: sleep 20-60 s between items, 1 s between</span>
+<span class="sd">            requests, 4 MB/s cap). Default ``None`` adds nothing. Raw yt-dlp</span>
+<span class="sd">            options in ``extra_opts`` win over it.</span>
+<span class="sd">        item_folders: Put each item in its own folder ``001_&lt;id&gt;/&lt;id&gt;.&lt;ext&gt;``</span>
+<span class="sd">            (the number is the 1-based playlist position, stable under</span>
+<span class="sd">            ``playlist_items``), sidecars beside it under flat id-keyed names.</span>
+<span class="sd">            Incompatible with a custom ``filename_template``.</span>
+<span class="sd">        embed_metadata: Write title/artist/etc. into the media file (yt-dlp</span>
+<span class="sd">            ``--embed-metadata``; needs ffmpeg).</span>
+
+<span class="sd">    Audio only: pass ``fmt="bestaudio/best", merge_to=None`` (keeps the source</span>
+<span class="sd">    stream, e.g. ``.m4a``, without re-encoding).</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        RateLimitedError: On HTTP 429 or a "confirm you're not a bot" wall, with</span>
+<span class="sd">            a backoff hint. (Per-item failures under ``ignoreerrors`` are skipped.)</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        A list of :class:`DownloadResult`, one per successfully-downloaded entry,</span>
@@ -903,6 +938,13 @@
 
     <span class="k">if</span> <span class="n">playlist_items</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">skip_first</span><span class="p">:</span>
         <span class="n">playlist_items</span> <span class="o">=</span> <span class="s2">"2:"</span>
+    <span class="k">if</span> <span class="n">item_folders</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">filename_template</span> <span class="o">!=</span> <span class="n">DEFAULT_OUTTMPL</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">"item_folders=True sets the filename template; "</span>
+                <span class="s2">"drop filename_template (or drop item_folders)"</span>
+            <span class="p">)</span>
+        <span class="n">filename_template</span> <span class="o">=</span> <span class="n">ITEM_FOLDER_OUTTMPL</span>
 
     <span class="n">opts</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
         <span class="s2">"format"</span><span class="p">:</span> <span class="n">fmt</span><span class="p">,</span>
@@ -934,11 +976,17 @@
     <span class="p">)</span>
     <span class="k">if</span> <span class="n">extractor_args</span><span class="p">:</span>
         <span class="n">opts</span><span class="p">[</span><span class="s2">"extractor_args"</span><span class="p">]</span> <span class="o">=</span> <span class="n">extractor_args</span>
+    <span class="n">opts</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">pace_opts</span><span class="p">(</span><span class="n">pace</span><span class="p">))</span>
     <span class="k">if</span> <span class="n">title_reject</span><span class="p">:</span>
         <span class="n">opts</span><span class="p">[</span><span class="s2">"match_filter"</span><span class="p">]</span> <span class="o">=</span> <span class="n">_reject_title_filter</span><span class="p">(</span><span class="n">title_reject</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">embed_metadata</span><span class="p">:</span>
+        <span class="n">opts</span><span class="p">[</span><span class="s2">"postprocessors"</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="o">*</span><span class="n">opts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"postprocessors"</span><span class="p">,</span> <span class="p">[]),</span>
+            <span class="p">{</span><span class="s2">"key"</span><span class="p">:</span> <span class="s2">"FFmpegMetadata"</span><span class="p">,</span> <span class="s2">"add_metadata"</span><span class="p">:</span> <span class="kc">True</span><span class="p">},</span>
+        <span class="p">]</span>
     <span class="n">opts</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">extra_opts</span> <span class="ow">or</span> <span class="p">{})</span>
 
-    <span class="k">with</span> <span class="n">YoutubeDL</span><span class="p">(</span><span class="n">with_runtime_opts</span><span class="p">(</span><span class="n">opts</span><span class="p">))</span> <span class="k">as</span> <span class="n">ydl</span><span class="p">:</span>
+    <span class="k">with</span> <span class="n">explain_rate_limit</span><span class="p">(),</span> <span class="n">YoutubeDL</span><span class="p">(</span><span class="n">with_runtime_opts</span><span class="p">(</span><span class="n">opts</span><span class="p">))</span> <span class="k">as</span> <span class="n">ydl</span><span class="p">:</span>
         <span class="n">info</span> <span class="o">=</span> <span class="n">ydl</span><span class="o">.</span><span class="n">extract_info</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
     <span class="n">results</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">DownloadResult</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
@@ -1079,7 +1127,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=d979bd5c"></script>
+</div><script src="../../../_static/documentation_options.js?v=0d95f3a7"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

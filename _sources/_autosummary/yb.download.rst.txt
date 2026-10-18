@@ -25,6 +25,7 @@ yb.download
    
       DownloadResult
       JsRuntime
+      Pace
       TimeRange
    
    .. rubric:: Exceptions
@@ -33,6 +34,7 @@ yb.download
    
       AudioConversionError
       DownloadRequirementWarning
+      RateLimitedError
    
 .. rubric:: Modules
 
@@ -40,6 +42,7 @@ yb.download
    :toctree:
    :recursive:
 
+   pacing
    ranges
    requirements
    youtube

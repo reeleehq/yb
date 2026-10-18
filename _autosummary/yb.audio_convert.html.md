@@ -83,10 +83,10 @@ Normalize a format spec to a bare lowercase extension.
 
 Accepts it with or without the leading dot, in any case:
 
-* **Return type:**
-  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
-
 ```pycon
 >>> normalize_format("mp3"), normalize_format(".MP3"), normalize_format(" .Wav ")
 ('mp3', 'mp3', 'wav')
 ```
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)

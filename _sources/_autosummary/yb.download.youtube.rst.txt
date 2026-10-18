@@ -14,6 +14,7 @@ yb.download.youtube
       DEFAULT_COOKIES_FILE
       CookiesFile
       DEFAULT_OUTTMPL
+      ITEM_FOLDER_OUTTMPL
       DEFAULT_AUDIO_FMT
    
    .. rubric:: Functions

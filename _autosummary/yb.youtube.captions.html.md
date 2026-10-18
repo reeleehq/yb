@@ -36,17 +36,29 @@ A caption track to attach to a video.
 
 Path to an `.srt` (or `.vtt`) file.
 
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
+
 #### language
 
 BCP-47 language code, e.g. `"en"` or `"fr"`.
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 #### name
 
 Track name shown in the YouTube UI (e.g. `"English"`).
 
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
 #### is_draft
 
 When `True`, uploaded but not published to viewers.
+
+* **Type:**
+  [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
 
 ### yb.youtube.captions.delete_caption(caption_id, , service=None, \*\*cred_kwargs)
 
