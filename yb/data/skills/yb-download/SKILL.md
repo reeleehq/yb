@@ -68,11 +68,13 @@ Long playlists, politely (audio only, resumable, one folder per item):
 
 ```python
 download_youtube_playlist(
-    url, fmt="bestaudio/best", merge_to=None,  # source stream, no re-encode
-    pace="polite",                  # sleep 20-60 s, 1 s between requests, 4 MB/s
-    download_archive="archive.txt", # re-run skips finished ids
-    playlist_items="1-42",          # also title_reject="PV"
-    item_folders=True,              # 001_<id>/<id>.m4a + sidecars
+    url,
+    fmt="bestaudio/best",
+    merge_to=None,  # source stream, no re-encode
+    pace="polite",  # sleep 20-60 s, 1 s between requests, 4 MB/s
+    download_archive="archive.txt",  # re-run skips finished ids
+    playlist_items="1-42",  # also title_reject="PV"
+    item_folders=True,  # 001_<id>/<id>.m4a + sidecars
     embed_metadata=True,
 )
 ```
