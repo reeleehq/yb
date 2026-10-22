@@ -17,7 +17,7 @@ from typing import Any, Callable, Mapping, Sequence
 
 from yb.config import YbConfig, load_config
 from yb.content import PublicationContent, prepare_content
-from yb.youtube.auth import get_service
+from yb.youtube.auth import check_channel, get_service
 from yb.youtube.metadata import VideoMetadata, CATEGORY_SCIENCE_TECH
 from yb.youtube.api import upload_video, set_thumbnail
 from yb.youtube.captions import CaptionTrack, upsert_caption
@@ -184,6 +184,7 @@ def publish_content(
     config: YbConfig | None = None,
     client_secrets_file: PathLike | None = None,
     token_file: PathLike | None = None,
+    profile: str | None = None,
     progress: bool = True,
     service=None,
     resume: Mapping | None = None,
@@ -202,6 +203,9 @@ def publish_content(
     ``playlist=None`` to skip the playlist for one call, or ``playlist="Name"``
     to override the target.
 
+    ``profile`` publishes as a named account/channel (own token and config
+    section; see :mod:`yb.config`); ``None`` uses ``$YB_PROFILE`` or the default.
+
     ``cred_kwargs`` reach :func:`~yb.youtube.auth.get_credentials` (e.g.
     ``open_browser=False, port=8080`` for headless consent).
 
@@ -217,11 +221,16 @@ def publish_content(
             ``err.result`` holds the video id and what was done. Pass
             ``resume=err.result`` to finish without uploading again (yb#21).
     """
-    cfg = config or load_config(privacy_status=privacy_status)
+    cfg = config or load_config(profile=profile, privacy_status=privacy_status)
     privacy_status = cfg.privacy_status
     service = service or get_service(
-        client_secrets_file=client_secrets_file, token_file=token_file, **cred_kwargs
+        client_secrets_file=client_secrets_file,
+        token_file=token_file,
+        profile=profile,
+        **cred_kwargs,
     )
+    if cfg.channel_id:  # refuse to upload to the wrong account's channel
+        check_channel(service, cfg.channel_id)
     meta = VideoMetadata.from_content(
         content, category_id=category_id, with_chapters=with_chapters
     )
@@ -294,6 +303,7 @@ def prepare_and_publish(
     config: YbConfig | None = None,
     client_secrets_file: PathLike | None = None,
     token_file: PathLike | None = None,
+    profile: str | None = None,
     progress: bool = True,
     **cred_kwargs,
 ) -> dict:
@@ -304,6 +314,9 @@ def prepare_and_publish(
     captions + thumbnail + chapters and adds the video to the configured
     playlist. ``privacy_status`` and ``playlist`` default to your ``yb`` config
     (see :func:`publish_content`).
+
+    ``profile`` publishes as a named account/channel (own token and config
+    section; see :mod:`yb.config`); ``None`` uses ``$YB_PROFILE`` or the default.
 
     ``cred_kwargs`` reach :func:`~yb.youtube.auth.get_credentials` (e.g.
     ``open_browser=False, port=8080`` for headless consent).
@@ -327,6 +340,7 @@ def prepare_and_publish(
         config=config,
         client_secrets_file=client_secrets_file,
         token_file=token_file,
+        profile=profile,
         progress=progress,
         **cred_kwargs,
     )
@@ -343,6 +357,7 @@ def publish_video(
     config: YbConfig | None = None,
     client_secrets_file: PathLike | None = None,
     token_file: PathLike | None = None,
+    profile: str | None = None,
     progress: bool = True,
     service=None,
     resume: Mapping | None = None,
@@ -357,14 +372,22 @@ def publish_video(
     the new video's id and what was done so far (``err.result``). Pass
     ``resume=err.result`` to finish without uploading again (yb#21).
 
+    ``profile`` publishes as a named account/channel (own token and config
+    section; see :mod:`yb.config`); ``None`` uses ``$YB_PROFILE`` or the default.
+
     ``cred_kwargs`` reach :func:`~yb.youtube.auth.get_credentials` (e.g.
     ``open_browser=False, port=8080`` for headless consent).
     """
-    cfg = config or load_config(privacy_status=privacy_status)
+    cfg = config or load_config(profile=profile, privacy_status=privacy_status)
     privacy_status = cfg.privacy_status
     service = service or get_service(
-        client_secrets_file=client_secrets_file, token_file=token_file, **cred_kwargs
+        client_secrets_file=client_secrets_file,
+        token_file=token_file,
+        profile=profile,
+        **cred_kwargs,
     )
+    if cfg.channel_id:  # refuse to upload to the wrong account's channel
+        check_channel(service, cfg.channel_id)
     body = metadata.insert_body(privacy_status=privacy_status)
 
     def upload():

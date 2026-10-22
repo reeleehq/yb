@@ -17,6 +17,8 @@ import os
 from pathlib import Path
 from typing import Sequence
 
+from yb.config import resolve_profile
+
 PathLike = str | Path
 
 #: Upload + force-ssl (the latter is needed for captions.insert and thumbnails.set).
@@ -63,9 +65,44 @@ def _config_dir() -> Path:
     return root / "yb"
 
 
-def default_token_file() -> Path:
-    """Cached OAuth token location (``$XDG_CONFIG_HOME`` or ``~/.config``)."""
-    return _config_dir() / "youtube_token.json"
+def default_token_file(profile: str | None = None) -> Path:
+    """Cached OAuth token location (``$XDG_CONFIG_HOME`` or ``~/.config``).
+
+    The default profile keeps ``youtube_token.json``; a named profile gets
+    ``youtube_token.<profile>.json`` beside it.
+    """
+    profile = resolve_profile(profile)
+    name = "youtube_token.json" if profile is None else f"youtube_token.{profile}.json"
+    return _config_dir() / name
+
+
+class WrongChannel(RuntimeError):
+    """The token uploads to a different channel than the profile expects."""
+
+
+def current_channel(service) -> dict:
+    """``{"id", "title", "handle"}`` of the channel this service uploads to."""
+    items = service.channels().list(part="snippet", mine=True).execute().get("items")
+    if not items:
+        raise WrongChannel("This token's account has no YouTube channel.")
+    snippet = items[0].get("snippet", {})
+    return {
+        "id": items[0]["id"],
+        "title": snippet.get("title"),
+        "handle": snippet.get("customUrl"),
+    }
+
+
+def check_channel(service, expected_channel_id: str | None = None) -> dict:
+    """Return :func:`current_channel`; raise :class:`WrongChannel` on a mismatch."""
+    channel = current_channel(service)
+    if expected_channel_id and channel["id"] != expected_channel_id:
+        raise WrongChannel(
+            f"Token uploads to {channel['title']!r} ({channel['id']}), but the "
+            f"profile expects channel {expected_channel_id}. Delete that "
+            "profile's token and re-consent signed in as the right Google account."
+        )
+    return channel
 
 
 def default_client_secrets_file() -> Path:
@@ -94,7 +131,7 @@ def _resolve_client_secrets(client_secrets_file: PathLike | None) -> Path:
     )
 
 
-def _consent_required_message(refresh_error, token_path: Path) -> str:
+def _consent_required_message(refresh_error, token_path: Path, profile=None) -> str:
     """Why consent is needed, and the two things that fix it.
 
     Both halves earn their place. The *cause* is invisible otherwise — the
@@ -109,6 +146,7 @@ def _consent_required_message(refresh_error, token_path: Path) -> str:
         if refresh_error is not None
         else f"no usable cached token at {token_path}"
     )
+    flag = f" --profile {profile}" if profile else ""
     return (
         f"YouTube consent is required ({cause}), but this process cannot obtain "
         "it: there is no terminal, so the consent URL has nowhere to go.\n"
@@ -119,7 +157,7 @@ def _consent_required_message(refresh_error, token_path: Path) -> str:
         "or, with no browser or terminal here (e.g. a phone-driven session), "
         "paste-back consent -- print a URL, open it anywhere, paste the "
         "redirect back:\n"
-        "    yb auth            # then: yb auth --paste '<redirected URL>'\n"
+        f"    yb auth{flag}            # then: yb auth{flag} --paste '<redirected URL>'\n"
         "    get_credentials(consent='paste')\n"
         "\n"
         'To stop this recurring: an OAuth client in "Testing" rotates refresh '
@@ -133,7 +171,9 @@ def _consent_required_message(refresh_error, token_path: Path) -> str:
     )
 
 
-def _paste_consent(authorization_response, *, client_secrets_file, scopes, port):
+def _paste_consent(
+    authorization_response, *, client_secrets_file, scopes, port, profile=None
+):
     """Paste-back consent: finish if given the redirect, else start and raise."""
     from yb.youtube.paste_consent import (
         DEFAULT_PASTE_PORT,
@@ -143,12 +183,17 @@ def _paste_consent(authorization_response, *, client_secrets_file, scopes, port)
         start_paste_consent,
     )
 
+    # A named profile keeps its own pending request, so two consents in flight
+    # (one per account) cannot overwrite each other.
+    extra = {}
+    if profile is not None:
+        extra["pending_file"] = _config_dir() / f"youtube_consent_pending.{profile}.json"
     if authorization_response:
         return finish_paste_consent(
-            authorization_response, client_secrets_file=client_secrets_file
+            authorization_response, client_secrets_file=client_secrets_file, **extra
         )
     url = start_paste_consent(
-        client_secrets_file=client_secrets_file, scopes=scopes, port=port
+        client_secrets_file=client_secrets_file, scopes=scopes, port=port, **extra
     )
     raise ConsentPending(url, redirect_uri=_redirect_uri(port or DEFAULT_PASTE_PORT))
 
@@ -157,6 +202,7 @@ def get_credentials(
     *,
     client_secrets_file: PathLike | None = None,
     token_file: PathLike | None = None,
+    profile: str | None = None,
     scopes: Sequence[str] = DEFAULT_SCOPES,
     open_browser: bool = True,
     port: int = 0,
@@ -166,6 +212,10 @@ def get_credentials(
     authorization_response: str | None = None,
 ):
     """Return OAuth user credentials, running the consent flow if needed.
+
+    ``profile`` selects a named account (``youtube_token.<profile>.json``; see
+    :mod:`yb.config`); ``None`` falls back to ``$YB_PROFILE``, then to the
+    default account. An explicit ``token_file`` wins over the profile.
 
     First use runs the installed-app consent flow and caches the token to
     ``token_file`` so later calls are non-interactive. Expired tokens are
@@ -229,7 +279,8 @@ def get_credentials(
         class _WSGITimeoutError(Exception):
             """Never raised; keeps the except-clause valid on older releases."""
 
-    token_path = Path(token_file) if token_file else default_token_file()
+    profile = resolve_profile(profile)
+    token_path = Path(token_file) if token_file else default_token_file(profile)
     scopes = list(scopes)
     creds = None
     if token_path.exists():
@@ -253,13 +304,14 @@ def get_credentials(
             creds = None
     if not refreshed:
         if not interactive:
-            raise ConsentRequired(_consent_required_message(refresh_error, token_path))
+            raise ConsentRequired(_consent_required_message(refresh_error, token_path, profile))
         if consent == "paste":
             creds = _paste_consent(
                 authorization_response,
                 client_secrets_file=client_secrets_file,
                 scopes=scopes,
                 port=port,
+                profile=profile,
             )
         else:
             secrets = _resolve_client_secrets(client_secrets_file)
@@ -276,7 +328,7 @@ def get_credentials(
                 # — so report them, rather than a bare timeout from a library
                 # the caller never named.
                 raise ConsentRequired(
-                    _consent_required_message(refresh_error, token_path)
+                    _consent_required_message(refresh_error, token_path, profile)
                 ) from timed_out
 
     token_path.parent.mkdir(parents=True, exist_ok=True)

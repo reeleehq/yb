@@ -29,7 +29,7 @@ Examples:
     >>> yb.prepare_and_publish(r.path, privacy_status="unlisted")        # needs yb[youtube]
 """
 
-from yb.config import YbConfig, load_config, default_config_file
+from yb.config import YbConfig, load_config, default_config_file, resolve_profile
 from yb.content import (
     PublicationContent,
     ContentMetadata,
@@ -66,6 +66,7 @@ __all__ = [
     "format_chapter_lines",
     "YbConfig",
     "load_config",
+    "resolve_profile",
     "default_config_file",
     *_LAZY.keys(),
 ]
