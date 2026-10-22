@@ -187,7 +187,9 @@ def _paste_consent(
     # (one per account) cannot overwrite each other.
     extra = {}
     if profile is not None:
-        extra["pending_file"] = _config_dir() / f"youtube_consent_pending.{profile}.json"
+        extra["pending_file"] = (
+            _config_dir() / f"youtube_consent_pending.{profile}.json"
+        )
     if authorization_response:
         return finish_paste_consent(
             authorization_response, client_secrets_file=client_secrets_file, **extra
@@ -304,7 +306,9 @@ def get_credentials(
             creds = None
     if not refreshed:
         if not interactive:
-            raise ConsentRequired(_consent_required_message(refresh_error, token_path, profile))
+            raise ConsentRequired(
+                _consent_required_message(refresh_error, token_path, profile)
+            )
         if consent == "paste":
             creds = _paste_consent(
                 authorization_response,

@@ -127,12 +127,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     auth.add_argument("--client-secrets", help="OAuth client JSON (default: as usual)")
     auth.add_argument("--token-file", help="token cache location (default: as usual)")
-    auth.add_argument("--profile", help="named account (default: $YB_PROFILE, else the default)")
+    auth.add_argument(
+        "--profile", help="named account (default: $YB_PROFILE, else the default)"
+    )
     auth.set_defaults(run=_auth)
     whoami = commands.add_parser(
         "whoami", help="which channel does a profile's token upload to?"
     )
-    whoami.add_argument("--profile", help="named account (default: $YB_PROFILE, else the default)")
+    whoami.add_argument(
+        "--profile", help="named account (default: $YB_PROFILE, else the default)"
+    )
     whoami.set_defaults(run=_whoami)
     check = commands.add_parser(
         "check", help="are YouTube downloads ready? (JS runtime, solver scripts)"
