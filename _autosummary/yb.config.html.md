@@ -24,17 +24,40 @@ Example `~/.config/yb/config.json`:
 }
 ```
 
+**Profiles** publish to another YouTube channel/account. Each named profile has
+its own OAuth token (`youtube_token.<profile>.json`) and its own section under
+`"profiles"`. A profile starts from the built-in defaults, *not* from the
+top-level keys (so a second channel never silently inherits your first
+channel’s playlist). Select one with `profile=`, `yb ... --profile NAME` or
+`$YB_PROFILE`; with none selected the top-level keys and `youtube_token.json`
+apply, exactly as before:
+
+```default
+{
+    "privacy_status": "unlisted",
+    "playlist": "TW Uploads",
+    "profiles": {
+        "reelee": {"privacy_status": "unlisted", "channel_id": "UC..."}
+    }
+}
+```
+
+`channel_id` (optional) is checked against the token’s channel before any
+upload, so a token minted for the wrong Google account fails loudly.
+
 ### Module Attributes
 
 | [`DEFAULT_PRIVACY_STATUS`](#yb.config.DEFAULT_PRIVACY_STATUS)          | Default privacy for a freshly uploaded video when neither the call nor the config file specifies one.   |
 |----------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------|
 | [`DEFAULT_PLAYLIST_PRIVACY_STATUS`](#yb.config.DEFAULT_PLAYLIST_PRIVACY_STATUS) | Default privacy for a playlist that `yb` auto-creates.                                                  |
+| [`PROFILE_ENV`](#yb.config.PROFILE_ENV)                     | Environment variable naming the profile to use when none is passed.                                     |
 
 ### Functions
 
-| [`default_config_file`](#yb.config.default_config_file)()      | Config file location (`$XDG_CONFIG_HOME` or `~/.config`).              |
-|-----------------------------------------------------------------------------|------------------------------------------------------------------------|
-| [`load_config`](#yb.config.load_config)([config_file]) | Load publishing defaults from `config_file` (or the default location). |
+| [`default_config_file`](#yb.config.default_config_file)()               | Config file location (`$XDG_CONFIG_HOME` or `~/.config`).              |
+|--------------------------------------------------------------------------------------|------------------------------------------------------------------------|
+| [`load_config`](#yb.config.load_config)([config_file, profile]) | Load publishing defaults from `config_file` (or the default location). |
+| [`resolve_profile`](#yb.config.resolve_profile)([profile])          | The active profile name: `profile`, else `$YB_PROFILE`, else `None`.   |
 
 ### Classes
 
@@ -52,7 +75,11 @@ Default privacy for a freshly uploaded video when neither the call nor the
 config file specifies one. `"unlisted"` keeps videos off your public feed
 but shareable by link until you deliberately make one `"public"`.
 
-### *class* yb.config.YbConfig(privacy_status='unlisted', playlist=None, create_playlist_if_missing=True, playlist_privacy_status='private')
+### yb.config.PROFILE_ENV *= 'YB_PROFILE'*
+
+Environment variable naming the profile to use when none is passed.
+
+### *class* yb.config.YbConfig(privacy_status='unlisted', playlist=None, create_playlist_if_missing=True, playlist_privacy_status='private', channel_id=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -88,6 +115,13 @@ Privacy for an auto-created playlist.
 * **Type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
+#### channel_id
+
+Channel the token must belong to (`None` = don’t check).
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
 #### *classmethod* from_mapping(mapping)
 
 Build a config from a mapping, ignoring unknown keys.
@@ -102,7 +136,7 @@ Config file location (`$XDG_CONFIG_HOME` or `~/.config`).
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
-### yb.config.load_config(config_file=None, \*\*overrides)
+### yb.config.load_config(config_file=None, , profile=None, \*\*overrides)
 
 Load publishing defaults from `config_file` (or the default location).
 
@@ -110,5 +144,18 @@ A missing file yields the built-in defaults. `overrides` (typically the
 explicit keyword arguments a caller passed) take precedence when not
 `None`, so call-site arguments always win over the file.
 
+`profile` (see [`resolve_profile()`](#yb.config.resolve_profile)) picks the `"profiles"` section
+to read instead of the top-level keys; an unknown profile is an error.
+
 * **Return type:**
   [`YbConfig`](#yb.config.YbConfig)
+
+### yb.config.resolve_profile(profile=None)
+
+The active profile name: `profile`, else `$YB_PROFILE`, else `None`.
+
+`None` (also for `""` and `"default"`) is the default profile: the
+top-level config keys and `youtube_token.json`.
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)

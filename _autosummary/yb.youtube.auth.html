@@ -9,7 +9,7 @@
 <link rel="alternate" type="text/markdown" href="yb.youtube.auth.html.md">
 <link rel="describedby" href="llms.txt"><link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="yb.youtube.captions" href="yb.youtube.captions.html"><link rel="prev" title="yb.youtube.api" href="yb.youtube.api.html">
 
-    <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
+    <!-- Generated with Sphinx 9.1.1 and Furo 2025.12.19 -->
         <title>yb.youtube.auth - yb</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d75fae25" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
@@ -309,10 +309,16 @@ walks through it).</p>
 <div class="table-wrapper autosummary longtable docutils container">
 <table class="autosummary longtable docutils align-default">
 <tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.youtube.auth.check_channel" title="yb.youtube.auth.check_channel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_channel</span></code></a>(service[, expected_channel_id])</p></td>
+<td><p>Return <a class="reference internal" href="#yb.youtube.auth.current_channel" title="yb.youtube.auth.current_channel"><code class="xref py py-func docutils literal notranslate"><span class="pre">current_channel()</span></code></a>; raise <a class="reference internal" href="#yb.youtube.auth.WrongChannel" title="yb.youtube.auth.WrongChannel"><code class="xref py py-class docutils literal notranslate"><span class="pre">WrongChannel</span></code></a> on a mismatch.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#yb.youtube.auth.current_channel" title="yb.youtube.auth.current_channel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">current_channel</span></code></a>(service)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">{&quot;id&quot;,</span> <span class="pre">&quot;title&quot;,</span> <span class="pre">&quot;handle&quot;}</span></code> of the channel this service uploads to.</p></td>
+</tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#yb.youtube.auth.default_client_secrets_file" title="yb.youtube.auth.default_client_secrets_file"><code class="xref py py-obj docutils literal notranslate"><span class="pre">default_client_secrets_file</span></code></a>()</p></td>
 <td><p>Default OAuth client-secrets location: <code class="docutils literal notranslate"><span class="pre">&lt;config</span> <span class="pre">dir&gt;/client_secret.json</span></code>.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#yb.youtube.auth.default_token_file" title="yb.youtube.auth.default_token_file"><code class="xref py py-obj docutils literal notranslate"><span class="pre">default_token_file</span></code></a>()</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#yb.youtube.auth.default_token_file" title="yb.youtube.auth.default_token_file"><code class="xref py py-obj docutils literal notranslate"><span class="pre">default_token_file</span></code></a>([profile])</p></td>
 <td><p>Cached OAuth token location (<code class="docutils literal notranslate"><span class="pre">$XDG_CONFIG_HOME</span></code> or <code class="docutils literal notranslate"><span class="pre">~/.config</span></code>).</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#yb.youtube.auth.get_credentials" title="yb.youtube.auth.get_credentials"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_credentials</span></code></a>(*[, client_secrets_file, ...])</p></td>
@@ -330,6 +336,9 @@ walks through it).</p>
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="#yb.youtube.auth.ConsentRequired" title="yb.youtube.auth.ConsentRequired"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ConsentRequired</span></code></a></p></td>
 <td><p>Consent is needed and this process cannot obtain it.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#yb.youtube.auth.WrongChannel" title="yb.youtube.auth.WrongChannel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">WrongChannel</span></code></a></p></td>
+<td><p>The token uploads to a different channel than the profile expects.</p></td>
 </tr>
 </tbody>
 </table>
@@ -378,6 +387,35 @@ finds out today. Pass <code class="docutils literal notranslate"><span class="pr
 <dd><p>Upload + force-ssl (the latter is needed for captions.insert and thumbnails.set).</p>
 </dd></dl>
 
+<dl class="py exception">
+<dt class="sig sig-object py" id="yb.youtube.auth.WrongChannel">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">yb.youtube.auth.</span></span><span class="sig-name descname"><span class="pre">WrongChannel</span></span><a class="reference internal" href="../_modules/yb/youtube/auth.html#WrongChannel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.youtube.auth.WrongChannel" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#RuntimeError" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">RuntimeError</span></code></a></p>
+<p>The token uploads to a different channel than the profile expects.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="yb.youtube.auth.check_channel">
+<span class="sig-prename descclassname"><span class="pre">yb.youtube.auth.</span></span><span class="sig-name descname"><span class="pre">check_channel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">service</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expected_channel_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/youtube/auth.html#check_channel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.youtube.auth.check_channel" title="Link to this definition">¶</a></dt>
+<dd><p>Return <a class="reference internal" href="#yb.youtube.auth.current_channel" title="yb.youtube.auth.current_channel"><code class="xref py py-func docutils literal notranslate"><span class="pre">current_channel()</span></code></a>; raise <a class="reference internal" href="#yb.youtube.auth.WrongChannel" title="yb.youtube.auth.WrongChannel"><code class="xref py py-class docutils literal notranslate"><span class="pre">WrongChannel</span></code></a> on a mismatch.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="yb.youtube.auth.current_channel">
+<span class="sig-prename descclassname"><span class="pre">yb.youtube.auth.</span></span><span class="sig-name descname"><span class="pre">current_channel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">service</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/youtube/auth.html#current_channel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.youtube.auth.current_channel" title="Link to this definition">¶</a></dt>
+<dd><p><code class="docutils literal notranslate"><span class="pre">{&quot;id&quot;,</span> <span class="pre">&quot;title&quot;,</span> <span class="pre">&quot;handle&quot;}</span></code> of the channel this service uploads to.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py function">
 <dt class="sig sig-object py" id="yb.youtube.auth.default_client_secrets_file">
 <span class="sig-prename descclassname"><span class="pre">yb.youtube.auth.</span></span><span class="sig-name descname"><span class="pre">default_client_secrets_file</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/youtube/auth.html#default_client_secrets_file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.youtube.auth.default_client_secrets_file" title="Link to this definition">¶</a></dt>
@@ -393,8 +431,10 @@ of <code class="docutils literal notranslate"><span class="pre">yb</span></code>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="yb.youtube.auth.default_token_file">
-<span class="sig-prename descclassname"><span class="pre">yb.youtube.auth.</span></span><span class="sig-name descname"><span class="pre">default_token_file</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/youtube/auth.html#default_token_file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.youtube.auth.default_token_file" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">yb.youtube.auth.</span></span><span class="sig-name descname"><span class="pre">default_token_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">profile</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/youtube/auth.html#default_token_file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.youtube.auth.default_token_file" title="Link to this definition">¶</a></dt>
 <dd><p>Cached OAuth token location (<code class="docutils literal notranslate"><span class="pre">$XDG_CONFIG_HOME</span></code> or <code class="docutils literal notranslate"><span class="pre">~/.config</span></code>).</p>
+<p>The default profile keeps <code class="docutils literal notranslate"><span class="pre">youtube_token.json</span></code>; a named profile gets
+<code class="docutils literal notranslate"><span class="pre">youtube_token.&lt;profile&gt;.json</span></code> beside it.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a></span></p>
@@ -404,8 +444,11 @@ of <code class="docutils literal notranslate"><span class="pre">yb</span></code>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="yb.youtube.auth.get_credentials">
-<span class="sig-prename descclassname"><span class="pre">yb.youtube.auth.</span></span><span class="sig-name descname"><span class="pre">get_credentials</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">client_secrets_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">token_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scopes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">['https://www.googleapis.com/auth/youtube.upload',</span> <span class="pre">'https://www.googleapis.com/auth/youtube.force-ssl']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">open_browser</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">port</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout_seconds</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">300.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interactive</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consent</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'local'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">authorization_response</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/youtube/auth.html#get_credentials"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.youtube.auth.get_credentials" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">yb.youtube.auth.</span></span><span class="sig-name descname"><span class="pre">get_credentials</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">client_secrets_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">token_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">profile</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scopes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">['https://www.googleapis.com/auth/youtube.upload',</span> <span class="pre">'https://www.googleapis.com/auth/youtube.force-ssl']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">open_browser</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">port</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout_seconds</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">300.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interactive</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consent</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'local'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">authorization_response</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/youtube/auth.html#get_credentials"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.youtube.auth.get_credentials" title="Link to this definition">¶</a></dt>
 <dd><p>Return OAuth user credentials, running the consent flow if needed.</p>
+<p><code class="docutils literal notranslate"><span class="pre">profile</span></code> selects a named account (<code class="docutils literal notranslate"><span class="pre">youtube_token.&lt;profile&gt;.json</span></code>; see
+<a class="reference internal" href="yb.config.html#module-yb.config" title="yb.config"><code class="xref py py-mod docutils literal notranslate"><span class="pre">yb.config</span></code></a>); <code class="docutils literal notranslate"><span class="pre">None</span></code> falls back to <code class="docutils literal notranslate"><span class="pre">$YB_PROFILE</span></code>, then to the
+default account. An explicit <code class="docutils literal notranslate"><span class="pre">token_file</span></code> wins over the profile.</p>
 <p>First use runs the installed-app consent flow and caches the token to
 <code class="docutils literal notranslate"><span class="pre">token_file</span></code> so later calls are non-interactive. Expired tokens are
 refreshed automatically.</p>
@@ -516,6 +559,9 @@ once to mint the token, after which nothing prompts again.</p>
 <li><a class="reference internal" href="#yb.youtube.auth.ConsentRequired"><code class="docutils literal notranslate"><span class="pre">ConsentRequired</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.auth.DEFAULT_CONSENT_TIMEOUT_S"><code class="docutils literal notranslate"><span class="pre">DEFAULT_CONSENT_TIMEOUT_S</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.auth.DEFAULT_SCOPES"><code class="docutils literal notranslate"><span class="pre">DEFAULT_SCOPES</span></code></a></li>
+<li><a class="reference internal" href="#yb.youtube.auth.WrongChannel"><code class="docutils literal notranslate"><span class="pre">WrongChannel</span></code></a></li>
+<li><a class="reference internal" href="#yb.youtube.auth.check_channel"><code class="docutils literal notranslate"><span class="pre">check_channel()</span></code></a></li>
+<li><a class="reference internal" href="#yb.youtube.auth.current_channel"><code class="docutils literal notranslate"><span class="pre">current_channel()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.auth.default_client_secrets_file"><code class="docutils literal notranslate"><span class="pre">default_client_secrets_file()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.auth.default_token_file"><code class="docutils literal notranslate"><span class="pre">default_token_file()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.auth.get_credentials"><code class="docutils literal notranslate"><span class="pre">get_credentials()</span></code></a></li>
@@ -531,7 +577,7 @@ once to mint the token, after which nothing prompts again.</p>
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=0d95f3a7"></script>
+</div><script src="../_static/documentation_options.js?v=a4d587c1"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>

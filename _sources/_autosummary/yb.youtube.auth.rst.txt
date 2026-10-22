@@ -16,6 +16,8 @@ yb.youtube.auth
 
    .. autosummary::
    
+      check_channel
+      current_channel
       default_client_secrets_file
       default_token_file
       get_credentials
@@ -26,4 +28,5 @@ yb.youtube.auth
    .. autosummary::
    
       ConsentRequired
+      WrongChannel
    

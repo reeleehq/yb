@@ -6,7 +6,7 @@
 <link rel="alternate" type="text/markdown" href="config.html.md">
 <link rel="describedby" href="../../llms.txt" type="text/markdown"><link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html">
 
-    <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
+    <!-- Generated with Sphinx 9.1.1 and Furo 2025.12.19 -->
         <title>yb.config - yb</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=d75fae25" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=7bdb33bb" />
@@ -291,6 +291,25 @@
 <span class="sd">        "create_playlist_if_missing": true,</span>
 <span class="sd">        "playlist_privacy_status": "private"</span>
 <span class="sd">    }</span>
+
+<span class="sd">**Profiles** publish to another YouTube channel/account. Each named profile has</span>
+<span class="sd">its own OAuth token (``youtube_token.&lt;profile&gt;.json``) and its own section under</span>
+<span class="sd">``"profiles"``. A profile starts from the built-in defaults, *not* from the</span>
+<span class="sd">top-level keys (so a second channel never silently inherits your first</span>
+<span class="sd">channel's playlist). Select one with ``profile=``, ``yb ... --profile NAME`` or</span>
+<span class="sd">``$YB_PROFILE``; with none selected the top-level keys and ``youtube_token.json``</span>
+<span class="sd">apply, exactly as before::</span>
+
+<span class="sd">    {</span>
+<span class="sd">        "privacy_status": "unlisted",</span>
+<span class="sd">        "playlist": "TW Uploads",</span>
+<span class="sd">        "profiles": {</span>
+<span class="sd">            "reelee": {"privacy_status": "unlisted", "channel_id": "UC..."}</span>
+<span class="sd">        }</span>
+<span class="sd">    }</span>
+
+<span class="sd">``channel_id`` (optional) is checked against the token's channel before any</span>
+<span class="sd">upload, so a token minted for the wrong Google account fails loudly.</span>
 <span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
@@ -310,6 +329,23 @@
 <span class="c1">#: Default privacy for a playlist that ``yb`` auto-creates. ``"private"`` means</span>
 <span class="c1">#: only you see it — ideal for a personal "find my uploads" playlist.</span>
 <span class="n">DEFAULT_PLAYLIST_PRIVACY_STATUS</span> <span class="o">=</span> <span class="s2">"private"</span>
+
+
+<span class="c1">#: Environment variable naming the profile to use when none is passed.</span>
+<span class="n">PROFILE_ENV</span> <span class="o">=</span> <span class="s2">"YB_PROFILE"</span>
+
+
+<div class="viewcode-block" id="resolve_profile">
+<a class="viewcode-back" href="../../_autosummary/yb.config.html#yb.resolve_profile">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">resolve_profile</span><span class="p">(</span><span class="n">profile</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The active profile name: ``profile``, else ``$YB_PROFILE``, else ``None``.</span>
+
+<span class="sd">    ``None`` (also for ``""`` and ``"default"``) is the default profile: the</span>
+<span class="sd">    top-level config keys and ``youtube_token.json``.</span>
+<span class="sd">    """</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">profile</span> <span class="k">if</span> <span class="n">profile</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">PROFILE_ENV</span><span class="p">)</span>
+    <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s2">""</span><span class="p">,</span> <span class="s2">"default"</span><span class="p">)</span> <span class="k">else</span> <span class="n">name</span></div>
+
 
 
 <div class="viewcode-block" id="default_config_file">
@@ -335,12 +371,14 @@
 <span class="sd">        create_playlist_if_missing: Create ``playlist`` if no playlist of that</span>
 <span class="sd">            title exists yet, rather than erroring.</span>
 <span class="sd">        playlist_privacy_status: Privacy for an auto-created playlist.</span>
+<span class="sd">        channel_id: Channel the token must belong to (``None`` = don't check).</span>
 <span class="sd">    """</span>
 
     <span class="n">privacy_status</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DEFAULT_PRIVACY_STATUS</span>
     <span class="n">playlist</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">create_playlist_if_missing</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
     <span class="n">playlist_privacy_status</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DEFAULT_PLAYLIST_PRIVACY_STATUS</span>
+    <span class="n">channel_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 
 <div class="viewcode-block" id="YbConfig.from_mapping">
 <a class="viewcode-back" href="../../_autosummary/yb.config.html#yb.YbConfig.from_mapping">[docs]</a>
@@ -356,17 +394,34 @@
 
 <div class="viewcode-block" id="load_config">
 <a class="viewcode-back" href="../../_autosummary/yb.config.html#yb.load_config">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">load_config</span><span class="p">(</span><span class="n">config_file</span><span class="p">:</span> <span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">overrides</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">YbConfig</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_config</span><span class="p">(</span>
+    <span class="n">config_file</span><span class="p">:</span> <span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">profile</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="o">**</span><span class="n">overrides</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">YbConfig</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Load publishing defaults from ``config_file`` (or the default location).</span>
 
 <span class="sd">    A missing file yields the built-in defaults. ``overrides`` (typically the</span>
 <span class="sd">    explicit keyword arguments a caller passed) take precedence when not</span>
 <span class="sd">    ``None``, so call-site arguments always win over the file.</span>
+
+<span class="sd">    ``profile`` (see :func:`resolve_profile`) picks the ``"profiles"`` section</span>
+<span class="sd">    to read instead of the top-level keys; an unknown profile is an error.</span>
 <span class="sd">    """</span>
+    <span class="n">profile</span> <span class="o">=</span> <span class="n">resolve_profile</span><span class="p">(</span><span class="n">profile</span><span class="p">)</span>
     <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">config_file</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span> <span class="k">if</span> <span class="n">config_file</span> <span class="k">else</span> <span class="n">default_config_file</span><span class="p">()</span>
     <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
         <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">read_text</span><span class="p">())</span>
+    <span class="k">if</span> <span class="n">profile</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">profiles</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"profiles"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">profile</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">profiles</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"No profile </span><span class="si">{</span><span class="n">profile</span><span class="si">!r}</span><span class="s2"> in </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> (known: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">profiles</span><span class="p">)</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">'none'</span><span class="si">}</span><span class="s2">). "</span>
+                <span class="s1">'Add it under "profiles" (see the yb-setup skill).'</span>
+            <span class="p">)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">profiles</span><span class="p">[</span><span class="n">profile</span><span class="p">])</span>
     <span class="n">data</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">overrides</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">v</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">})</span>
     <span class="k">return</span> <span class="n">YbConfig</span><span class="o">.</span><span class="n">from_mapping</span><span class="p">(</span><span class="n">data</span><span class="p">)</span></div>
 
@@ -398,7 +453,7 @@
       
     </aside>
   </div>
-</div><script src="../../_static/documentation_options.js?v=0d95f3a7"></script>
+</div><script src="../../_static/documentation_options.js?v=a4d587c1"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/scripts/furo.js?v=46bd48cc"></script>

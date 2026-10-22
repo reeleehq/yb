@@ -342,6 +342,8 @@ tokens minted while it is in *Testing* expire after 7 days. With no browser or
 terminal on the machine (a phone-driven session), consent by paste-back:
 `yb auth`, open the URL anywhere, then `yb auth --paste '<redirected URL>'`.
 
+**Several channels (profiles).** Default stays your first account. For another channel add a section under `"profiles"` in `~/.config/yb/config.json`, consent once with `yb auth --profile NAME`, check with `yb whoami --profile NAME` (prints the channel the token uploads to), then publish with `profile="NAME"` or `YB_PROFILE=NAME`. Each profile has its own token (`youtube_token.NAME.json`) and settings; an optional `channel_id` makes `publish_*` refuse a token for the wrong channel.
+
 > Note: until your Google Cloud project passes YouTube’s one-time API
 > compliance audit, uploads may be forced to **private** even when you request
 > `unlisted`/`public`.

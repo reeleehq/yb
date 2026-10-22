@@ -6,7 +6,7 @@
 <link rel="alternate" type="text/markdown" href="auth.html.md">
 <link rel="describedby" href="../../../llms.txt" type="text/markdown"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
-    <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
+    <!-- Generated with Sphinx 9.1.1 and Furo 2025.12.19 -->
         <title>yb.youtube.auth - yb</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=d75fae25" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
@@ -289,6 +289,8 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Sequence</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">yb.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">resolve_profile</span>
+
 <span class="n">PathLike</span> <span class="o">=</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span>
 
 <span class="c1">#: Upload + force-ssl (the latter is needed for captions.insert and thumbnails.set).</span>
@@ -340,9 +342,53 @@
 
 <div class="viewcode-block" id="default_token_file">
 <a class="viewcode-back" href="../../../_autosummary/yb.youtube.auth.html#yb.youtube.default_token_file">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">default_token_file</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Cached OAuth token location (``$XDG_CONFIG_HOME`` or ``~/.config``)."""</span>
-    <span class="k">return</span> <span class="n">_config_dir</span><span class="p">()</span> <span class="o">/</span> <span class="s2">"youtube_token.json"</span></div>
+<span class="k">def</span><span class="w"> </span><span class="nf">default_token_file</span><span class="p">(</span><span class="n">profile</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Cached OAuth token location (``$XDG_CONFIG_HOME`` or ``~/.config``).</span>
+
+<span class="sd">    The default profile keeps ``youtube_token.json``; a named profile gets</span>
+<span class="sd">    ``youtube_token.&lt;profile&gt;.json`` beside it.</span>
+<span class="sd">    """</span>
+    <span class="n">profile</span> <span class="o">=</span> <span class="n">resolve_profile</span><span class="p">(</span><span class="n">profile</span><span class="p">)</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">"youtube_token.json"</span> <span class="k">if</span> <span class="n">profile</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">"youtube_token.</span><span class="si">{</span><span class="n">profile</span><span class="si">}</span><span class="s2">.json"</span>
+    <span class="k">return</span> <span class="n">_config_dir</span><span class="p">()</span> <span class="o">/</span> <span class="n">name</span></div>
+
+
+
+<div class="viewcode-block" id="WrongChannel">
+<a class="viewcode-back" href="../../../_autosummary/yb.youtube.auth.html#yb.youtube.WrongChannel">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">WrongChannel</span><span class="p">(</span><span class="ne">RuntimeError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""The token uploads to a different channel than the profile expects."""</span></div>
+
+
+
+<div class="viewcode-block" id="current_channel">
+<a class="viewcode-back" href="../../../_autosummary/yb.youtube.auth.html#yb.youtube.current_channel">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">current_channel</span><span class="p">(</span><span class="n">service</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""``{"id", "title", "handle"}`` of the channel this service uploads to."""</span>
+    <span class="n">items</span> <span class="o">=</span> <span class="n">service</span><span class="o">.</span><span class="n">channels</span><span class="p">()</span><span class="o">.</span><span class="n">list</span><span class="p">(</span><span class="n">part</span><span class="o">=</span><span class="s2">"snippet"</span><span class="p">,</span> <span class="n">mine</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">execute</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"items"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">items</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">WrongChannel</span><span class="p">(</span><span class="s2">"This token's account has no YouTube channel."</span><span class="p">)</span>
+    <span class="n">snippet</span> <span class="o">=</span> <span class="n">items</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"snippet"</span><span class="p">,</span> <span class="p">{})</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">"id"</span><span class="p">:</span> <span class="n">items</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">"id"</span><span class="p">],</span>
+        <span class="s2">"title"</span><span class="p">:</span> <span class="n">snippet</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"title"</span><span class="p">),</span>
+        <span class="s2">"handle"</span><span class="p">:</span> <span class="n">snippet</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"customUrl"</span><span class="p">),</span>
+    <span class="p">}</span></div>
+
+
+
+<div class="viewcode-block" id="check_channel">
+<a class="viewcode-back" href="../../../_autosummary/yb.youtube.auth.html#yb.youtube.check_channel">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">check_channel</span><span class="p">(</span><span class="n">service</span><span class="p">,</span> <span class="n">expected_channel_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return :func:`current_channel`; raise :class:`WrongChannel` on a mismatch."""</span>
+    <span class="n">channel</span> <span class="o">=</span> <span class="n">current_channel</span><span class="p">(</span><span class="n">service</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">expected_channel_id</span> <span class="ow">and</span> <span class="n">channel</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]</span> <span class="o">!=</span> <span class="n">expected_channel_id</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">WrongChannel</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"Token uploads to </span><span class="si">{</span><span class="n">channel</span><span class="p">[</span><span class="s1">'title'</span><span class="p">]</span><span class="si">!r}</span><span class="s2"> (</span><span class="si">{</span><span class="n">channel</span><span class="p">[</span><span class="s1">'id'</span><span class="p">]</span><span class="si">}</span><span class="s2">), but the "</span>
+            <span class="sa">f</span><span class="s2">"profile expects channel </span><span class="si">{</span><span class="n">expected_channel_id</span><span class="si">}</span><span class="s2">. Delete that "</span>
+            <span class="s2">"profile's token and re-consent signed in as the right Google account."</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">channel</span></div>
 
 
 
@@ -375,7 +421,7 @@
     <span class="p">)</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_consent_required_message</span><span class="p">(</span><span class="n">refresh_error</span><span class="p">,</span> <span class="n">token_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_consent_required_message</span><span class="p">(</span><span class="n">refresh_error</span><span class="p">,</span> <span class="n">token_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">profile</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Why consent is needed, and the two things that fix it.</span>
 
 <span class="sd">    Both halves earn their place. The *cause* is invisible otherwise — the</span>
@@ -390,6 +436,7 @@
         <span class="k">if</span> <span class="n">refresh_error</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
         <span class="k">else</span> <span class="sa">f</span><span class="s2">"no usable cached token at </span><span class="si">{</span><span class="n">token_path</span><span class="si">}</span><span class="s2">"</span>
     <span class="p">)</span>
+    <span class="n">flag</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">" --profile </span><span class="si">{</span><span class="n">profile</span><span class="si">}</span><span class="s2">"</span> <span class="k">if</span> <span class="n">profile</span> <span class="k">else</span> <span class="s2">""</span>
     <span class="k">return</span> <span class="p">(</span>
         <span class="sa">f</span><span class="s2">"YouTube consent is required (</span><span class="si">{</span><span class="n">cause</span><span class="si">}</span><span class="s2">), but this process cannot obtain "</span>
         <span class="s2">"it: there is no terminal, so the consent URL has nowhere to go.</span><span class="se">\n</span><span class="s2">"</span>
@@ -400,7 +447,7 @@
         <span class="s2">"or, with no browser or terminal here (e.g. a phone-driven session), "</span>
         <span class="s2">"paste-back consent -- print a URL, open it anywhere, paste the "</span>
         <span class="s2">"redirect back:</span><span class="se">\n</span><span class="s2">"</span>
-        <span class="s2">"    yb auth            # then: yb auth --paste '&lt;redirected URL&gt;'</span><span class="se">\n</span><span class="s2">"</span>
+        <span class="sa">f</span><span class="s2">"    yb auth</span><span class="si">{</span><span class="n">flag</span><span class="si">}</span><span class="s2">            # then: yb auth</span><span class="si">{</span><span class="n">flag</span><span class="si">}</span><span class="s2"> --paste '&lt;redirected URL&gt;'</span><span class="se">\n</span><span class="s2">"</span>
         <span class="s2">"    get_credentials(consent='paste')</span><span class="se">\n</span><span class="s2">"</span>
         <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span>
         <span class="s1">'To stop this recurring: an OAuth client in "Testing" rotates refresh '</span>
@@ -414,7 +461,9 @@
     <span class="p">)</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_paste_consent</span><span class="p">(</span><span class="n">authorization_response</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">client_secrets_file</span><span class="p">,</span> <span class="n">scopes</span><span class="p">,</span> <span class="n">port</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_paste_consent</span><span class="p">(</span>
+    <span class="n">authorization_response</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">client_secrets_file</span><span class="p">,</span> <span class="n">scopes</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">profile</span><span class="o">=</span><span class="kc">None</span>
+<span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Paste-back consent: finish if given the redirect, else start and raise."""</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">yb.youtube.paste_consent</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
         <span class="n">DEFAULT_PASTE_PORT</span><span class="p">,</span>
@@ -424,12 +473,17 @@
         <span class="n">start_paste_consent</span><span class="p">,</span>
     <span class="p">)</span>
 
+    <span class="c1"># A named profile keeps its own pending request, so two consents in flight</span>
+    <span class="c1"># (one per account) cannot overwrite each other.</span>
+    <span class="n">extra</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="n">profile</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">extra</span><span class="p">[</span><span class="s2">"pending_file"</span><span class="p">]</span> <span class="o">=</span> <span class="n">_config_dir</span><span class="p">()</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"youtube_consent_pending.</span><span class="si">{</span><span class="n">profile</span><span class="si">}</span><span class="s2">.json"</span>
     <span class="k">if</span> <span class="n">authorization_response</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">finish_paste_consent</span><span class="p">(</span>
-            <span class="n">authorization_response</span><span class="p">,</span> <span class="n">client_secrets_file</span><span class="o">=</span><span class="n">client_secrets_file</span>
+            <span class="n">authorization_response</span><span class="p">,</span> <span class="n">client_secrets_file</span><span class="o">=</span><span class="n">client_secrets_file</span><span class="p">,</span> <span class="o">**</span><span class="n">extra</span>
         <span class="p">)</span>
     <span class="n">url</span> <span class="o">=</span> <span class="n">start_paste_consent</span><span class="p">(</span>
-        <span class="n">client_secrets_file</span><span class="o">=</span><span class="n">client_secrets_file</span><span class="p">,</span> <span class="n">scopes</span><span class="o">=</span><span class="n">scopes</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="n">port</span>
+        <span class="n">client_secrets_file</span><span class="o">=</span><span class="n">client_secrets_file</span><span class="p">,</span> <span class="n">scopes</span><span class="o">=</span><span class="n">scopes</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="n">port</span><span class="p">,</span> <span class="o">**</span><span class="n">extra</span>
     <span class="p">)</span>
     <span class="k">raise</span> <span class="n">ConsentPending</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">redirect_uri</span><span class="o">=</span><span class="n">_redirect_uri</span><span class="p">(</span><span class="n">port</span> <span class="ow">or</span> <span class="n">DEFAULT_PASTE_PORT</span><span class="p">))</span>
 
@@ -440,6 +494,7 @@
     <span class="o">*</span><span class="p">,</span>
     <span class="n">client_secrets_file</span><span class="p">:</span> <span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">token_file</span><span class="p">:</span> <span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">profile</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">scopes</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">DEFAULT_SCOPES</span><span class="p">,</span>
     <span class="n">open_browser</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">port</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
@@ -449,6 +504,10 @@
     <span class="n">authorization_response</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Return OAuth user credentials, running the consent flow if needed.</span>
+
+<span class="sd">    ``profile`` selects a named account (``youtube_token.&lt;profile&gt;.json``; see</span>
+<span class="sd">    :mod:`yb.config`); ``None`` falls back to ``$YB_PROFILE``, then to the</span>
+<span class="sd">    default account. An explicit ``token_file`` wins over the profile.</span>
 
 <span class="sd">    First use runs the installed-app consent flow and caches the token to</span>
 <span class="sd">    ``token_file`` so later calls are non-interactive. Expired tokens are</span>
@@ -512,7 +571,8 @@
         <span class="k">class</span><span class="w"> </span><span class="nc">_WSGITimeoutError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
 <span class="w">            </span><span class="sd">"""Never raised; keeps the except-clause valid on older releases."""</span>
 
-    <span class="n">token_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">token_file</span><span class="p">)</span> <span class="k">if</span> <span class="n">token_file</span> <span class="k">else</span> <span class="n">default_token_file</span><span class="p">()</span>
+    <span class="n">profile</span> <span class="o">=</span> <span class="n">resolve_profile</span><span class="p">(</span><span class="n">profile</span><span class="p">)</span>
+    <span class="n">token_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">token_file</span><span class="p">)</span> <span class="k">if</span> <span class="n">token_file</span> <span class="k">else</span> <span class="n">default_token_file</span><span class="p">(</span><span class="n">profile</span><span class="p">)</span>
     <span class="n">scopes</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">scopes</span><span class="p">)</span>
     <span class="n">creds</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="k">if</span> <span class="n">token_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
@@ -536,13 +596,14 @@
             <span class="n">creds</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">refreshed</span><span class="p">:</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">interactive</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">ConsentRequired</span><span class="p">(</span><span class="n">_consent_required_message</span><span class="p">(</span><span class="n">refresh_error</span><span class="p">,</span> <span class="n">token_path</span><span class="p">))</span>
+            <span class="k">raise</span> <span class="n">ConsentRequired</span><span class="p">(</span><span class="n">_consent_required_message</span><span class="p">(</span><span class="n">refresh_error</span><span class="p">,</span> <span class="n">token_path</span><span class="p">,</span> <span class="n">profile</span><span class="p">))</span>
         <span class="k">if</span> <span class="n">consent</span> <span class="o">==</span> <span class="s2">"paste"</span><span class="p">:</span>
             <span class="n">creds</span> <span class="o">=</span> <span class="n">_paste_consent</span><span class="p">(</span>
                 <span class="n">authorization_response</span><span class="p">,</span>
                 <span class="n">client_secrets_file</span><span class="o">=</span><span class="n">client_secrets_file</span><span class="p">,</span>
                 <span class="n">scopes</span><span class="o">=</span><span class="n">scopes</span><span class="p">,</span>
                 <span class="n">port</span><span class="o">=</span><span class="n">port</span><span class="p">,</span>
+                <span class="n">profile</span><span class="o">=</span><span class="n">profile</span><span class="p">,</span>
             <span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">secrets</span> <span class="o">=</span> <span class="n">_resolve_client_secrets</span><span class="p">(</span><span class="n">client_secrets_file</span><span class="p">)</span>
@@ -559,7 +620,7 @@
                 <span class="c1"># — so report them, rather than a bare timeout from a library</span>
                 <span class="c1"># the caller never named.</span>
                 <span class="k">raise</span> <span class="n">ConsentRequired</span><span class="p">(</span>
-                    <span class="n">_consent_required_message</span><span class="p">(</span><span class="n">refresh_error</span><span class="p">,</span> <span class="n">token_path</span><span class="p">)</span>
+                    <span class="n">_consent_required_message</span><span class="p">(</span><span class="n">refresh_error</span><span class="p">,</span> <span class="n">token_path</span><span class="p">,</span> <span class="n">profile</span><span class="p">)</span>
                 <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">timed_out</span>
 
     <span class="n">token_path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -609,7 +670,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=0d95f3a7"></script>
+</div><script src="../../../_static/documentation_options.js?v=a4d587c1"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

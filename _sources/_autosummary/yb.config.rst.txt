@@ -10,6 +10,7 @@ yb.config
    
       DEFAULT_PRIVACY_STATUS
       DEFAULT_PLAYLIST_PRIVACY_STATUS
+      PROFILE_ENV
    
    .. rubric:: Functions
 
@@ -17,6 +18,7 @@ yb.config
    
       default_config_file
       load_config
+      resolve_profile
    
    .. rubric:: Classes
 

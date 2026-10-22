@@ -16,6 +16,8 @@ yb.youtube
       search_videos
       start_paste_consent
       finish_paste_consent
+      check_channel
+      current_channel
       get_credentials
       get_service
       default_token_file
@@ -67,6 +69,7 @@ yb.youtube
    
       ConsentRequired
       ConsentPending
+      WrongChannel
       VisibilityDropWarning
       PartialPublish
    

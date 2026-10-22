@@ -21,16 +21,19 @@ walks through it).
 
 ### Functions
 
-| [`default_client_secrets_file`](#yb.youtube.auth.default_client_secrets_file)()                   | Default OAuth client-secrets location: `<config dir>/client_secret.json`.   |
-|--------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|
-| [`default_token_file`](#yb.youtube.auth.default_token_file)()                            | Cached OAuth token location (`$XDG_CONFIG_HOME` or `~/.config`).            |
-| [`get_credentials`](#yb.youtube.auth.get_credentials)(\*[, client_secrets_file, ...]) | Return OAuth user credentials, running the consent flow if needed.          |
-| [`get_service`](#yb.youtube.auth.get_service)(\*[, credentials])                  | Build a YouTube Data API v3 service object.                                 |
+| [`check_channel`](#yb.youtube.auth.check_channel)(service[, expected_channel_id])   | Return [`current_channel()`](#yb.youtube.auth.current_channel); raise [`WrongChannel`](#yb.youtube.auth.WrongChannel) on a mismatch.   |
+|--------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`current_channel`](#yb.youtube.auth.current_channel)(service)                        | `{"id", "title", "handle"}` of the channel this service uploads to.                                                                                             |
+| [`default_client_secrets_file`](#yb.youtube.auth.default_client_secrets_file)()                   | Default OAuth client-secrets location: `<config dir>/client_secret.json`.                                                                                       |
+| [`default_token_file`](#yb.youtube.auth.default_token_file)([profile])                   | Cached OAuth token location (`$XDG_CONFIG_HOME` or `~/.config`).                                                                                                |
+| [`get_credentials`](#yb.youtube.auth.get_credentials)(\*[, client_secrets_file, ...]) | Return OAuth user credentials, running the consent flow if needed.                                                                                              |
+| [`get_service`](#yb.youtube.auth.get_service)(\*[, credentials])                  | Build a YouTube Data API v3 service object.                                                                                                                     |
 
 ### Exceptions
 
-| [`ConsentRequired`](#yb.youtube.auth.ConsentRequired)   | Consent is needed and this process cannot obtain it.   |
-|--------------------------------------------------------------------|--------------------------------------------------------|
+| [`ConsentRequired`](#yb.youtube.auth.ConsentRequired)   | Consent is needed and this process cannot obtain it.               |
+|--------------------------------------------------------------------|--------------------------------------------------------------------|
+| [`WrongChannel`](#yb.youtube.auth.WrongChannel)      | The token uploads to a different channel than the profile expects. |
 
 ### yb.youtube.auth.CONSENT_MODES *= ('local', 'paste')*
 
@@ -69,6 +72,26 @@ finds out today. Pass `timeout_seconds=None` for the old behaviour.
 
 Upload + force-ssl (the latter is needed for captions.insert and thumbnails.set).
 
+### *exception* yb.youtube.auth.WrongChannel
+
+Bases: [`RuntimeError`](https://docs.python.org/3/builtins/exceptions.html#RuntimeError)
+
+The token uploads to a different channel than the profile expects.
+
+### yb.youtube.auth.check_channel(service, expected_channel_id=None)
+
+Return [`current_channel()`](#yb.youtube.auth.current_channel); raise [`WrongChannel`](#yb.youtube.auth.WrongChannel) on a mismatch.
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
+
+### yb.youtube.auth.current_channel(service)
+
+`{"id", "title", "handle"}` of the channel this service uploads to.
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
+
 ### yb.youtube.auth.default_client_secrets_file()
 
 Default OAuth client-secrets location: `<config dir>/client_secret.json`.
@@ -79,16 +102,23 @@ of `yb`’s state can live in one directory next to the token.
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
-### yb.youtube.auth.default_token_file()
+### yb.youtube.auth.default_token_file(profile=None)
 
 Cached OAuth token location (`$XDG_CONFIG_HOME` or `~/.config`).
+
+The default profile keeps `youtube_token.json`; a named profile gets
+`youtube_token.<profile>.json` beside it.
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
-### yb.youtube.auth.get_credentials(, client_secrets_file=None, token_file=None, scopes=['https://www.googleapis.com/auth/youtube.upload', 'https://www.googleapis.com/auth/youtube.force-ssl'], open_browser=True, port=0, timeout_seconds=300.0, interactive=True, consent='local', authorization_response=None)
+### yb.youtube.auth.get_credentials(, client_secrets_file=None, token_file=None, profile=None, scopes=['https://www.googleapis.com/auth/youtube.upload', 'https://www.googleapis.com/auth/youtube.force-ssl'], open_browser=True, port=0, timeout_seconds=300.0, interactive=True, consent='local', authorization_response=None)
 
 Return OAuth user credentials, running the consent flow if needed.
+
+`profile` selects a named account (`youtube_token.<profile>.json`; see
+[`yb.config`](yb.config.html.md#module-yb.config)); `None` falls back to `$YB_PROFILE`, then to the
+default account. An explicit `token_file` wins over the profile.
 
 First use runs the installed-app consent flow and caches the token to
 `token_file` so later calls are non-interactive. Expired tokens are

@@ -23,52 +23,54 @@ Edit an existing video:
 
 ### Functions
 
-| [`api_available`](#yb.youtube.api_available)(\*[, api_key])                       | Whether the Data API can actually be called with the key we have.                                                       |
-|-----------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
-| `watch_url`(video_id)                                                                               |                                                                                                                         |
-| [`thumbnail_url`](#yb.youtube.thumbnail_url)(video_id, \*[, quality])             | Thumbnail URL for a video.                                                                                              |
-| [`rank_by_engagement`](#yb.youtube.rank_by_engagement)(videos, \*[, min_views, ...])   | Order videos by a like-rate-and-reach score.                                                                            |
-| [`add_stats`](#yb.youtube.add_stats)(videos, \*[, api_key, backend])          | Fill in engagement numbers on search results, in place-ish (returns them).                                              |
-| [`search_videos`](#yb.youtube.search_videos)(query, \*[, max_results, ...])       | Search YouTube and return a list of video records.                                                                      |
-| [`start_paste_consent`](#yb.youtube.start_paste_consent)(\*[, ...])                     | Begin paste-back consent and return the URL to open.                                                                    |
-| [`finish_paste_consent`](#yb.youtube.finish_paste_consent)(authorization_response, \*)   | Complete a consent begun by [`start_paste_consent()`](#yb.youtube.start_paste_consent); return credentials. |
-| [`get_credentials`](#yb.youtube.get_credentials)(\*[, client_secrets_file, ...])    | Return OAuth user credentials, running the consent flow if needed.                                                      |
-| [`get_service`](#yb.youtube.get_service)(\*[, credentials])                     | Build a YouTube Data API v3 service object.                                                                             |
-| [`default_token_file`](#yb.youtube.default_token_file)()                               | Cached OAuth token location (`$XDG_CONFIG_HOME` or `~/.config`).                                                        |
-| [`default_client_secrets_file`](#yb.youtube.default_client_secrets_file)()                      | Default OAuth client-secrets location: `<config dir>/client_secret.json`.                                               |
-| [`list_my_playlists`](#yb.youtube.list_my_playlists)(\*[, service])                   | Return all playlists owned by the authenticated channel (paginated).                                                    |
-| [`find_playlist`](#yb.youtube.find_playlist)(title, \*[, service])                | Return the id of the caller's playlist titled `title` (or `None`).                                                      |
-| [`create_playlist`](#yb.youtube.create_playlist)(title, \*[, description, ...])     | Create a playlist and return its id.                                                                                    |
-| [`ensure_playlist`](#yb.youtube.ensure_playlist)(title, \*[, create, ...])          | Return the id of the playlist titled `title`, creating it if missing.                                                   |
-| [`is_video_in_playlist`](#yb.youtube.is_video_in_playlist)(video_id, playlist_id, \*)    | Whether `video_id` is already an item of `playlist_id` (paginated).                                                     |
-| [`add_to_playlist`](#yb.youtube.add_to_playlist)(video_id, playlist_id, \*[, ...])  | Add `video_id` to `playlist_id` (`playlistItems.insert`).                                                               |
-| [`add_video_to_playlist`](#yb.youtube.add_video_to_playlist)(video_id, title, \*[, ...])  | Find-or-create the playlist named `title` and append `video_id`.                                                        |
-| [`playlist_item_ids`](#yb.youtube.playlist_item_ids)(video_id, playlist_id, \*)       | The `playlistItems` ids holding `video_id` in `playlist_id`.                                                            |
-| [`first_position`](#yb.youtube.first_position)(video_id, playlist_id, \*[, ...])   | The 0-based position of `video_id`'s first occurrence (`None` if absent).                                               |
-| [`playlists_containing`](#yb.youtube.playlists_containing)(video_id, \*[, service])      | Ids of the authenticated channel's playlists that hold `video_id`.                                                      |
-| [`remove_from_playlist`](#yb.youtube.remove_from_playlist)(video_id, playlist_id, \*)    | Remove every occurrence of `video_id` from `playlist_id`.                                                               |
-| [`update_video_status`](#yb.youtube.update_video_status)(video_id, \*[, ...])           | Change a video's privacy (or synthetic-media flag), keeping the rest.                                                   |
-| [`supersede`](#yb.youtube.supersede)(old_id, new_id, \*[, old_privacy, ...])  | Retire an upload that `new_id` replaces (yb#19).                                                                        |
-| [`get_video`](#yb.youtube.get_video)(video_id, \*[, part, service])           | Fetch a video resource (raises `KeyError` if not found/visible).                                                        |
-| [`upload_video`](#yb.youtube.upload_video)(video_path, body, \*[, service, ...]) | Resumably upload a video with the given `videos.insert` `body`.                                                         |
-| [`update_video`](#yb.youtube.update_video)(video_id, snippet, \*[, service])     | Update a video's snippet (`videos.update`).                                                                             |
-| [`update_video_fields`](#yb.youtube.update_video_fields)(video_id, \*[, title, ...])    | Patch selected snippet fields, preserving the rest.                                                                     |
-| [`set_thumbnail`](#yb.youtube.set_thumbnail)(video_id, image_path, \*[, service]) | Set a custom thumbnail (`thumbnails.set`).                                                                              |
-| [`set_chapters`](#yb.youtube.set_chapters)(video_id, chapters, \*[, ...])        | Insert/replace a chapters block in the video's description.                                                             |
-| [`video_metadata`](#yb.youtube.video_metadata)(video_id, \*[, group, fields, ...]) | Fetch a video's live metadata & engagement numbers.                                                                     |
-| [`flatten_video`](#yb.youtube.flatten_video)(resource)                            | Flatten a raw `videos.list` item into a friendly, typed, ordered dict.                                                  |
-| [`select_fields`](#yb.youtube.select_fields)(flat, \*[, group, fields])           | Return an ordered subset of `flat` per `fields`/`group`.                                                                |
-| [`resolve_fields`](#yb.youtube.resolve_fields)(\*[, group, fields, available])     | Resolve the ordered field list to show.                                                                                 |
-| [`render_table`](#yb.youtube.render_table)(data, \*[, fields])                   | Render metadata as an ASCII table.                                                                                      |
-| [`list_captions`](#yb.youtube.list_captions)(video_id, \*[, service])             | List caption tracks on a video (each item's snippet has language/name/trackKind/status).                                |
-| [`insert_caption`](#yb.youtube.insert_caption)(video_id, path, \*, language)       | Insert a new caption track (`captions.insert`).                                                                         |
-| [`update_caption`](#yb.youtube.update_caption)(caption_id, path, \*[, ...])        | Replace the content of an existing caption track (`captions.update`).                                                   |
-| [`upsert_caption`](#yb.youtube.upsert_caption)(video_id, track, \*[, ...])         | Insert a caption track, or update the existing same-language one.                                                       |
-| [`download_caption`](#yb.youtube.download_caption)(caption_id, \*[, tfmt, service])  | Download a caption track's content (`captions.download`), default SRT.                                                  |
-| [`delete_caption`](#yb.youtube.delete_caption)(caption_id, \*[, service])          | Delete a caption track (`captions.delete`).                                                                             |
-| [`publish_content`](#yb.youtube.publish_content)(content, \*[, ...])                | Upload a prepared `PublicationContent` to YouTube.                                                                      |
-| [`prepare_and_publish`](#yb.youtube.prepare_and_publish)(media, \*[, language, ...])    | One call: prepare publication content from `media` and upload it.                                                       |
-| [`publish_video`](#yb.youtube.publish_video)(video_path, metadata, \*[, ...])     | Lower-level upload: explicit [`VideoMetadata`](#yb.youtube.VideoMetadata) + caption tracks.           |
+| [`api_available`](#yb.youtube.api_available)(\*[, api_key])                       | Whether the Data API can actually be called with the key we have.                                                                                             |
+|-----------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `watch_url`(video_id)                                                                               |                                                                                                                                                               |
+| [`thumbnail_url`](#yb.youtube.thumbnail_url)(video_id, \*[, quality])             | Thumbnail URL for a video.                                                                                                                                    |
+| [`rank_by_engagement`](#yb.youtube.rank_by_engagement)(videos, \*[, min_views, ...])   | Order videos by a like-rate-and-reach score.                                                                                                                  |
+| [`add_stats`](#yb.youtube.add_stats)(videos, \*[, api_key, backend])          | Fill in engagement numbers on search results, in place-ish (returns them).                                                                                    |
+| [`search_videos`](#yb.youtube.search_videos)(query, \*[, max_results, ...])       | Search YouTube and return a list of video records.                                                                                                            |
+| [`start_paste_consent`](#yb.youtube.start_paste_consent)(\*[, ...])                     | Begin paste-back consent and return the URL to open.                                                                                                          |
+| [`finish_paste_consent`](#yb.youtube.finish_paste_consent)(authorization_response, \*)   | Complete a consent begun by [`start_paste_consent()`](#yb.youtube.start_paste_consent); return credentials.                                       |
+| [`check_channel`](#yb.youtube.check_channel)(service[, expected_channel_id])      | Return [`current_channel()`](#yb.youtube.current_channel); raise [`WrongChannel`](#yb.youtube.WrongChannel) on a mismatch. |
+| [`current_channel`](#yb.youtube.current_channel)(service)                           | `{"id", "title", "handle"}` of the channel this service uploads to.                                                                                           |
+| [`get_credentials`](#yb.youtube.get_credentials)(\*[, client_secrets_file, ...])    | Return OAuth user credentials, running the consent flow if needed.                                                                                            |
+| [`get_service`](#yb.youtube.get_service)(\*[, credentials])                     | Build a YouTube Data API v3 service object.                                                                                                                   |
+| [`default_token_file`](#yb.youtube.default_token_file)([profile])                      | Cached OAuth token location (`$XDG_CONFIG_HOME` or `~/.config`).                                                                                              |
+| [`default_client_secrets_file`](#yb.youtube.default_client_secrets_file)()                      | Default OAuth client-secrets location: `<config dir>/client_secret.json`.                                                                                     |
+| [`list_my_playlists`](#yb.youtube.list_my_playlists)(\*[, service])                   | Return all playlists owned by the authenticated channel (paginated).                                                                                          |
+| [`find_playlist`](#yb.youtube.find_playlist)(title, \*[, service])                | Return the id of the caller's playlist titled `title` (or `None`).                                                                                            |
+| [`create_playlist`](#yb.youtube.create_playlist)(title, \*[, description, ...])     | Create a playlist and return its id.                                                                                                                          |
+| [`ensure_playlist`](#yb.youtube.ensure_playlist)(title, \*[, create, ...])          | Return the id of the playlist titled `title`, creating it if missing.                                                                                         |
+| [`is_video_in_playlist`](#yb.youtube.is_video_in_playlist)(video_id, playlist_id, \*)    | Whether `video_id` is already an item of `playlist_id` (paginated).                                                                                           |
+| [`add_to_playlist`](#yb.youtube.add_to_playlist)(video_id, playlist_id, \*[, ...])  | Add `video_id` to `playlist_id` (`playlistItems.insert`).                                                                                                     |
+| [`add_video_to_playlist`](#yb.youtube.add_video_to_playlist)(video_id, title, \*[, ...])  | Find-or-create the playlist named `title` and append `video_id`.                                                                                              |
+| [`playlist_item_ids`](#yb.youtube.playlist_item_ids)(video_id, playlist_id, \*)       | The `playlistItems` ids holding `video_id` in `playlist_id`.                                                                                                  |
+| [`first_position`](#yb.youtube.first_position)(video_id, playlist_id, \*[, ...])   | The 0-based position of `video_id`'s first occurrence (`None` if absent).                                                                                     |
+| [`playlists_containing`](#yb.youtube.playlists_containing)(video_id, \*[, service])      | Ids of the authenticated channel's playlists that hold `video_id`.                                                                                            |
+| [`remove_from_playlist`](#yb.youtube.remove_from_playlist)(video_id, playlist_id, \*)    | Remove every occurrence of `video_id` from `playlist_id`.                                                                                                     |
+| [`update_video_status`](#yb.youtube.update_video_status)(video_id, \*[, ...])           | Change a video's privacy (or synthetic-media flag), keeping the rest.                                                                                         |
+| [`supersede`](#yb.youtube.supersede)(old_id, new_id, \*[, old_privacy, ...])  | Retire an upload that `new_id` replaces (yb#19).                                                                                                              |
+| [`get_video`](#yb.youtube.get_video)(video_id, \*[, part, service])           | Fetch a video resource (raises `KeyError` if not found/visible).                                                                                              |
+| [`upload_video`](#yb.youtube.upload_video)(video_path, body, \*[, service, ...]) | Resumably upload a video with the given `videos.insert` `body`.                                                                                               |
+| [`update_video`](#yb.youtube.update_video)(video_id, snippet, \*[, service])     | Update a video's snippet (`videos.update`).                                                                                                                   |
+| [`update_video_fields`](#yb.youtube.update_video_fields)(video_id, \*[, title, ...])    | Patch selected snippet fields, preserving the rest.                                                                                                           |
+| [`set_thumbnail`](#yb.youtube.set_thumbnail)(video_id, image_path, \*[, service]) | Set a custom thumbnail (`thumbnails.set`).                                                                                                                    |
+| [`set_chapters`](#yb.youtube.set_chapters)(video_id, chapters, \*[, ...])        | Insert/replace a chapters block in the video's description.                                                                                                   |
+| [`video_metadata`](#yb.youtube.video_metadata)(video_id, \*[, group, fields, ...]) | Fetch a video's live metadata & engagement numbers.                                                                                                           |
+| [`flatten_video`](#yb.youtube.flatten_video)(resource)                            | Flatten a raw `videos.list` item into a friendly, typed, ordered dict.                                                                                        |
+| [`select_fields`](#yb.youtube.select_fields)(flat, \*[, group, fields])           | Return an ordered subset of `flat` per `fields`/`group`.                                                                                                      |
+| [`resolve_fields`](#yb.youtube.resolve_fields)(\*[, group, fields, available])     | Resolve the ordered field list to show.                                                                                                                       |
+| [`render_table`](#yb.youtube.render_table)(data, \*[, fields])                   | Render metadata as an ASCII table.                                                                                                                            |
+| [`list_captions`](#yb.youtube.list_captions)(video_id, \*[, service])             | List caption tracks on a video (each item's snippet has language/name/trackKind/status).                                                                      |
+| [`insert_caption`](#yb.youtube.insert_caption)(video_id, path, \*, language)       | Insert a new caption track (`captions.insert`).                                                                                                               |
+| [`update_caption`](#yb.youtube.update_caption)(caption_id, path, \*[, ...])        | Replace the content of an existing caption track (`captions.update`).                                                                                         |
+| [`upsert_caption`](#yb.youtube.upsert_caption)(video_id, track, \*[, ...])         | Insert a caption track, or update the existing same-language one.                                                                                             |
+| [`download_caption`](#yb.youtube.download_caption)(caption_id, \*[, tfmt, service])  | Download a caption track's content (`captions.download`), default SRT.                                                                                        |
+| [`delete_caption`](#yb.youtube.delete_caption)(caption_id, \*[, service])          | Delete a caption track (`captions.delete`).                                                                                                                   |
+| [`publish_content`](#yb.youtube.publish_content)(content, \*[, ...])                | Upload a prepared `PublicationContent` to YouTube.                                                                                                            |
+| [`prepare_and_publish`](#yb.youtube.prepare_and_publish)(media, \*[, language, ...])    | One call: prepare publication content from `media` and upload it.                                                                                             |
+| [`publish_video`](#yb.youtube.publish_video)(video_path, metadata, \*[, ...])     | Lower-level upload: explicit [`VideoMetadata`](#yb.youtube.VideoMetadata) + caption tracks.                                                 |
 
 ### Classes
 
@@ -81,6 +83,7 @@ Edit an existing video:
 | [`ConsentRequired`](#yb.youtube.ConsentRequired)                         | Consent is needed and this process cannot obtain it.                                                               |
 |------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
 | [`ConsentPending`](#yb.youtube.ConsentPending)(url, \*, redirect_uri)   | Consent was started, and now waits for the user to paste the redirect back.                                        |
+| [`WrongChannel`](#yb.youtube.WrongChannel)                            | The token uploads to a different channel than the profile expects.                                                 |
 | [`VisibilityDropWarning`](#yb.youtube.VisibilityDropWarning)                   | [`supersede()`](#yb.youtube.supersede) leaves the re-cut less visible than the original was. |
 | [`PartialPublish`](#yb.youtube.PartialPublish)(result, \*, step, error) | The video was uploaded, then a later step failed (yb#21).                                                          |
 
@@ -266,6 +269,12 @@ Emitted before anything is changed, so escalating it refuses the call:
 warnings.simplefilter("error", VisibilityDropWarning)
 ```
 
+### *exception* yb.youtube.WrongChannel
+
+Bases: [`RuntimeError`](https://docs.python.org/3/builtins/exceptions.html#RuntimeError)
+
+The token uploads to a different channel than the profile expects.
+
 ### yb.youtube.add_stats(videos, , api_key=None, backend='auto')
 
 Fill in engagement numbers on search results, in place-ish (returns them).
@@ -310,12 +319,26 @@ anything visible up front.
 * **Return type:**
   [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
 
+### yb.youtube.check_channel(service, expected_channel_id=None)
+
+Return [`current_channel()`](#yb.youtube.current_channel); raise [`WrongChannel`](#yb.youtube.WrongChannel) on a mismatch.
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
+
 ### yb.youtube.create_playlist(title, , description='', privacy_status='private', service=None, \*\*cred_kwargs)
 
 Create a playlist and return its id.
 
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
+### yb.youtube.current_channel(service)
+
+`{"id", "title", "handle"}` of the channel this service uploads to.
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
 
 ### yb.youtube.default_client_secrets_file()
 
@@ -327,9 +350,12 @@ of `yb`’s state can live in one directory next to the token.
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
-### yb.youtube.default_token_file()
+### yb.youtube.default_token_file(profile=None)
 
 Cached OAuth token location (`$XDG_CONFIG_HOME` or `~/.config`).
+
+The default profile keeps `youtube_token.json`; a named profile gets
+`youtube_token.<profile>.json` beside it.
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
@@ -393,9 +419,13 @@ Pure: pass the dict returned by the API. Missing pieces (from a partial
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
 
-### yb.youtube.get_credentials(, client_secrets_file=None, token_file=None, scopes=['https://www.googleapis.com/auth/youtube.upload', 'https://www.googleapis.com/auth/youtube.force-ssl'], open_browser=True, port=0, timeout_seconds=300.0, interactive=True, consent='local', authorization_response=None)
+### yb.youtube.get_credentials(, client_secrets_file=None, token_file=None, profile=None, scopes=['https://www.googleapis.com/auth/youtube.upload', 'https://www.googleapis.com/auth/youtube.force-ssl'], open_browser=True, port=0, timeout_seconds=300.0, interactive=True, consent='local', authorization_response=None)
 
 Return OAuth user credentials, running the consent flow if needed.
+
+`profile` selects a named account (`youtube_token.<profile>.json`; see
+[`yb.config`](yb.config.html.md#module-yb.config)); `None` falls back to `$YB_PROFILE`, then to the
+default account. An explicit `token_file` wins over the profile.
 
 First use runs the installed-app consent flow and caches the token to
 `token_file` so later calls are non-interactive. Expired tokens are
@@ -506,7 +536,7 @@ plus the `playlists.list` pages: on a large channel, budget for it.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
 
-### yb.youtube.prepare_and_publish(media, \*, language='English', language_code=None, audio_language_code=None, brand=None, extra_context=None, with_chapters=True, with_thumbnail=True, privacy_status=None, playlist=<object object>, category_id='28', config=None, client_secrets_file=None, token_file=None, progress=True, \*\*cred_kwargs)
+### yb.youtube.prepare_and_publish(media, \*, language='English', language_code=None, audio_language_code=None, brand=None, extra_context=None, with_chapters=True, with_thumbnail=True, privacy_status=None, playlist=<object object>, category_id='28', config=None, client_secrets_file=None, token_file=None, profile=None, progress=True, \*\*cred_kwargs)
 
 One call: prepare publication content from `media` and upload it.
 
@@ -516,13 +546,16 @@ captions + thumbnail + chapters and adds the video to the configured
 playlist. `privacy_status` and `playlist` default to your `yb` config
 (see [`publish_content()`](#yb.youtube.publish_content)).
 
+`profile` publishes as a named account/channel (own token and config
+section; see [`yb.config`](yb.config.html.md#module-yb.config)); `None` uses `$YB_PROFILE` or the default.
+
 `cred_kwargs` reach [`get_credentials()`](yb.youtube.auth.html.md#yb.youtube.auth.get_credentials) (e.g.
 `open_browser=False, port=8080` for headless consent).
 
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
 
-### yb.youtube.publish_content(content, \*, privacy_status=None, playlist=<object object>, category_id='28', with_chapters=True, attach_caption=True, set_thumb=True, config=None, client_secrets_file=None, token_file=None, progress=True, service=None, resume=None, \*\*cred_kwargs)
+### yb.youtube.publish_content(content, \*, privacy_status=None, playlist=<object object>, category_id='28', with_chapters=True, attach_caption=True, set_thumb=True, config=None, client_secrets_file=None, token_file=None, profile=None, progress=True, service=None, resume=None, \*\*cred_kwargs)
 
 Upload a prepared `PublicationContent` to YouTube.
 
@@ -536,6 +569,9 @@ thumbnail when available, and adds the video to the configured playlist.
 to `unlisted` and the video joins your configured playlist. Pass
 `playlist=None` to skip the playlist for one call, or `playlist="Name"`
 to override the target.
+
+`profile` publishes as a named account/channel (own token and config
+section; see [`yb.config`](yb.config.html.md#module-yb.config)); `None` uses `$YB_PROFILE` or the default.
 
 `cred_kwargs` reach [`get_credentials()`](yb.youtube.auth.html.md#yb.youtube.auth.get_credentials) (e.g.
 `open_browser=False, port=8080` for headless consent).
@@ -553,7 +589,7 @@ to override the target.
       `err.result` holds the video id and what was done. Pass
       `resume=err.result` to finish without uploading again (yb#21).
 
-### yb.youtube.publish_video(video_path, metadata, \*, privacy_status=None, playlist=<object object>, captions=None, thumbnail=None, config=None, client_secrets_file=None, token_file=None, progress=True, service=None, resume=None, \*\*cred_kwargs)
+### yb.youtube.publish_video(video_path, metadata, \*, privacy_status=None, playlist=<object object>, captions=None, thumbnail=None, config=None, client_secrets_file=None, token_file=None, profile=None, progress=True, service=None, resume=None, \*\*cred_kwargs)
 
 Lower-level upload: explicit [`VideoMetadata`](#yb.youtube.VideoMetadata) + caption tracks.
 
@@ -563,6 +599,9 @@ Lower-level upload: explicit [`VideoMetadata`](#yb.youtube.VideoMetadata) + capt
 If a step after the upload fails, [`PartialPublish`](#yb.youtube.PartialPublish) is raised with
 the new video’s id and what was done so far (`err.result`). Pass
 `resume=err.result` to finish without uploading again (yb#21).
+
+`profile` publishes as a named account/channel (own token and config
+section; see [`yb.config`](yb.config.html.md#module-yb.config)); `None` uses `$YB_PROFILE` or the default.
 
 `cred_kwargs` reach [`get_credentials()`](yb.youtube.auth.html.md#yb.youtube.auth.get_credentials) (e.g.
 `open_browser=False, port=8080` for headless consent).

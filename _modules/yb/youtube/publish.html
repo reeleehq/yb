@@ -6,7 +6,7 @@
 <link rel="alternate" type="text/markdown" href="publish.html.md">
 <link rel="describedby" href="../../../llms.txt" type="text/markdown"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
-    <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
+    <!-- Generated with Sphinx 9.1.1 and Furo 2025.12.19 -->
         <title>yb.youtube.publish - yb</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=d75fae25" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
@@ -289,7 +289,7 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">yb.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">YbConfig</span><span class="p">,</span> <span class="n">load_config</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">yb.content</span><span class="w"> </span><span class="kn">import</span> <span class="n">PublicationContent</span><span class="p">,</span> <span class="n">prepare_content</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">yb.youtube.auth</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_service</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">yb.youtube.auth</span><span class="w"> </span><span class="kn">import</span> <span class="n">check_channel</span><span class="p">,</span> <span class="n">get_service</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">yb.youtube.metadata</span><span class="w"> </span><span class="kn">import</span> <span class="n">VideoMetadata</span><span class="p">,</span> <span class="n">CATEGORY_SCIENCE_TECH</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">yb.youtube.api</span><span class="w"> </span><span class="kn">import</span> <span class="n">upload_video</span><span class="p">,</span> <span class="n">set_thumbnail</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">yb.youtube.captions</span><span class="w"> </span><span class="kn">import</span> <span class="n">CaptionTrack</span><span class="p">,</span> <span class="n">upsert_caption</span>
@@ -461,6 +461,7 @@
     <span class="n">config</span><span class="p">:</span> <span class="n">YbConfig</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">client_secrets_file</span><span class="p">:</span> <span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">token_file</span><span class="p">:</span> <span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">profile</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">service</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="n">resume</span><span class="p">:</span> <span class="n">Mapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -479,6 +480,9 @@
 <span class="sd">    ``playlist=None`` to skip the playlist for one call, or ``playlist="Name"``</span>
 <span class="sd">    to override the target.</span>
 
+<span class="sd">    ``profile`` publishes as a named account/channel (own token and config</span>
+<span class="sd">    section; see :mod:`yb.config`); ``None`` uses ``$YB_PROFILE`` or the default.</span>
+
 <span class="sd">    ``cred_kwargs`` reach :func:`~yb.youtube.auth.get_credentials` (e.g.</span>
 <span class="sd">    ``open_browser=False, port=8080`` for headless consent).</span>
 
@@ -494,11 +498,16 @@
 <span class="sd">            ``err.result`` holds the video id and what was done. Pass</span>
 <span class="sd">            ``resume=err.result`` to finish without uploading again (yb#21).</span>
 <span class="sd">    """</span>
-    <span class="n">cfg</span> <span class="o">=</span> <span class="n">config</span> <span class="ow">or</span> <span class="n">load_config</span><span class="p">(</span><span class="n">privacy_status</span><span class="o">=</span><span class="n">privacy_status</span><span class="p">)</span>
+    <span class="n">cfg</span> <span class="o">=</span> <span class="n">config</span> <span class="ow">or</span> <span class="n">load_config</span><span class="p">(</span><span class="n">profile</span><span class="o">=</span><span class="n">profile</span><span class="p">,</span> <span class="n">privacy_status</span><span class="o">=</span><span class="n">privacy_status</span><span class="p">)</span>
     <span class="n">privacy_status</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">privacy_status</span>
     <span class="n">service</span> <span class="o">=</span> <span class="n">service</span> <span class="ow">or</span> <span class="n">get_service</span><span class="p">(</span>
-        <span class="n">client_secrets_file</span><span class="o">=</span><span class="n">client_secrets_file</span><span class="p">,</span> <span class="n">token_file</span><span class="o">=</span><span class="n">token_file</span><span class="p">,</span> <span class="o">**</span><span class="n">cred_kwargs</span>
+        <span class="n">client_secrets_file</span><span class="o">=</span><span class="n">client_secrets_file</span><span class="p">,</span>
+        <span class="n">token_file</span><span class="o">=</span><span class="n">token_file</span><span class="p">,</span>
+        <span class="n">profile</span><span class="o">=</span><span class="n">profile</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">cred_kwargs</span><span class="p">,</span>
     <span class="p">)</span>
+    <span class="k">if</span> <span class="n">cfg</span><span class="o">.</span><span class="n">channel_id</span><span class="p">:</span>  <span class="c1"># refuse to upload to the wrong account's channel</span>
+        <span class="n">check_channel</span><span class="p">(</span><span class="n">service</span><span class="p">,</span> <span class="n">cfg</span><span class="o">.</span><span class="n">channel_id</span><span class="p">)</span>
     <span class="n">meta</span> <span class="o">=</span> <span class="n">VideoMetadata</span><span class="o">.</span><span class="n">from_content</span><span class="p">(</span>
         <span class="n">content</span><span class="p">,</span> <span class="n">category_id</span><span class="o">=</span><span class="n">category_id</span><span class="p">,</span> <span class="n">with_chapters</span><span class="o">=</span><span class="n">with_chapters</span>
     <span class="p">)</span>
@@ -574,6 +583,7 @@
     <span class="n">config</span><span class="p">:</span> <span class="n">YbConfig</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">client_secrets_file</span><span class="p">:</span> <span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">token_file</span><span class="p">:</span> <span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">profile</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="o">**</span><span class="n">cred_kwargs</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
@@ -584,6 +594,9 @@
 <span class="sd">    captions + thumbnail + chapters and adds the video to the configured</span>
 <span class="sd">    playlist. ``privacy_status`` and ``playlist`` default to your ``yb`` config</span>
 <span class="sd">    (see :func:`publish_content`).</span>
+
+<span class="sd">    ``profile`` publishes as a named account/channel (own token and config</span>
+<span class="sd">    section; see :mod:`yb.config`); ``None`` uses ``$YB_PROFILE`` or the default.</span>
 
 <span class="sd">    ``cred_kwargs`` reach :func:`~yb.youtube.auth.get_credentials` (e.g.</span>
 <span class="sd">    ``open_browser=False, port=8080`` for headless consent).</span>
@@ -607,6 +620,7 @@
         <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">,</span>
         <span class="n">client_secrets_file</span><span class="o">=</span><span class="n">client_secrets_file</span><span class="p">,</span>
         <span class="n">token_file</span><span class="o">=</span><span class="n">token_file</span><span class="p">,</span>
+        <span class="n">profile</span><span class="o">=</span><span class="n">profile</span><span class="p">,</span>
         <span class="n">progress</span><span class="o">=</span><span class="n">progress</span><span class="p">,</span>
         <span class="o">**</span><span class="n">cred_kwargs</span><span class="p">,</span>
     <span class="p">)</span></div>
@@ -626,6 +640,7 @@
     <span class="n">config</span><span class="p">:</span> <span class="n">YbConfig</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">client_secrets_file</span><span class="p">:</span> <span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">token_file</span><span class="p">:</span> <span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">profile</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">service</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="n">resume</span><span class="p">:</span> <span class="n">Mapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -640,14 +655,22 @@
 <span class="sd">    the new video's id and what was done so far (``err.result``). Pass</span>
 <span class="sd">    ``resume=err.result`` to finish without uploading again (yb#21).</span>
 
+<span class="sd">    ``profile`` publishes as a named account/channel (own token and config</span>
+<span class="sd">    section; see :mod:`yb.config`); ``None`` uses ``$YB_PROFILE`` or the default.</span>
+
 <span class="sd">    ``cred_kwargs`` reach :func:`~yb.youtube.auth.get_credentials` (e.g.</span>
 <span class="sd">    ``open_browser=False, port=8080`` for headless consent).</span>
 <span class="sd">    """</span>
-    <span class="n">cfg</span> <span class="o">=</span> <span class="n">config</span> <span class="ow">or</span> <span class="n">load_config</span><span class="p">(</span><span class="n">privacy_status</span><span class="o">=</span><span class="n">privacy_status</span><span class="p">)</span>
+    <span class="n">cfg</span> <span class="o">=</span> <span class="n">config</span> <span class="ow">or</span> <span class="n">load_config</span><span class="p">(</span><span class="n">profile</span><span class="o">=</span><span class="n">profile</span><span class="p">,</span> <span class="n">privacy_status</span><span class="o">=</span><span class="n">privacy_status</span><span class="p">)</span>
     <span class="n">privacy_status</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">privacy_status</span>
     <span class="n">service</span> <span class="o">=</span> <span class="n">service</span> <span class="ow">or</span> <span class="n">get_service</span><span class="p">(</span>
-        <span class="n">client_secrets_file</span><span class="o">=</span><span class="n">client_secrets_file</span><span class="p">,</span> <span class="n">token_file</span><span class="o">=</span><span class="n">token_file</span><span class="p">,</span> <span class="o">**</span><span class="n">cred_kwargs</span>
+        <span class="n">client_secrets_file</span><span class="o">=</span><span class="n">client_secrets_file</span><span class="p">,</span>
+        <span class="n">token_file</span><span class="o">=</span><span class="n">token_file</span><span class="p">,</span>
+        <span class="n">profile</span><span class="o">=</span><span class="n">profile</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">cred_kwargs</span><span class="p">,</span>
     <span class="p">)</span>
+    <span class="k">if</span> <span class="n">cfg</span><span class="o">.</span><span class="n">channel_id</span><span class="p">:</span>  <span class="c1"># refuse to upload to the wrong account's channel</span>
+        <span class="n">check_channel</span><span class="p">(</span><span class="n">service</span><span class="p">,</span> <span class="n">cfg</span><span class="o">.</span><span class="n">channel_id</span><span class="p">)</span>
     <span class="n">body</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="n">insert_body</span><span class="p">(</span><span class="n">privacy_status</span><span class="o">=</span><span class="n">privacy_status</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">upload</span><span class="p">():</span>
@@ -741,7 +764,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=0d95f3a7"></script>
+</div><script src="../../../_static/documentation_options.js?v=a4d587c1"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

@@ -122,7 +122,7 @@ Description with a chapters block appended (if any chapters).
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
-### *class* yb.YbConfig(privacy_status='unlisted', playlist=None, create_playlist_if_missing=True, playlist_privacy_status='private')
+### *class* yb.YbConfig(privacy_status='unlisted', playlist=None, create_playlist_if_missing=True, playlist_privacy_status='private', channel_id=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -157,6 +157,13 @@ Privacy for an auto-created playlist.
 
 * **Type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
+#### channel_id
+
+Channel the token must belong to (`None` = don’t check).
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 #### *classmethod* from_mapping(mapping)
 
@@ -350,7 +357,7 @@ LLM-backed via `aix`. Pass a ready [`ContentMetadata`](#yb.ContentMetadata) to
 * **Return type:**
   [`ContentMetadata`](yb.content.html.md#yb.content.ContentMetadata)
 
-### yb.load_config(config_file=None, \*\*overrides)
+### yb.load_config(config_file=None, , profile=None, \*\*overrides)
 
 Load publishing defaults from `config_file` (or the default location).
 
@@ -358,10 +365,13 @@ A missing file yields the built-in defaults. `overrides` (typically the
 explicit keyword arguments a caller passed) take precedence when not
 `None`, so call-site arguments always win over the file.
 
+`profile` (see [`resolve_profile()`](#yb.resolve_profile)) picks the `"profiles"` section
+to read instead of the top-level keys; an unknown profile is an error.
+
 * **Return type:**
   [`YbConfig`](yb.config.html.md#yb.config.YbConfig)
 
-### yb.prepare_and_publish(media, \*, language='English', language_code=None, audio_language_code=None, brand=None, extra_context=None, with_chapters=True, with_thumbnail=True, privacy_status=None, playlist=<object object>, category_id='28', config=None, client_secrets_file=None, token_file=None, progress=True, \*\*cred_kwargs)
+### yb.prepare_and_publish(media, \*, language='English', language_code=None, audio_language_code=None, brand=None, extra_context=None, with_chapters=True, with_thumbnail=True, privacy_status=None, playlist=<object object>, category_id='28', config=None, client_secrets_file=None, token_file=None, profile=None, progress=True, \*\*cred_kwargs)
 
 One call: prepare publication content from `media` and upload it.
 
@@ -370,6 +380,9 @@ LLM metadata, detects chapters, renders a thumbnail, then uploads with
 captions + thumbnail + chapters and adds the video to the configured
 playlist. `privacy_status` and `playlist` default to your `yb` config
 (see [`publish_content()`](#yb.publish_content)).
+
+`profile` publishes as a named account/channel (own token and config
+section; see [`yb.config`](yb.config.html.md#module-yb.config)); `None` uses `$YB_PROFILE` or the default.
 
 `cred_kwargs` reach [`get_credentials()`](yb.youtube.auth.html.md#yb.youtube.auth.get_credentials) (e.g.
 `open_browser=False, port=8080` for headless consent).
@@ -428,7 +441,7 @@ Build a podcast episode bundle from `media` into `output_dir`.
 * **Returns:**
   A `PodcastEpisode` with the asset paths.
 
-### yb.publish_content(content, \*, privacy_status=None, playlist=<object object>, category_id='28', with_chapters=True, attach_caption=True, set_thumb=True, config=None, client_secrets_file=None, token_file=None, progress=True, service=None, resume=None, \*\*cred_kwargs)
+### yb.publish_content(content, \*, privacy_status=None, playlist=<object object>, category_id='28', with_chapters=True, attach_caption=True, set_thumb=True, config=None, client_secrets_file=None, token_file=None, profile=None, progress=True, service=None, resume=None, \*\*cred_kwargs)
 
 Upload a prepared [`PublicationContent`](#yb.PublicationContent) to YouTube.
 
@@ -442,6 +455,9 @@ thumbnail when available, and adds the video to the configured playlist.
 to `unlisted` and the video joins your configured playlist. Pass
 `playlist=None` to skip the playlist for one call, or `playlist="Name"`
 to override the target.
+
+`profile` publishes as a named account/channel (own token and config
+section; see [`yb.config`](yb.config.html.md#module-yb.config)); `None` uses `$YB_PROFILE` or the default.
 
 `cred_kwargs` reach [`get_credentials()`](yb.youtube.auth.html.md#yb.youtube.auth.get_credentials) (e.g.
 `open_browser=False, port=8080` for headless consent).
@@ -458,6 +474,16 @@ to override the target.
   [**PartialPublish**](yb.youtube.html.md#yb.youtube.PartialPublish) – the upload succeeded and a later step failed;
       `err.result` holds the video id and what was done. Pass
       `resume=err.result` to finish without uploading again (yb#21).
+
+### yb.resolve_profile(profile=None)
+
+The active profile name: `profile`, else `$YB_PROFILE`, else `None`.
+
+`None` (also for `""` and `"default"`) is the default profile: the
+top-level config keys and `youtube_token.json`.
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 ### yb.set_chapters(video_id, chapters, , header='Chapters:', service=None, \*\*cred_kwargs)
 

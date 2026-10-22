@@ -51,7 +51,7 @@ remaining steps target the saved `video_id`.
 `result` is plain JSON-able data, and the exception pickles (so a worker
 process can hand it back); `__cause__` does not survive pickling.
 
-### yb.youtube.publish.prepare_and_publish(media, \*, language='English', language_code=None, audio_language_code=None, brand=None, extra_context=None, with_chapters=True, with_thumbnail=True, privacy_status=None, playlist=<object object>, category_id='28', config=None, client_secrets_file=None, token_file=None, progress=True, \*\*cred_kwargs)
+### yb.youtube.publish.prepare_and_publish(media, \*, language='English', language_code=None, audio_language_code=None, brand=None, extra_context=None, with_chapters=True, with_thumbnail=True, privacy_status=None, playlist=<object object>, category_id='28', config=None, client_secrets_file=None, token_file=None, profile=None, progress=True, \*\*cred_kwargs)
 
 One call: prepare publication content from `media` and upload it.
 
@@ -61,13 +61,16 @@ captions + thumbnail + chapters and adds the video to the configured
 playlist. `privacy_status` and `playlist` default to your `yb` config
 (see [`publish_content()`](#yb.youtube.publish.publish_content)).
 
+`profile` publishes as a named account/channel (own token and config
+section; see [`yb.config`](yb.config.html.md#module-yb.config)); `None` uses `$YB_PROFILE` or the default.
+
 `cred_kwargs` reach [`get_credentials()`](yb.youtube.auth.html.md#yb.youtube.auth.get_credentials) (e.g.
 `open_browser=False, port=8080` for headless consent).
 
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
 
-### yb.youtube.publish.publish_content(content, \*, privacy_status=None, playlist=<object object>, category_id='28', with_chapters=True, attach_caption=True, set_thumb=True, config=None, client_secrets_file=None, token_file=None, progress=True, service=None, resume=None, \*\*cred_kwargs)
+### yb.youtube.publish.publish_content(content, \*, privacy_status=None, playlist=<object object>, category_id='28', with_chapters=True, attach_caption=True, set_thumb=True, config=None, client_secrets_file=None, token_file=None, profile=None, progress=True, service=None, resume=None, \*\*cred_kwargs)
 
 Upload a prepared `PublicationContent` to YouTube.
 
@@ -81,6 +84,9 @@ thumbnail when available, and adds the video to the configured playlist.
 to `unlisted` and the video joins your configured playlist. Pass
 `playlist=None` to skip the playlist for one call, or `playlist="Name"`
 to override the target.
+
+`profile` publishes as a named account/channel (own token and config
+section; see [`yb.config`](yb.config.html.md#module-yb.config)); `None` uses `$YB_PROFILE` or the default.
 
 `cred_kwargs` reach [`get_credentials()`](yb.youtube.auth.html.md#yb.youtube.auth.get_credentials) (e.g.
 `open_browser=False, port=8080` for headless consent).
@@ -98,7 +104,7 @@ to override the target.
       `err.result` holds the video id and what was done. Pass
       `resume=err.result` to finish without uploading again (yb#21).
 
-### yb.youtube.publish.publish_video(video_path, metadata, \*, privacy_status=None, playlist=<object object>, captions=None, thumbnail=None, config=None, client_secrets_file=None, token_file=None, progress=True, service=None, resume=None, \*\*cred_kwargs)
+### yb.youtube.publish.publish_video(video_path, metadata, \*, privacy_status=None, playlist=<object object>, captions=None, thumbnail=None, config=None, client_secrets_file=None, token_file=None, profile=None, progress=True, service=None, resume=None, \*\*cred_kwargs)
 
 Lower-level upload: explicit `VideoMetadata` + caption tracks.
 
@@ -108,6 +114,9 @@ Lower-level upload: explicit `VideoMetadata` + caption tracks.
 If a step after the upload fails, [`PartialPublish`](#yb.youtube.publish.PartialPublish) is raised with
 the new video’s id and what was done so far (`err.result`). Pass
 `resume=err.result` to finish without uploading again (yb#21).
+
+`profile` publishes as a named account/channel (own token and config
+section; see [`yb.config`](yb.config.html.md#module-yb.config)); `None` uses `$YB_PROFILE` or the default.
 
 `cred_kwargs` reach [`get_credentials()`](yb.youtube.auth.html.md#yb.youtube.auth.get_credentials) (e.g.
 `open_browser=False, port=8080` for headless consent).

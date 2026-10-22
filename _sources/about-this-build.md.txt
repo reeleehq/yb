@@ -5,19 +5,19 @@ orphan: true
 
 # About this build
 
-This documentation was built on **2026-10-18 01:53 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/eeebe593afa35950093b42472fbf638e39651a62"><code>eeebe59</code></a> on branch <code>main</code>, for **yb 0.1.20** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-10-22 01:35 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/028f0e3501a74381ba8634ea8fc43e734554068c"><code>028f0e3</code></a> on branch <code>main</code>, for **yb 0.1.21** (from <code>pyproject.toml</code>).
 
 :::{warning}
 The documentation and the package may be misaligned:
 
-- The documented version (0.1.20) is behind the latest release on PyPI (0.1.21): `pip install yb` gives newer code than these docs describe.
+- The documented version (0.1.21) is behind the latest release on PyPI (0.1.22): `pip install yb` gives newer code than these docs describe.
 :::
 
 ## Source
 
 | | |
 |---|---|
-| Commit | <a href="https://github.com/reeleehq/yb/commit/eeebe593afa35950093b42472fbf638e39651a62"><code>eeebe593afa35950093b42472fbf638e39651a62</code></a> |
+| Commit | <a href="https://github.com/reeleehq/yb/commit/028f0e3501a74381ba8634ea8fc43e734554068c"><code>028f0e3501a74381ba8634ea8fc43e734554068c</code></a> |
 | Branch | <code>main</code> |
 | Tags at this commit | none |
 | Working tree | clean |
@@ -28,16 +28,16 @@ The documentation and the package may be misaligned:
 | | |
 |---|---|
 | Repository | <code>reeleehq/yb</code> |
-| Run | <a href="https://github.com/reeleehq/yb/actions/runs/39088003591">39088003591</a> |
+| Run | <a href="https://github.com/reeleehq/yb/actions/runs/39706367753">39706367753</a> |
 | Ref | <code>refs/heads/main</code> |
-| Event commit | <code>eeebe593afa35950093b42472fbf638e39651a62</code> (in the history of the built commit) |
+| Event commit | <code>028f0e3501a74381ba8634ea8fc43e734554068c</code> (in the history of the built commit) |
 
 ## Tools
 
 | | |
 |---|---|
-| epythet | 0.2.17 |
-| Sphinx | 9.1.0 |
+| epythet | 0.2.22 |
+| Sphinx | 9.1.1 |
 | docutils | 0.22.4 |
 | Python | 3.12.15 |
 
@@ -55,14 +55,14 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/yb/0.1.21/">0.1.21</a>, newer than the documented version (0.1.20).
+Latest release: <a href="https://pypi.org/project/yb/0.1.22/">0.1.22</a>, newer than the documented version (0.1.21).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/yb && cd yb
-git checkout eeebe593afa35950093b42472fbf638e39651a62
-pip install "epythet==0.2.17"
+git checkout 028f0e3501a74381ba8634ea8fc43e734554068c
+pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```
 

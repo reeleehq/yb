@@ -9,7 +9,7 @@
 <link rel="alternate" type="text/markdown" href="yb.config.html.md">
 <link rel="describedby" href="llms.txt"><link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="yb.content" href="yb.content.html"><link rel="prev" title="yb.audio_convert" href="yb.audio_convert.html">
 
-    <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
+    <!-- Generated with Sphinx 9.1.1 and Furo 2025.12.19 -->
         <title>yb.config - yb</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d75fae25" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
@@ -299,6 +299,24 @@ ignored (forward-compatible).</p>
 <span class="p">}</span>
 </pre></div>
 </div>
+<p><strong>Profiles</strong> publish to another YouTube channel/account. Each named profile has
+its own OAuth token (<code class="docutils literal notranslate"><span class="pre">youtube_token.&lt;profile&gt;.json</span></code>) and its own section under
+<code class="docutils literal notranslate"><span class="pre">&quot;profiles&quot;</span></code>. A profile starts from the built-in defaults, <em>not</em> from the
+top-level keys (so a second channel never silently inherits your first
+channel’s playlist). Select one with <code class="docutils literal notranslate"><span class="pre">profile=</span></code>, <code class="docutils literal notranslate"><span class="pre">yb</span> <span class="pre">...</span> <span class="pre">--profile</span> <span class="pre">NAME</span></code> or
+<code class="docutils literal notranslate"><span class="pre">$YB_PROFILE</span></code>; with none selected the top-level keys and <code class="docutils literal notranslate"><span class="pre">youtube_token.json</span></code>
+apply, exactly as before:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="s2">"privacy_status"</span><span class="p">:</span> <span class="s2">"unlisted"</span><span class="p">,</span>
+    <span class="s2">"playlist"</span><span class="p">:</span> <span class="s2">"TW Uploads"</span><span class="p">,</span>
+    <span class="s2">"profiles"</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">"reelee"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"privacy_status"</span><span class="p">:</span> <span class="s2">"unlisted"</span><span class="p">,</span> <span class="s2">"channel_id"</span><span class="p">:</span> <span class="s2">"UC..."</span><span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">channel_id</span></code> (optional) is checked against the token’s channel before any
+upload, so a token minted for the wrong Google account fails loudly.</p>
 <p class="rubric">Module Attributes</p>
 <div class="table-wrapper autosummary longtable docutils container">
 <table class="autosummary longtable docutils align-default">
@@ -308,6 +326,9 @@ ignored (forward-compatible).</p>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#yb.config.DEFAULT_PLAYLIST_PRIVACY_STATUS" title="yb.config.DEFAULT_PLAYLIST_PRIVACY_STATUS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DEFAULT_PLAYLIST_PRIVACY_STATUS</span></code></a></p></td>
 <td><p>Default privacy for a playlist that <code class="docutils literal notranslate"><span class="pre">yb</span></code> auto-creates.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.config.PROFILE_ENV" title="yb.config.PROFILE_ENV"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PROFILE_ENV</span></code></a></p></td>
+<td><p>Environment variable naming the profile to use when none is passed.</p></td>
 </tr>
 </tbody>
 </table>
@@ -319,8 +340,11 @@ ignored (forward-compatible).</p>
 <tr class="row-odd"><td><p><a class="reference internal" href="#yb.config.default_config_file" title="yb.config.default_config_file"><code class="xref py py-obj docutils literal notranslate"><span class="pre">default_config_file</span></code></a>()</p></td>
 <td><p>Config file location (<code class="docutils literal notranslate"><span class="pre">$XDG_CONFIG_HOME</span></code> or <code class="docutils literal notranslate"><span class="pre">~/.config</span></code>).</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#yb.config.load_config" title="yb.config.load_config"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_config</span></code></a>([config_file])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#yb.config.load_config" title="yb.config.load_config"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_config</span></code></a>([config_file, profile])</p></td>
 <td><p>Load publishing defaults from <code class="docutils literal notranslate"><span class="pre">config_file</span></code> (or the default location).</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.config.resolve_profile" title="yb.config.resolve_profile"><code class="xref py py-obj docutils literal notranslate"><span class="pre">resolve_profile</span></code></a>([profile])</p></td>
+<td><p>The active profile name: <code class="docutils literal notranslate"><span class="pre">profile</span></code>, else <code class="docutils literal notranslate"><span class="pre">$YB_PROFILE</span></code>, else <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></td>
 </tr>
 </tbody>
 </table>
@@ -350,9 +374,15 @@ config file specifies one. <code class="docutils literal notranslate"><span clas
 but shareable by link until you deliberately make one <code class="docutils literal notranslate"><span class="pre">&quot;public&quot;</span></code>.</p>
 </dd></dl>
 
+<dl class="py data">
+<dt class="sig sig-object py" id="yb.config.PROFILE_ENV">
+<span class="sig-prename descclassname"><span class="pre">yb.config.</span></span><span class="sig-name descname"><span class="pre">PROFILE_ENV</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'YB_PROFILE'</span></span><a class="headerlink" href="#yb.config.PROFILE_ENV" title="Link to this definition">¶</a></dt>
+<dd><p>Environment variable naming the profile to use when none is passed.</p>
+</dd></dl>
+
 <dl class="py class">
 <dt class="sig sig-object py" id="yb.config.YbConfig">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">yb.config.</span></span><span class="sig-name descname"><span class="pre">YbConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">privacy_status</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'unlisted'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">playlist</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">create_playlist_if_missing</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">playlist_privacy_status</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'private'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/config.html#YbConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.config.YbConfig" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">yb.config.</span></span><span class="sig-name descname"><span class="pre">YbConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">privacy_status</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'unlisted'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">playlist</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">create_playlist_if_missing</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">playlist_privacy_status</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'private'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/config.html#YbConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.config.YbConfig" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#object" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <p>Resolved publishing defaults.</p>
 <dl class="field-list simple">
@@ -403,6 +433,17 @@ title exists yet, rather than erroring.</p>
 </dl>
 </dd></dl>
 
+<dl class="py attribute">
+<dt class="sig sig-object py" id="yb.config.YbConfig.channel_id">
+<span class="sig-name descname"><span class="pre">channel_id</span></span><a class="headerlink" href="#yb.config.YbConfig.channel_id" title="Link to this definition">¶</a></dt>
+<dd><p>Channel the token must belong to (<code class="docutils literal notranslate"><span class="pre">None</span></code> = don’t check).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a> | <span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code></a></span></span></p>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="yb.config.YbConfig.from_mapping">
 <span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_mapping</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mapping</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/config.html#YbConfig.from_mapping"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.config.YbConfig.from_mapping" title="Link to this definition">¶</a></dt>
@@ -429,14 +470,29 @@ title exists yet, rather than erroring.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="yb.config.load_config">
-<span class="sig-prename descclassname"><span class="pre">yb.config.</span></span><span class="sig-name descname"><span class="pre">load_config</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">overrides</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/config.html#load_config"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.config.load_config" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">yb.config.</span></span><span class="sig-name descname"><span class="pre">load_config</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">profile</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">overrides</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/config.html#load_config"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.config.load_config" title="Link to this definition">¶</a></dt>
 <dd><p>Load publishing defaults from <code class="docutils literal notranslate"><span class="pre">config_file</span></code> (or the default location).</p>
 <p>A missing file yields the built-in defaults. <code class="docutils literal notranslate"><span class="pre">overrides</span></code> (typically the
 explicit keyword arguments a caller passed) take precedence when not
 <code class="docutils literal notranslate"><span class="pre">None</span></code>, so call-site arguments always win over the file.</p>
+<p><code class="docutils literal notranslate"><span class="pre">profile</span></code> (see <a class="reference internal" href="#yb.config.resolve_profile" title="yb.config.resolve_profile"><code class="xref py py-func docutils literal notranslate"><span class="pre">resolve_profile()</span></code></a>) picks the <code class="docutils literal notranslate"><span class="pre">&quot;profiles&quot;</span></code> section
+to read instead of the top-level keys; an unknown profile is an error.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#yb.config.YbConfig" title="yb.config.YbConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">YbConfig</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="yb.config.resolve_profile">
+<span class="sig-prename descclassname"><span class="pre">yb.config.</span></span><span class="sig-name descname"><span class="pre">resolve_profile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">profile</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/config.html#resolve_profile"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.config.resolve_profile" title="Link to this definition">¶</a></dt>
+<dd><p>The active profile name: <code class="docutils literal notranslate"><span class="pre">profile</span></code>, else <code class="docutils literal notranslate"><span class="pre">$YB_PROFILE</span></code>, else <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">None</span></code> (also for <code class="docutils literal notranslate"><span class="pre">&quot;&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;default&quot;</span></code>) is the default profile: the
+top-level config keys and <code class="docutils literal notranslate"><span class="pre">youtube_token.json</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a> | <span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code></a></span></span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -497,16 +553,19 @@ explicit keyword arguments a caller passed) take precedence when not
 <li><a class="reference internal" href="#">yb.config</a><ul>
 <li><a class="reference internal" href="#yb.config.DEFAULT_PLAYLIST_PRIVACY_STATUS"><code class="docutils literal notranslate"><span class="pre">DEFAULT_PLAYLIST_PRIVACY_STATUS</span></code></a></li>
 <li><a class="reference internal" href="#yb.config.DEFAULT_PRIVACY_STATUS"><code class="docutils literal notranslate"><span class="pre">DEFAULT_PRIVACY_STATUS</span></code></a></li>
+<li><a class="reference internal" href="#yb.config.PROFILE_ENV"><code class="docutils literal notranslate"><span class="pre">PROFILE_ENV</span></code></a></li>
 <li><a class="reference internal" href="#yb.config.YbConfig"><code class="docutils literal notranslate"><span class="pre">YbConfig</span></code></a><ul>
 <li><a class="reference internal" href="#yb.config.YbConfig.privacy_status"><code class="docutils literal notranslate"><span class="pre">YbConfig.privacy_status</span></code></a></li>
 <li><a class="reference internal" href="#yb.config.YbConfig.playlist"><code class="docutils literal notranslate"><span class="pre">YbConfig.playlist</span></code></a></li>
 <li><a class="reference internal" href="#yb.config.YbConfig.create_playlist_if_missing"><code class="docutils literal notranslate"><span class="pre">YbConfig.create_playlist_if_missing</span></code></a></li>
 <li><a class="reference internal" href="#yb.config.YbConfig.playlist_privacy_status"><code class="docutils literal notranslate"><span class="pre">YbConfig.playlist_privacy_status</span></code></a></li>
+<li><a class="reference internal" href="#yb.config.YbConfig.channel_id"><code class="docutils literal notranslate"><span class="pre">YbConfig.channel_id</span></code></a></li>
 <li><a class="reference internal" href="#yb.config.YbConfig.from_mapping"><code class="docutils literal notranslate"><span class="pre">YbConfig.from_mapping()</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#yb.config.default_config_file"><code class="docutils literal notranslate"><span class="pre">default_config_file()</span></code></a></li>
 <li><a class="reference internal" href="#yb.config.load_config"><code class="docutils literal notranslate"><span class="pre">load_config()</span></code></a></li>
+<li><a class="reference internal" href="#yb.config.resolve_profile"><code class="docutils literal notranslate"><span class="pre">resolve_profile()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -518,7 +577,7 @@ explicit keyword arguments a caller passed) take precedence when not
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=0d95f3a7"></script>
+</div><script src="../_static/documentation_options.js?v=a4d587c1"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
