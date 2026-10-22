@@ -7,6 +7,12 @@ back::
     yb auth                          # print the consent URL
     yb auth --paste '<redirected URL>'   # finish; also - (stdin) or @file
     yb auth --check                  # is a usable token cached? (never prompts)
+    yb auth --profile reelee         # same, for the named account/channel
+
+``whoami``: which channel does a profile's token upload to? (run before
+publishing; never uploads)::
+
+    yb whoami --profile reelee
 
 ``check``: are YouTube downloads ready (JS runtime, solver scripts)? Prints what
 is missing and how to install it; exit status 1 if anything is::
@@ -38,7 +44,11 @@ def _read_paste(value: str) -> str:
 def _auth(args: argparse.Namespace) -> int:
     from yb.youtube import ConsentPending, ConsentRequired, get_credentials
 
-    kwargs = dict(client_secrets_file=args.client_secrets, token_file=args.token_file)
+    kwargs = dict(
+        client_secrets_file=args.client_secrets,
+        token_file=args.token_file,
+        profile=args.profile,
+    )
     try:
         if args.check:
             get_credentials(interactive=False, **kwargs)
@@ -56,6 +66,28 @@ def _auth(args: argparse.Namespace) -> int:
         print(error, file=sys.stderr)
         return 1
     print("YouTube credentials are valid and cached.")
+    return 0
+
+
+def _whoami(args: argparse.Namespace) -> int:
+    from yb.config import load_config, resolve_profile
+    from yb.youtube import ConsentRequired, WrongChannel, check_channel, get_service
+
+    profile = resolve_profile(args.profile)
+    label = profile or "default"
+    try:
+        cfg = load_config(profile=profile)
+        service = get_service(profile=profile, interactive=False)
+        channel = check_channel(service, cfg.channel_id)
+    except (ConsentRequired, WrongChannel, KeyError) as error:
+        print(error, file=sys.stderr)
+        return 1
+    expected = "matches config" if cfg.channel_id else "no channel_id in config"
+    print(
+        f"profile {label}: uploads to {channel['title']!r} "
+        f"{channel['handle'] or ''} id={channel['id']} ({expected}); "
+        f"privacy={cfg.privacy_status} playlist={cfg.playlist!r}"
+    )
     return 0
 
 
@@ -95,7 +127,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     auth.add_argument("--client-secrets", help="OAuth client JSON (default: as usual)")
     auth.add_argument("--token-file", help="token cache location (default: as usual)")
+    auth.add_argument("--profile", help="named account (default: $YB_PROFILE, else the default)")
     auth.set_defaults(run=_auth)
+    whoami = commands.add_parser(
+        "whoami", help="which channel does a profile's token upload to?"
+    )
+    whoami.add_argument("--profile", help="named account (default: $YB_PROFILE, else the default)")
+    whoami.set_defaults(run=_whoami)
     check = commands.add_parser(
         "check", help="are YouTube downloads ready? (JS runtime, solver scripts)"
     )

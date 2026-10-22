@@ -135,6 +135,29 @@ helpers (which also forward `open_browser=` / `port=` themselves).
 
 Pass `timeout_seconds=` if you want the wait bounded rather than indefinite.
 
+## Several accounts/channels: profiles
+
+One yb install can publish to more than one YouTube channel. Each **profile** has its own token (`~/.config/yb/youtube_token.<profile>.json`) and its own section under `"profiles"` in `~/.config/yb/config.json`. No profile selected = the default account, exactly as before (`youtube_token.json`, the top-level config keys).
+
+```json
+{"privacy_status": "unlisted", "playlist": "TW Uploads",
+ "profiles": {"reelee": {"privacy_status": "unlisted", "channel_id": "UC..."}}}
+```
+
+A profile does **not** inherit the top-level keys (a second channel must not silently get the first one's playlist); set what it needs. `channel_id` is optional but recommended: it is checked against the token before every upload.
+
+Select with `profile="reelee"` on any `yb.youtube` call, `--profile reelee` on the CLI, or `export YB_PROFILE=reelee`.
+
+One-time consent per profile (browser signed in as *that* Google account; add the account as a Test user on the consent screen unless the app is published):
+
+```bash
+yb auth --profile reelee                      # prints a URL; open it signed in as the target account
+yb auth --profile reelee --paste '<redirected URL>'
+yb whoami --profile reelee                    # which channel does this token upload to? (read-only)
+```
+
+Copy the `id=` that `whoami` prints into the profile's `channel_id`. **Always run `yb whoami --profile X` before the first publish with a profile**: a token minted while signed in as the wrong Google account uploads to the wrong channel.
+
 ## Caveats to surface to the user
 
 - **Unaudited project → forced private.** Until the project passes YouTube's
@@ -156,5 +179,5 @@ Pass `timeout_seconds=` if you want the wait bounded rather than indefinite.
   caveat above) or was revoked; delete `~/.config/yb/youtube_token.json` and
   re-run consent.
 - `ConsentRequired` from a session with no terminal → use paste-back above.
-- Wrong channel authorized → delete the cached token and re-consent with the
-  correct Google account.
+- Wrong channel authorized → delete that profile's cached token and re-consent with the
+  correct Google account (`yb whoami --profile X` shows which channel a token uses).

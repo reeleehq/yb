@@ -19,6 +19,25 @@ Example ``~/.config/yb/config.json``::
         "create_playlist_if_missing": true,
         "playlist_privacy_status": "private"
     }
+
+**Profiles** publish to another YouTube channel/account. Each named profile has
+its own OAuth token (``youtube_token.<profile>.json``) and its own section under
+``"profiles"``. A profile starts from the built-in defaults, *not* from the
+top-level keys (so a second channel never silently inherits your first
+channel's playlist). Select one with ``profile=``, ``yb ... --profile NAME`` or
+``$YB_PROFILE``; with none selected the top-level keys and ``youtube_token.json``
+apply, exactly as before::
+
+    {
+        "privacy_status": "unlisted",
+        "playlist": "TW Uploads",
+        "profiles": {
+            "reelee": {"privacy_status": "unlisted", "channel_id": "UC..."}
+        }
+    }
+
+``channel_id`` (optional) is checked against the token's channel before any
+upload, so a token minted for the wrong Google account fails loudly.
 """
 
 from __future__ import annotations
@@ -40,6 +59,20 @@ DEFAULT_PRIVACY_STATUS = "unlisted"
 DEFAULT_PLAYLIST_PRIVACY_STATUS = "private"
 
 
+#: Environment variable naming the profile to use when none is passed.
+PROFILE_ENV = "YB_PROFILE"
+
+
+def resolve_profile(profile: str | None = None) -> str | None:
+    """The active profile name: ``profile``, else ``$YB_PROFILE``, else ``None``.
+
+    ``None`` (also for ``""`` and ``"default"``) is the default profile: the
+    top-level config keys and ``youtube_token.json``.
+    """
+    name = profile if profile is not None else os.environ.get(PROFILE_ENV)
+    return None if name in (None, "", "default") else name
+
+
 def default_config_file() -> Path:
     """Config file location (``$XDG_CONFIG_HOME`` or ``~/.config``)."""
     base = os.environ.get("XDG_CONFIG_HOME")
@@ -58,12 +91,14 @@ class YbConfig:
         create_playlist_if_missing: Create ``playlist`` if no playlist of that
             title exists yet, rather than erroring.
         playlist_privacy_status: Privacy for an auto-created playlist.
+        channel_id: Channel the token must belong to (``None`` = don't check).
     """
 
     privacy_status: str = DEFAULT_PRIVACY_STATUS
     playlist: str | None = None
     create_playlist_if_missing: bool = True
     playlist_privacy_status: str = DEFAULT_PLAYLIST_PRIVACY_STATUS
+    channel_id: str | None = None
 
     @classmethod
     def from_mapping(cls, mapping: dict | None) -> "YbConfig":
@@ -73,16 +108,33 @@ class YbConfig:
         return cls(**{k: v for k, v in mapping.items() if k in known})
 
 
-def load_config(config_file: PathLike | None = None, **overrides) -> YbConfig:
+def load_config(
+    config_file: PathLike | None = None,
+    *,
+    profile: str | None = None,
+    **overrides,
+) -> YbConfig:
     """Load publishing defaults from ``config_file`` (or the default location).
 
     A missing file yields the built-in defaults. ``overrides`` (typically the
     explicit keyword arguments a caller passed) take precedence when not
     ``None``, so call-site arguments always win over the file.
+
+    ``profile`` (see :func:`resolve_profile`) picks the ``"profiles"`` section
+    to read instead of the top-level keys; an unknown profile is an error.
     """
+    profile = resolve_profile(profile)
     path = Path(config_file).expanduser() if config_file else default_config_file()
     data: dict = {}
     if path.exists():
         data = json.loads(path.read_text())
+    if profile is not None:
+        profiles = data.get("profiles") or {}
+        if profile not in profiles:
+            raise KeyError(
+                f"No profile {profile!r} in {path} (known: {sorted(profiles) or 'none'}). "
+                'Add it under "profiles" (see the yb-setup skill).'
+            )
+        data = dict(profiles[profile])
     data.update({k: v for k, v in overrides.items() if v is not None})
     return YbConfig.from_mapping(data)

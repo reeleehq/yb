@@ -47,6 +47,10 @@ from yb.youtube import add_video_to_playlist
 add_video_to_playlist("VIDEO_ID", "TW Uploads")  # find-or-create, idempotent
 ```
 
+## Which account? (profiles)
+
+Default = the personal account. To publish to another channel pass `profile="reelee"` (any `yb.youtube` call) or set `YB_PROFILE=reelee`. **Before the first upload with a profile, run `yb whoami --profile reelee`** and confirm the channel it prints; set that id as `channel_id` in the profile so `publish_*` refuses (`WrongChannel`) if the token is ever for another account. Profiles start from built-in defaults (they do not inherit the top-level playlist). Setup: see yb-setup.
+
 ## Reuse-and-persist rule
 
 The transcript SRT lives next to the media (`<basename>.srt`) and is **reused if
