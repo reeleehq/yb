@@ -98,7 +98,8 @@ class AudioDownload:
     """A bounded audio download.
 
     Attributes:
-        path: The mp3 file. The caller owns it (move or delete it after ingest).
+        path: The mp3 file, alone in its own directory. The caller owns the
+            directory (``path.parent``): move the file, then remove it.
         title: The source's title, or the file stem when it has none.
         duration_s: Length in seconds, ``None`` when the source did not say.
         notice: The copyright notice to store with the file.
@@ -128,7 +129,6 @@ def _pinned_opts(max_bytes: int, max_duration_s: float) -> dict[str, Any]:
         "max_filesize": max_bytes,  # yt-dlp skips/aborts oversized formats
         "noplaylist": True,
         "playlist_items": "1",
-        "max_downloads": 1,
         "keepvideo": False,
         # `<=?` lets a source with no reported duration through; `!is_live` and
         # the byte cap bound it.
@@ -187,12 +187,14 @@ def download_audio_bounded(
     Order: ``validate_target`` on ``url`` (before any network), a metadata-only
     fetch that refuses playlists, live streams and over-long sources (before any
     media bytes) and re-validates the resolved page URL, then the download with
-    the caps pinned, then a size check on the extracted file. Work happens in a
-    private temp directory under ``download_dir``, removed on any failure.
+    the caps pinned, then a size check on the extracted file. The mp3 is written
+    to a fresh private directory under ``download_dir`` (so concurrent calls never
+    collide); on any failure that directory is removed.
 
     Args:
         url: A page link (YouTube, SoundCloud, Bandcamp, ...).
-        download_dir: Where the mp3 ends up (the caller owns it from then on).
+        download_dir: Parent of the per-call directory holding the mp3 (the caller
+            owns that directory from then on and removes it after ingest).
         max_bytes: Cap on the downloaded and on the extracted file.
         max_duration_s: Cap on the source's duration. A source that reports no
             duration passes this check and is bounded by ``max_bytes`` alone.
@@ -245,14 +247,13 @@ def download_audio_bounded(
         # max_filesize bounds the download, not the extracted output.
         if path.stat().st_size > max_bytes:
             raise AudioLimitError(f"audio exceeds the {max_bytes}-byte limit")
-        final = out_dir / path.name
-        shutil.move(path, final)
-    finally:
+    except BaseException:
         shutil.rmtree(work, ignore_errors=True)
+        raise
     info = result.info or {}
     return AudioDownload(
-        path=final,
-        title=info.get("title") or final.stem,
+        path=path,
+        title=info.get("title") or path.stem,
         duration_s=info.get("duration"),
         notice=notice,
         info=info,

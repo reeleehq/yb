@@ -53,9 +53,15 @@ def leftovers(tmp_path):
 
 def test_happy_path_moves_mp3_into_download_dir(fakes, tmp_path):
     got = run(tmp_path, max_bytes=100, max_duration_s=120)
-    assert got.path == tmp_path / "Song (id).mp3" and got.path.exists()
+    assert got.path.name == "Song (id).mp3" and got.path.exists()
+    assert got.path.parent.parent == tmp_path  # its own per-call directory
     assert (got.title, got.duration_s, got.notice) == ("Song", 60, COPYRIGHT_NOTICE)
-    assert leftovers(tmp_path) == ["Song (id).mp3"]  # temp work dir is gone
+    assert [p.name for p in got.path.parent.iterdir()] == ["Song (id).mp3"]
+
+
+def test_two_calls_on_one_video_do_not_collide(fakes, tmp_path):
+    first, second = run(tmp_path), run(tmp_path)
+    assert first.path != second.path and first.path.exists() and second.path.exists()
 
 
 def test_validator_runs_before_any_network(fakes, tmp_path):
@@ -139,7 +145,8 @@ def test_pinned_opts_are_single_bounded_nonlive_mp3(fakes, tmp_path):
     run(tmp_path, max_bytes=100, extra_opts={"http_headers": {"X": "1"}})
     opts = fakes["download"][0][1]["extra_opts"]
     assert opts["max_filesize"] == 100
-    assert opts["noplaylist"] and opts["max_downloads"] == 1
+    # max_downloads would make yt-dlp raise after the first success.
+    assert opts["noplaylist"] and "max_downloads" not in opts
     assert opts["playlist_items"] == "1" and opts["keepvideo"] is False
     assert opts["postprocessors"][0]["preferredcodec"] == "mp3"
     assert opts["http_headers"] == {"X": "1"}  # deployment options pass through
@@ -169,3 +176,37 @@ def test_extra_opts_outside_the_allowlist_raise(fakes, tmp_path, key):
 def test_caps_must_be_positive(fakes, tmp_path, kw):
     with pytest.raises(ValueError):
         run(tmp_path, **kw)
+
+
+def test_real_ytdlp_downloads_a_local_file_as_mp3(tmp_path, monkeypatch):
+    """No fakes: real yt-dlp (generic extractor) + ffmpeg against a local HTTP server."""
+    import functools
+    import http.server
+    import shutil
+    import subprocess
+    import threading
+
+    if not shutil.which("ffmpeg"):
+        pytest.skip("ffmpeg is not installed")
+    served = tmp_path / "srv"
+    served.mkdir()
+    subprocess.run(
+        ["ffmpeg", "-y", "-f", "lavfi", "-i", "sine=duration=1", str(served / "a.mp3")],
+        capture_output=True,
+        check=True,
+    )
+    handler = functools.partial(
+        http.server.SimpleHTTPRequestHandler, directory=str(served)
+    )
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        got = download_audio_bounded(
+            f"http://127.0.0.1:{server.server_port}/a.mp3",
+            download_dir=tmp_path / "out",
+            max_bytes=10**6,
+            max_duration_s=60,
+        )
+    finally:
+        server.shutdown()
+    assert got.path.suffix == ".mp3" and got.path.stat().st_size > 0
