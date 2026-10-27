@@ -150,7 +150,9 @@ def test_problems_warn_and_never_raise(tmp_path):
     assert len(problems) == 2
 
 
-def test_broken_module_lookup_counts_as_missing():
+def test_broken_module_lookup_counts_as_missing(monkeypatch):
+    monkeypatch.delitem(sys.modules, req.EJS_MODULE, raising=False)
+
     def _raises(name):
         raise ValueError("bad spec")
 
@@ -189,7 +191,9 @@ class _FakeYDL:
 
 def test_downloads_hand_yt_dlp_the_off_path_runtime(monkeypatch, tmp_path):
     deno = _fake_deno(tmp_path)
-    monkeypatch.setitem(sys.modules, "yt_dlp", types.SimpleNamespace(YoutubeDL=_FakeYDL))
+    monkeypatch.setitem(
+        sys.modules, "yt_dlp", types.SimpleNamespace(YoutubeDL=_FakeYDL)
+    )
     monkeypatch.setattr(req, "check_requirements", lambda **k: [])
     monkeypatch.setattr(
         req, "find_js_runtime", lambda: req.JsRuntime("deno", deno, on_path=False)
@@ -260,7 +264,9 @@ def test_min_version_is_read_from_yt_dlp():
 @pytest.mark.parametrize(
     "importer",
     [
-        pytest.param(lambda name: (_ for _ in ()).throw(ImportError(name)), id="absent"),
+        pytest.param(
+            lambda name: (_ for _ in ()).throw(ImportError(name)), id="absent"
+        ),
         pytest.param(lambda name: types.SimpleNamespace(), id="no-attribute"),
         pytest.param(_yt_dlp_with_min(("x",)), id="garbage"),
     ],
@@ -345,7 +351,26 @@ def test_the_download_preflight_never_spawns_deno(monkeypatch):
 
 
 def test_the_version_check_can_be_turned_off(tmp_path):
-    problems = _check_with(
-        tmp_path, _fake_run("deno 0.1.0"), check_deno_version=False
-    )
+    problems = _check_with(tmp_path, _fake_run("deno 0.1.0"), check_deno_version=False)
     assert problems == []
+
+
+def test_module_already_imported_counts_as_present_even_if_find_spec_fails(monkeypatch):
+    # An imported module can have __spec__ None, which makes find_spec raise.
+    def _raises(name):
+        raise ValueError(f"{name}.__spec__ is None")
+
+    monkeypatch.setitem(sys.modules, req.EJS_MODULE, types.ModuleType(req.EJS_MODULE))
+    assert req.has_ejs_scripts(find_spec=_raises) is True
+    monkeypatch.delitem(sys.modules, req.EJS_MODULE)
+    assert req.has_ejs_scripts(find_spec=_raises) is False
+
+
+def test_ejs_problem_names_the_interpreter_it_looked_in():
+    problems = req.check_requirements(
+        warn=False,
+        which=_no_which,
+        search_dirs=[],
+        find_spec=lambda name: None if name == req.EJS_MODULE else object(),
+    )
+    assert sys.executable in problems[0]
