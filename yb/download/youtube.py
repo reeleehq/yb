@@ -610,14 +610,28 @@ def search_youtube(
 
 
 def _search_hit(entry: dict) -> SearchHit:
+    """The one parser of a yt-dlp flat-extraction entry (search and playlist rows)."""
     video_id = entry.get("id") or ""
     return SearchHit(
         id=video_id,
         title=entry.get("title") or "",
         duration=entry.get("duration"),
         channel=entry.get("channel") or entry.get("uploader"),
-        url=entry.get("url") or f"https://www.youtube.com/watch?v={video_id}",
+        url=entry.get("url")
+        or entry.get("webpage_url")
+        or (f"https://www.youtube.com/watch?v={video_id}" if video_id else ""),
     )
+
+
+def _flat_playlist_entry(entry: dict) -> dict[str, Any]:
+    """A :func:`youtube_playlist_info` row (``webpage_url`` key) from a flat entry."""
+    hit = _search_hit(entry)
+    return {  # missing values stay None, as before the shared parser
+        "id": hit.id or None,
+        "title": hit.title or None,
+        "webpage_url": hit.url or None,
+        "duration": hit.duration,
+    }
 
 
 def youtube_playlist_info(
@@ -656,16 +670,7 @@ def youtube_playlist_info(
 
     raw_entries = (info.get("entries") if info else None) or []
     if flat:
-        entries = [
-            {
-                "id": e.get("id"),
-                "title": e.get("title"),
-                "webpage_url": e.get("url") or e.get("webpage_url"),
-                "duration": e.get("duration"),
-            }
-            for e in raw_entries
-            if e
-        ]
+        entries = [_flat_playlist_entry(e) for e in raw_entries if e]
     else:
         entries = [_trim_info(e) for e in raw_entries if e]
     return {
