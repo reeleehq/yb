@@ -1,32 +1,32 @@
 {
   "schema_version": 1,
-  "built_at": "2026-10-27T01:34:30Z",
+  "built_at": "2026-10-27T01:36:37Z",
   "package": {
     "name": "yb",
-    "version": "0.1.25",
+    "version": "0.1.26",
     "display_name": "yb",
     "source": "pyproject.toml"
   },
   "git": {
     "available": true,
-    "commit": "3a8a8a3193bd89ee38a7c6f84c17e612e33a8822",
-    "short_commit": "3a8a8a3",
+    "commit": "2aeb749036bdbed05301c3c61a0e9a96c31efe39",
+    "short_commit": "2aeb749",
     "branch": "main",
     "tags": [],
     "dirty": false,
     "remote_url": "https://github.com/reeleehq/yb",
-    "commit_url": "https://github.com/reeleehq/yb/commit/3a8a8a3193bd89ee38a7c6f84c17e612e33a8822",
+    "commit_url": "https://github.com/reeleehq/yb/commit/2aeb749036bdbed05301c3c61a0e9a96c31efe39",
     "error": null
   },
   "ci": {
     "provider": "github",
     "repository": "reeleehq/yb",
-    "sha": "3a8a8a3193bd89ee38a7c6f84c17e612e33a8822",
+    "sha": "2aeb749036bdbed05301c3c61a0e9a96c31efe39",
     "sha_in_history": true,
     "ref": "refs/heads/main",
     "ref_name": "main",
-    "run_id": "40432504801",
-    "run_url": "https://github.com/reeleehq/yb/actions/runs/40432504801",
+    "run_id": "40433396576",
+    "run_url": "https://github.com/reeleehq/yb/actions/runs/40433396576",
     "server_url": "https://github.com"
   },
   "tools": {
@@ -60,11 +60,11 @@
   },
   "pypi": {
     "checked": true,
-    "latest": "0.1.25",
+    "latest": "0.1.26",
     "relation": "same",
     "error": null
   },
-  "reproduce": "git clone https://github.com/reeleehq/yb && cd yb\ngit checkout 3a8a8a3193bd89ee38a7c6f84c17e612e33a8822\npip install \"epythet==0.2.22\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
+  "reproduce": "git clone https://github.com/reeleehq/yb && cd yb\ngit checkout 2aeb749036bdbed05301c3c61a0e9a96c31efe39\npip install \"epythet==0.2.22\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
   "warnings": [],
   "alignment": {
     "aligned": true,
