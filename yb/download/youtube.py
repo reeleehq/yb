@@ -203,6 +203,23 @@ def _cookie_opts(
     return {"cookiefile": usable} if usable else {}
 
 
+def _extract_info(
+    target: str,
+    base_opts: dict[str, Any],
+    *,
+    extra_opts: dict | None,
+    cookies_file: CookiesFile,
+) -> dict | None:
+    """Metadata-only yt-dlp extraction: cookies, then ``extra_opts``, then the JS runtime."""
+    from yt_dlp import YoutubeDL
+
+    opts = dict(base_opts)
+    opts.update(_cookie_opts(cookies_file, extra_opts=extra_opts))
+    opts.update(extra_opts or {})
+    with YoutubeDL(with_runtime_opts(opts)) as ydl:
+        return ydl.extract_info(target, download=False)
+
+
 def youtube_video_info(
     url: str,
     *,
@@ -216,13 +233,12 @@ def youtube_video_info(
 
     ``cookies_file``: see :func:`download_youtube_video`.
     """
-    from yt_dlp import YoutubeDL
-
-    opts = {"quiet": True, "skip_download": True, "noplaylist": True}
-    opts.update(_cookie_opts(cookies_file, extra_opts=extra_opts))
-    opts.update(extra_opts or {})
-    with YoutubeDL(with_runtime_opts(opts)) as ydl:
-        info = ydl.extract_info(url, download=False)
+    info = _extract_info(
+        url,
+        {"quiet": True, "skip_download": True, "noplaylist": True},
+        extra_opts=extra_opts,
+        cookies_file=cookies_file,
+    )
     return _trim_info(info)
 
 
@@ -534,19 +550,14 @@ def search_youtube(
     if not 1 <= limit <= MAX_SEARCH_LIMIT:
         raise ValueError(f"limit must be in 1..{MAX_SEARCH_LIMIT}, got {limit}")
 
-    from yt_dlp import YoutubeDL
-
-    opts: dict[str, Any] = {
-        "quiet": True,
-        "skip_download": True,
-        "extract_flat": True,
-    }
-    opts.update(_cookie_opts(cookies_file, extra_opts=extra_opts))
-    opts.update(extra_opts or {})
-    with YoutubeDL(with_runtime_opts(opts)) as ydl:
-        info = ydl.extract_info(f"ytsearch{limit}:{query}", download=False)
-
-    return [_search_hit(e) for e in (info or {}).get("entries") or [] if e]
+    info = _extract_info(
+        f"ytsearch{limit}:{query}",
+        {"quiet": True, "skip_download": True, "extract_flat": True},
+        extra_opts=extra_opts,
+        cookies_file=cookies_file,
+    )
+    entries = (info or {}).get("entries") or []
+    return [_search_hit(e) for e in entries if e and (e.get("id") or e.get("url"))]
 
 
 def _search_hit(entry: dict) -> SearchHit:
@@ -584,8 +595,6 @@ def youtube_playlist_info(
         extra_opts: Additional raw yt-dlp options (merged last).
         cookies_file: See :func:`download_youtube_video`.
     """
-    from yt_dlp import YoutubeDL
-
     opts: dict[str, Any] = {
         "quiet": True,
         "skip_download": True,
@@ -594,10 +603,7 @@ def youtube_playlist_info(
     }
     if playlist_items:
         opts["playlist_items"] = playlist_items
-    opts.update(_cookie_opts(cookies_file, extra_opts=extra_opts))
-    opts.update(extra_opts or {})
-    with YoutubeDL(with_runtime_opts(opts)) as ydl:
-        info = ydl.extract_info(url, download=False)
+    info = _extract_info(url, opts, extra_opts=extra_opts, cookies_file=cookies_file)
 
     raw_entries = (info.get("entries") if info else None) or []
     if flat:

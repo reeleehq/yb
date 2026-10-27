@@ -31,7 +31,7 @@ def fake_ydl(monkeypatch):
     module = types.ModuleType("yt_dlp")
     module.YoutubeDL = FakeYDL
     monkeypatch.setitem(sys.modules, "yt_dlp", module)
-    monkeypatch.setattr(ytdl, "with_runtime_opts", lambda o: o)
+    monkeypatch.setattr(ytdl, "with_runtime_opts", lambda o: {**o, "_rt": True})
     monkeypatch.setattr(ytdl, "default_cookies_file", lambda: None)
     return calls
 
@@ -47,6 +47,7 @@ def test_returns_rows_and_builds_ytsearch_query(fake_ydl):
                 "url": "https://www.youtube.com/watch?v=a1",
             },
             None,
+            {"title": "no id, no url"},
             {"id": "b2", "title": "Live", "duration": None, "uploader": "Up"},
         ]
     }
@@ -54,6 +55,7 @@ def test_returns_rows_and_builds_ytsearch_query(fake_ydl):
     assert fake_ydl["query"] == "ytsearch2:हनुमान चालीसा"
     assert fake_ydl["download"] is False
     assert fake_ydl["opts"]["extract_flat"] is True
+    assert fake_ydl["opts"]["_rt"] is True  # went through the JS-runtime step
     assert hits == [
         SearchHit("a1", "Song", 61, "Ch", "https://www.youtube.com/watch?v=a1"),
         SearchHit("b2", "Live", None, "Up", "https://www.youtube.com/watch?v=b2"),
