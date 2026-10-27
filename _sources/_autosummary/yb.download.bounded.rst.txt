@@ -1,0 +1,36 @@
+yb.download.bounded
+===================
+
+.. automodule:: yb.download.bounded
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      DEFAULT_MAX_BYTES
+      DEFAULT_MAX_DURATION_S
+      AUDIO_CODEC
+      COPYRIGHT_NOTICE
+      DEPLOYMENT_OPT_KEYS
+      TargetValidator
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      download_audio_bounded
+      require_http_url
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      AudioDownload
+   
+   .. rubric:: Exceptions
+
+   .. autosummary::
+   
+      AudioLimitError
+   

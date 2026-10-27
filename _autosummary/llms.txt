@@ -10,6 +10,7 @@
 - [yb.config](yb.config.html.md): User configuration for &#96;yb&#96; publishing defaults.
 - [yb.content](yb.content.html.md): Target-agnostic publication content: prepare it once, publish anywhere.
 - [yb.download](yb.download.html.md): Media download (yt-dlp) — fetch videos, audio, and their metadata.
+- [yb.download.bounded](yb.download.bounded.html.md): Link-to-audio with the safety policy applied once: &#96;download_audio_bounded()&#96;.
 - [yb.download.pacing](yb.download.pacing.html.md): Polite pacing for yt-dlp downloads, and a useful message when YouTube pushes back.
 - [yb.download.ranges](yb.download.ranges.html.md): Download just a time range of a video: parse start/end, build yt-dlp’s options.
 - [yb.download.requirements](yb.download.requirements.html.md): Preflight for downloading: does yt-dlp have what YouTube now demands?

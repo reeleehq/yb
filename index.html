@@ -209,6 +209,7 @@
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/yb.config.html">yb.config</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/yb.content.html">yb.content</a></li>
 <li class="toctree-l3 has-children"><a class="reference internal" href="_autosummary/yb.download.html">yb.download</a><input aria-label="Toggle navigation of yb.download" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="_autosummary/yb.download.bounded.html">yb.download.bounded</a></li>
 <li class="toctree-l4"><a class="reference internal" href="_autosummary/yb.download.pacing.html">yb.download.pacing</a></li>
 <li class="toctree-l4"><a class="reference internal" href="_autosummary/yb.download.ranges.html">yb.download.ranges</a></li>
 <li class="toctree-l4"><a class="reference internal" href="_autosummary/yb.download.requirements.html">yb.download.requirements</a></li>
@@ -344,7 +345,10 @@ one — the error only surfaces when you actually call that feature. You also ne
 <span class="p">)</span>
 
 <span class="n">youtube_video_info</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>  <span class="c1"># metadata only, no download</span>
-<span class="n">search_youtube</span><span class="p">(</span><span class="s2">"song name"</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>  <span class="c1"># -&gt; [SearchHit(id, title, duration, channel, url)]</span>
+<span class="n">search_youtube</span><span class="p">(</span>
+    <span class="s2">"song name"</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="mi">5</span>
+<span class="p">)</span>  <span class="c1"># -&gt; [SearchHit(id, title, duration, channel, url)]</span>
+<span class="n">download_audio_bounded</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">download_dir</span><span class="o">=</span><span class="n">tmp</span><span class="p">,</span> <span class="n">max_bytes</span><span class="o">=...</span><span class="p">,</span> <span class="n">max_duration_s</span><span class="o">=...</span><span class="p">)</span>  <span class="c1"># mp3 + caps + copyright notice, for services</span>
 <span class="n">download_youtube_video</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>  <span class="c1"># best quality -&gt; ~/Downloads/"Title (id).mp4"</span>
 <span class="n">download_youtube_video</span><span class="p">(</span>
     <span class="n">url</span><span class="p">,</span>
@@ -647,7 +651,7 @@ it, and the <code class="docutils literal notranslate"><span class="pre">music</
 </section>
 </section>
 
-<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-10-27 01:07 UTC from <a href="https://github.com/reeleehq/yb/commit/15aebb8a2b2299d7169050ac7d9c6edfa1eec3bf">15aebb8</a> (main) · yb 0.1.22 · <a href="about-this-build.html">about this build</a></p>
+<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-10-27 01:15 UTC from <a href="https://github.com/reeleehq/yb/commit/9d3a2511b7e720af6b32dcff7536fb1808055b6d">9d3a251</a> (main) · yb 0.1.23 · <a href="about-this-build.html">about this build</a></p>
         </article>
       </div>
       <footer>
@@ -717,7 +721,7 @@ it, and the <code class="docutils literal notranslate"><span class="pre">music</
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=84641d2a"></script>
+</div><script src="_static/documentation_options.js?v=2d24694c"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>

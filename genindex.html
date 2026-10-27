@@ -205,6 +205,7 @@
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/yb.config.html">yb.config</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/yb.content.html">yb.content</a></li>
 <li class="toctree-l3 has-children"><a class="reference internal" href="_autosummary/yb.download.html">yb.download</a><input aria-label="Toggle navigation of yb.download" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="_autosummary/yb.download.bounded.html">yb.download.bounded</a></li>
 <li class="toctree-l4"><a class="reference internal" href="_autosummary/yb.download.pacing.html">yb.download.pacing</a></li>
 <li class="toctree-l4"><a class="reference internal" href="_autosummary/yb.download.ranges.html">yb.download.ranges</a></li>
 <li class="toctree-l4"><a class="reference internal" href="_autosummary/yb.download.requirements.html">yb.download.requirements</a></li>
@@ -297,20 +298,22 @@
           <li><a href="_autosummary/yb.youtube.playlists.html#yb.youtube.playlists.add_video_to_playlist">(in module yb.youtube.playlists)</a>
 </li>
         </ul></li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="_autosummary/yb.youtube.html#yb.youtube.api_available">api_available() (in module yb.youtube)</a>
 
         <ul>
           <li><a href="_autosummary/yb.youtube.search.html#yb.youtube.search.api_available">(in module yb.youtube.search)</a>
 </li>
         </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="_autosummary/yb.download.ranges.html#yb.download.ranges.TimeRange.as_info">as_info() (yb.download.ranges.TimeRange method)</a>
 
         <ul>
           <li><a href="_autosummary/yb.download.html#yb.download.TimeRange.as_info">(yb.download.TimeRange method)</a>
 </li>
         </ul></li>
+        <li><a href="_autosummary/yb.download.bounded.html#yb.download.bounded.AUDIO_CODEC">AUDIO_CODEC (in module yb.download.bounded)</a>
+</li>
         <li><a href="_autosummary/yb.content.html#yb.content.PublicationContent.audio_language">audio_language (yb.content.PublicationContent attribute)</a>
 
         <ul>
@@ -318,6 +321,14 @@
 </li>
         </ul></li>
         <li><a href="_autosummary/yb.audio_convert.html#yb.audio_convert.AudioConversionError">AudioConversionError</a>, <a href="_autosummary/yb.download.html#yb.download.AudioConversionError">[1]</a>
+</li>
+        <li><a href="_autosummary/yb.download.html#yb.download.AudioDownload">AudioDownload (class in yb.download)</a>
+
+        <ul>
+          <li><a href="_autosummary/yb.download.bounded.html#yb.download.bounded.AudioDownload">(class in yb.download.bounded)</a>
+</li>
+        </ul></li>
+        <li><a href="_autosummary/yb.download.bounded.html#yb.download.bounded.AudioLimitError">AudioLimitError</a>, <a href="_autosummary/yb.download.html#yb.download.AudioLimitError">[1]</a>
 </li>
     </ul></td>
   </tr></table>
@@ -409,6 +420,8 @@
 </li>
         <li><a href="_autosummary/yb.download.youtube.html#yb.download.youtube.CookiesFile">CookiesFile (in module yb.download.youtube)</a>
 </li>
+        <li><a href="_autosummary/yb.download.bounded.html#yb.download.bounded.COPYRIGHT_NOTICE">COPYRIGHT_NOTICE (in module yb.download.bounded)</a>
+</li>
         <li><a href="_autosummary/yb.podcast.html#yb.podcast.cover_video">cover_video() (in module yb.podcast)</a>
 
         <ul>
@@ -481,6 +494,10 @@
         </ul></li>
         <li><a href="_autosummary/yb.audio_convert.html#yb.audio_convert.DEFAULT_LOSSY_BITRATE">DEFAULT_LOSSY_BITRATE (in module yb.audio_convert)</a>
 </li>
+        <li><a href="_autosummary/yb.download.bounded.html#yb.download.bounded.DEFAULT_MAX_BYTES">DEFAULT_MAX_BYTES (in module yb.download.bounded)</a>
+</li>
+        <li><a href="_autosummary/yb.download.bounded.html#yb.download.bounded.DEFAULT_MAX_DURATION_S">DEFAULT_MAX_DURATION_S (in module yb.download.bounded)</a>
+</li>
         <li><a href="_autosummary/yb.download.youtube.html#yb.download.youtube.DEFAULT_OUTTMPL">DEFAULT_OUTTMPL (in module yb.download.youtube)</a>
 </li>
         <li><a href="_autosummary/yb.youtube.stats.html#yb.youtube.stats.DEFAULT_PARTS">DEFAULT_PARTS (in module yb.youtube.stats)</a>
@@ -511,12 +528,12 @@
 </li>
         <li><a href="_autosummary/yb.download.requirements.html#yb.download.requirements.DENO_INSTALL_CMD">DENO_INSTALL_CMD (in module yb.download.requirements)</a>
 </li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="_autosummary/yb.download.requirements.html#yb.download.requirements.DENO_INSTALL_ENV">DENO_INSTALL_ENV (in module yb.download.requirements)</a>
 </li>
         <li><a href="_autosummary/yb.download.requirements.html#yb.download.requirements.DENO_MIN_VERSION_FALLBACK">DENO_MIN_VERSION_FALLBACK (in module yb.download.requirements)</a>
 </li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="_autosummary/yb.download.requirements.html#yb.download.requirements.deno_search_dirs">deno_search_dirs() (in module yb.download.requirements)</a>
 </li>
         <li><a href="_autosummary/yb.download.requirements.html#yb.download.requirements.DENO_UPGRADE_CMD">DENO_UPGRADE_CMD (in module yb.download.requirements)</a>
@@ -524,6 +541,8 @@
         <li><a href="_autosummary/yb.download.requirements.html#yb.download.requirements.deno_version">deno_version() (in module yb.download.requirements)</a>
 </li>
         <li><a href="_autosummary/yb.download.requirements.html#yb.download.requirements.DENO_VERSION_TIMEOUT">DENO_VERSION_TIMEOUT (in module yb.download.requirements)</a>
+</li>
+        <li><a href="_autosummary/yb.download.bounded.html#yb.download.bounded.DEPLOYMENT_OPT_KEYS">DEPLOYMENT_OPT_KEYS (in module yb.download.bounded)</a>
 </li>
         <li><a href="_autosummary/yb.content.html#yb.content.PublicationContent.description">description (yb.content.PublicationContent attribute)</a>
 
@@ -539,6 +558,12 @@
 
         <ul>
           <li><a href="_autosummary/yb.html#yb.PublicationContent.description_with_chapters">(yb.PublicationContent method)</a>
+</li>
+        </ul></li>
+        <li><a href="_autosummary/yb.download.html#yb.download.download_audio_bounded">download_audio_bounded() (in module yb.download)</a>
+
+        <ul>
+          <li><a href="_autosummary/yb.download.bounded.html#yb.download.bounded.download_audio_bounded">(in module yb.download.bounded)</a>
 </li>
         </ul></li>
         <li><a href="_autosummary/yb.youtube.html#yb.youtube.download_caption">download_caption() (in module yb.youtube)</a>
@@ -585,6 +610,12 @@
 
         <ul>
           <li><a href="_autosummary/yb.html#yb.PublicationContent.duration">(yb.PublicationContent attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="_autosummary/yb.download.html#yb.download.AudioDownload.duration_s">duration_s (yb.download.AudioDownload attribute)</a>
+
+        <ul>
+          <li><a href="_autosummary/yb.download.bounded.html#yb.download.bounded.AudioDownload.duration_s">(yb.download.bounded.AudioDownload attribute)</a>
 </li>
         </ul></li>
     </ul></td>
@@ -739,9 +770,13 @@
   <h2>I</h2>
   <table style="width: 100%" class="indextable genindextable"><tr>
     <td style="width: 33%; vertical-align: top;"><ul>
-        <li><a href="_autosummary/yb.download.html#yb.download.DownloadResult.info">info (yb.download.DownloadResult attribute)</a>
+        <li><a href="_autosummary/yb.download.html#yb.download.AudioDownload.info">info (yb.download.AudioDownload attribute)</a>
 
         <ul>
+          <li><a href="_autosummary/yb.download.bounded.html#yb.download.bounded.AudioDownload.info">(yb.download.bounded.AudioDownload attribute)</a>
+</li>
+          <li><a href="_autosummary/yb.download.html#yb.download.DownloadResult.info">(yb.download.DownloadResult attribute)</a>
+</li>
           <li><a href="_autosummary/yb.download.youtube.html#yb.download.youtube.DownloadResult.info">(yb.download.youtube.DownloadResult attribute)</a>
 </li>
         </ul></li>
@@ -753,14 +788,14 @@
           <li><a href="_autosummary/yb.youtube.html#yb.youtube.VideoMetadata.insert_body">(yb.youtube.VideoMetadata method)</a>
 </li>
         </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="_autosummary/yb.youtube.html#yb.youtube.insert_caption">insert_caption() (in module yb.youtube)</a>
 
         <ul>
           <li><a href="_autosummary/yb.youtube.captions.html#yb.youtube.captions.insert_caption">(in module yb.youtube.captions)</a>
 </li>
         </ul></li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="_autosummary/yb.youtube.captions.html#yb.youtube.captions.CaptionTrack.is_draft">is_draft (yb.youtube.captions.CaptionTrack attribute)</a>
 
         <ul>
@@ -899,6 +934,8 @@
 </li>
           <li><a href="_autosummary/yb.download.html#module-yb.download">yb.download</a>
 </li>
+          <li><a href="_autosummary/yb.download.bounded.html#module-yb.download.bounded">yb.download.bounded</a>
+</li>
           <li><a href="_autosummary/yb.download.pacing.html#module-yb.download.pacing">yb.download.pacing</a>
 </li>
           <li><a href="_autosummary/yb.download.ranges.html#module-yb.download.ranges">yb.download.ranges</a>
@@ -962,6 +999,12 @@
     <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="_autosummary/yb.audio_convert.html#yb.audio_convert.normalize_format">normalize_format() (in module yb.audio_convert)</a>
 </li>
+        <li><a href="_autosummary/yb.download.html#yb.download.AudioDownload.notice">notice (yb.download.AudioDownload attribute)</a>
+
+        <ul>
+          <li><a href="_autosummary/yb.download.bounded.html#yb.download.bounded.AudioDownload.notice">(yb.download.bounded.AudioDownload attribute)</a>
+</li>
+        </ul></li>
     </ul></td>
   </tr></table>
 </section>
@@ -1014,9 +1057,13 @@
         </ul></li>
         <li><a href="_autosummary/yb.youtube.html#yb.youtube.PartialPublish">PartialPublish</a>, <a href="_autosummary/yb.youtube.publish.html#yb.youtube.publish.PartialPublish">[1]</a>
 </li>
-        <li><a href="_autosummary/yb.download.html#yb.download.DownloadResult.path">path (yb.download.DownloadResult attribute)</a>
+        <li><a href="_autosummary/yb.download.html#yb.download.AudioDownload.path">path (yb.download.AudioDownload attribute)</a>
 
         <ul>
+          <li><a href="_autosummary/yb.download.bounded.html#yb.download.bounded.AudioDownload.path">(yb.download.bounded.AudioDownload attribute)</a>
+</li>
+          <li><a href="_autosummary/yb.download.html#yb.download.DownloadResult.path">(yb.download.DownloadResult attribute)</a>
+</li>
           <li><a href="_autosummary/yb.download.html#yb.download.JsRuntime.path">(yb.download.JsRuntime attribute)</a>
 </li>
           <li><a href="_autosummary/yb.download.requirements.html#yb.download.requirements.JsRuntime.path">(yb.download.requirements.JsRuntime attribute)</a>
@@ -1154,12 +1201,18 @@
           <li><a href="_autosummary/yb.youtube.playlists.html#yb.youtube.playlists.remove_from_playlist">(in module yb.youtube.playlists)</a>
 </li>
         </ul></li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="_autosummary/yb.youtube.html#yb.youtube.render_table">render_table() (in module yb.youtube)</a>
 
         <ul>
           <li><a href="_autosummary/yb.youtube.stats.html#yb.youtube.stats.render_table">(in module yb.youtube.stats)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="_autosummary/yb.download.html#yb.download.require_http_url">require_http_url() (in module yb.download)</a>
+
+        <ul>
+          <li><a href="_autosummary/yb.download.bounded.html#yb.download.bounded.require_http_url">(in module yb.download.bounded)</a>
 </li>
         </ul></li>
         <li><a href="_autosummary/yb.youtube.html#yb.youtube.resolve_fields">resolve_fields() (in module yb.youtube)</a>
@@ -1274,6 +1327,8 @@
           <li><a href="_autosummary/yb.youtube.html#yb.youtube.VideoMetadata.tags">(yb.youtube.VideoMetadata attribute)</a>
 </li>
         </ul></li>
+        <li><a href="_autosummary/yb.download.bounded.html#yb.download.bounded.TargetValidator">TargetValidator (in module yb.download.bounded)</a>
+</li>
         <li><a href="_autosummary/yb.content.html#yb.content.PublicationContent.thumbnail">thumbnail (yb.content.PublicationContent attribute)</a>
 
         <ul>
@@ -1301,6 +1356,10 @@
         <li><a href="_autosummary/yb.content.html#yb.content.PublicationContent.title">title (yb.content.PublicationContent attribute)</a>
 
         <ul>
+          <li><a href="_autosummary/yb.download.html#yb.download.AudioDownload.title">(yb.download.AudioDownload attribute)</a>
+</li>
+          <li><a href="_autosummary/yb.download.bounded.html#yb.download.bounded.AudioDownload.title">(yb.download.bounded.AudioDownload attribute)</a>
+</li>
           <li><a href="_autosummary/yb.html#yb.PublicationContent.title">(yb.PublicationContent attribute)</a>
 </li>
           <li><a href="_autosummary/yb.youtube.metadata.html#yb.youtube.metadata.VideoMetadata.title">(yb.youtube.metadata.VideoMetadata attribute)</a>
@@ -1466,6 +1525,13 @@
 </li>
         </ul></li>
         <li>
+    yb.download.bounded
+
+        <ul>
+          <li><a href="_autosummary/yb.download.bounded.html#module-yb.download.bounded">module</a>
+</li>
+        </ul></li>
+        <li>
     yb.download.pacing
 
         <ul>
@@ -1528,6 +1594,8 @@
           <li><a href="_autosummary/yb.podcast.publish.html#module-yb.podcast.publish">module</a>
 </li>
         </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
         <li>
     yb.podcast.shownotes
 
@@ -1535,8 +1603,6 @@
           <li><a href="_autosummary/yb.podcast.shownotes.html#module-yb.podcast.shownotes">module</a>
 </li>
         </ul></li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li>
     yb.youtube
 
@@ -1663,7 +1729,7 @@
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=84641d2a"></script>
+</div><script src="_static/documentation_options.js?v=2d24694c"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>

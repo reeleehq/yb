@@ -36,6 +36,10 @@ To go from a name to a download, search first ([`search_youtube()`](#yb.download
 >>> download_youtube_audio(hits[0].url)
 ```
 
+A service turning user-supplied links into audio uses
+[`download_audio_bounded()`](#yb.download.download_audio_bounded): duration and size caps, mp3 output, and a
+copyright notice, with the caps immune to caller `extra_opts`.
+
 YouTube downloads need a JavaScript runtime (Deno) and yt-dlp’s solver
 scripts; [`check_requirements()`](#yb.download.check_requirements) (or `yb check`) says what’s missing and
 how to install it. The first download in a process runs it and warns.
@@ -49,6 +53,8 @@ how to install it. The first download in a process runs it and warns.
 | [`download_youtube_playlist`](#yb.download.download_youtube_playlist)(url, \*[, ...])      | Download all (or a selected subset of) a YouTube playlist's videos.           |
 | [`youtube_playlist_info`](#yb.download.youtube_playlist_info)(url, \*[, ...])          | Fetch a playlist's per-video metadata without downloading.                    |
 | [`search_youtube`](#yb.download.search_youtube)(query, \*[, limit, ...])        | Search YouTube by name; returns up to `limit` hits, best match first.         |
+| [`download_audio_bounded`](#yb.download.download_audio_bounded)(url, \*, download_dir)  | Download the audio of one video link as mp3, refusing what exceeds the caps.  |
+| [`require_http_url`](#yb.download.require_http_url)(url)                          | Default target check: an http(s) URL with a host.                             |
 | [`default_download_dir`](#yb.download.default_download_dir)()                         | Resolve the default download directory (`$YB_DOWNLOAD_DIR` or `~/Downloads`). |
 | [`convert_audio`](#yb.download.convert_audio)(src, audio_format, \*[, ...])    | Convert `src` to `audio_format`, returning the resulting path.                |
 | [`check_requirements`](#yb.download.check_requirements)(\*[, warn, which, ...])     | Check what YouTube downloads need, and say how to fix what's missing.         |
@@ -57,17 +63,19 @@ how to install it. The first download in a process runs it and warns.
 
 ### Classes
 
-| [`SearchHit`](#yb.download.SearchHit)(id, title, duration, channel, url)    | One row of [`search_youtube()`](#yb.download.search_youtube) (flat extraction: no per-video fetch).   |
-|--------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------|
-| [`DownloadResult`](#yb.download.DownloadResult)(path, info[, sidecars])          | Outcome of a download.                                                                                                |
-| [`JsRuntime`](#yb.download.JsRuntime)(name, path, on_path)                  | A JavaScript runtime found for yt-dlp.                                                                                |
-| [`Pace`](#yb.download.Pace)([sleep_interval, max_sleep_interval, ...]) | How gently to talk to YouTube.                                                                                        |
-| [`TimeRange`](#yb.download.TimeRange)([start, end])                         | A span of a video, in seconds.                                                                                        |
+| [`AudioDownload`](#yb.download.AudioDownload)(path, title, duration_s, ...)     | A bounded audio download.                                                                                           |
+|--------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
+| [`SearchHit`](#yb.download.SearchHit)(id, title, duration, channel, url)    | One row of [`search_youtube()`](#yb.download.search_youtube) (flat extraction: no per-video fetch). |
+| [`DownloadResult`](#yb.download.DownloadResult)(path, info[, sidecars])          | Outcome of a download.                                                                                              |
+| [`JsRuntime`](#yb.download.JsRuntime)(name, path, on_path)                  | A JavaScript runtime found for yt-dlp.                                                                              |
+| [`Pace`](#yb.download.Pace)([sleep_interval, max_sleep_interval, ...]) | How gently to talk to YouTube.                                                                                      |
+| [`TimeRange`](#yb.download.TimeRange)([start, end])                         | A span of a video, in seconds.                                                                                      |
 
 ### Exceptions
 
-| [`AudioConversionError`](#yb.download.AudioConversionError)       | Raised when audio could not be converted to the requested format.            |
+| [`AudioLimitError`](#yb.download.AudioLimitError)            | The source exceeds a cap (duration or size); nothing is left on disk.        |
 |-----------------------------------------------------------------------------|------------------------------------------------------------------------------|
+| [`AudioConversionError`](#yb.download.AudioConversionError)       | Raised when audio could not be converted to the requested format.            |
 | [`DownloadRequirementWarning`](#yb.download.DownloadRequirementWarning) | A download prerequisite (JS runtime, solver scripts) looks missing.          |
 | [`RateLimitedError`](#yb.download.RateLimitedError)           | YouTube refused the request (HTTP 429 or a "confirm you're not a bot" wall). |
 
@@ -76,6 +84,54 @@ how to install it. The first download in a process runs it and warns.
 Bases: [`RuntimeError`](https://docs.python.org/3/builtins/exceptions.html#RuntimeError)
 
 Raised when audio could not be converted to the requested format.
+
+### *class* yb.download.AudioDownload(path, title, duration_s, notice, info)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+A bounded audio download.
+
+#### path
+
+The mp3 file, alone in its own directory. The caller owns the
+directory (`path.parent`): move the file, then remove it.
+
+* **Type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
+
+#### title
+
+The source’s title, or the file stem when it has none.
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
+#### duration_s
+
+Length in seconds, `None` when the source did not say.
+
+* **Type:**
+  [`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+#### notice
+
+The copyright notice to store with the file.
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
+#### info
+
+Trimmed source metadata (see `DownloadResult.info`).
+
+* **Type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]
+
+### *exception* yb.download.AudioLimitError
+
+Bases: [`ValueError`](https://docs.python.org/3/builtins/exceptions.html#ValueError)
+
+The source exceeds a cap (duration or size); nothing is left on disk.
 
 ### *exception* yb.download.DownloadRequirementWarning
 
@@ -270,6 +326,39 @@ Resolve the default download directory (`$YB_DOWNLOAD_DIR` or `~/Downloads`).
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
+
+### yb.download.download_audio_bounded(url, \*, download_dir, max_bytes=83886080, max_duration_s=2700, validate_target=<function require_http_url>, extra_opts=None, cookies_file=None, notice="Downloaded from a user-supplied link — respect the source's copyright and terms of service; you are responsible for having the right to use it.")
+
+Download the audio of one video link as mp3, refusing what exceeds the caps.
+
+Order: `validate_target` on `url` (before any network), a metadata-only
+fetch that refuses playlists, live streams and over-long sources (before any
+media bytes) and re-validates the resolved page URL, then the download with
+the caps pinned, then a size check on the extracted file. The mp3 is written
+to a fresh private directory under `download_dir` (so concurrent calls never
+collide); on any failure that directory is removed.
+
+* **Parameters:**
+  * **url** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – A page link (YouTube, SoundCloud, Bandcamp, …).
+  * **download_dir** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)) – Parent of the per-call directory holding the mp3 (the caller
+    owns that directory from then on and removes it after ingest).
+  * **max_bytes** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – Cap on the downloaded and on the extracted file.
+  * **max_duration_s** ([`float`](https://docs.python.org/3/builtins/functions.html#float)) – Cap on the source’s duration. A source that reports no
+    duration passes this check and is bounded by `max_bytes` alone.
+  * **validate_target** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – Raises `ValueError` to refuse a URL; see
+    [`require_http_url()`](#yb.download.require_http_url). Not an egress sandbox: yt-dlp follows
+    redirects itself.
+  * **extra_opts** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Deployment yt-dlp options, restricted to
+    `DEPLOYMENT_OPT_KEYS` (credentials, cookies, proxy); anything
+    else raises, so no option can widen a cap or redirect the output.
+  * **cookies_file** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[[`False`](https://docs.python.org/3/builtins/constants.html#False)], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – As in [`download_youtube_video()`](#yb.download.download_youtube_video).
+  * **notice** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Copyright notice returned in the result.
+* **Raises:**
+  * [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – `validate_target` refused a URL, a cap is not positive, or
+        `extra_opts` has a key outside `DEPLOYMENT_OPT_KEYS`.
+  * [**AudioLimitError**](#yb.download.AudioLimitError) – Playlist, live stream, too long, or too large.
+* **Return type:**
+  [`AudioDownload`](yb.download.bounded.html.md#yb.download.bounded.AudioDownload)
 
 ### yb.download.download_youtube_audio(url, , download_dir=None, audio_format=None, bitrate=None, keep_original=False, on_error='raise', fmt='bestaudio/best', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None, pace=None)
 
@@ -511,6 +600,17 @@ Seconds from a number or a `"[[h:]m:]s[.fraction]"` string.
 * **Return type:**
   [`float`](https://docs.python.org/3/builtins/functions.html#float)
 
+### yb.download.require_http_url(url)
+
+Default target check: an http(s) URL with a host.
+
+This is only the floor. A service fetching on behalf of untrusted callers
+should pass a `validate_target` that also refuses loopback, private,
+link-local and cloud-metadata hosts.
+
+* **Return type:**
+  [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
 ### yb.download.search_youtube(query, , limit=5, extra_opts=None, cookies_file=None)
 
 Search YouTube by name; returns up to `limit` hits, best match first.
@@ -570,8 +670,9 @@ the title/duration/chapters before deciding to download.
 
 ### Modules
 
-| [`pacing`](yb.download.pacing.html.md#module-yb.download.pacing)             | Polite pacing for yt-dlp downloads, and a useful message when YouTube pushes back.   |
-|-----------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------|
-| [`ranges`](yb.download.ranges.html.md#module-yb.download.ranges)             | Download just a time range of a video: parse start/end, build yt-dlp's options.      |
-| [`requirements`](yb.download.requirements.html.md#module-yb.download.requirements) | Preflight for downloading: does yt-dlp have what YouTube now demands?                |
-| [`youtube`](yb.download.youtube.html.md#module-yb.download.youtube)           | Download YouTube videos (and their metadata) via yt-dlp.                             |
+| [`bounded`](yb.download.bounded.html.md#module-yb.download.bounded)           | Link-to-audio with the safety policy applied once: [`download_audio_bounded()`](#yb.download.download_audio_bounded).   |
+|-----------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
+| [`pacing`](yb.download.pacing.html.md#module-yb.download.pacing)             | Polite pacing for yt-dlp downloads, and a useful message when YouTube pushes back.                                              |
+| [`ranges`](yb.download.ranges.html.md#module-yb.download.ranges)             | Download just a time range of a video: parse start/end, build yt-dlp's options.                                                 |
+| [`requirements`](yb.download.requirements.html.md#module-yb.download.requirements) | Preflight for downloading: does yt-dlp have what YouTube now demands?                                                           |
+| [`youtube`](yb.download.youtube.html.md#module-yb.download.youtube)           | Download YouTube videos (and their metadata) via yt-dlp.                                                                        |

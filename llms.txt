@@ -12,6 +12,7 @@
 - [yb.config](_autosummary/yb.config.html.md): User configuration for &#96;yb&#96; publishing defaults.
 - [yb.content](_autosummary/yb.content.html.md): Target-agnostic publication content: prepare it once, publish anywhere.
 - [yb.download](_autosummary/yb.download.html.md): Media download (yt-dlp) — fetch videos, audio, and their metadata.
+- [yb.download.bounded](_autosummary/yb.download.bounded.html.md): Link-to-audio with the safety policy applied once: &#96;download_audio_bounded()&#96;.
 - [yb.download.pacing](_autosummary/yb.download.pacing.html.md): Polite pacing for yt-dlp downloads, and a useful message when YouTube pushes back.
 - [yb.download.ranges](_autosummary/yb.download.ranges.html.md): Download just a time range of a video: parse start/end, build yt-dlp’s options.
 - [yb.download.requirements](_autosummary/yb.download.requirements.html.md): Preflight for downloading: does yt-dlp have what YouTube now demands?
@@ -33,7 +34,7 @@
 - [yb.youtube.search](_autosummary/yb.youtube.search.html.md): Search YouTube for videos, with engagement numbers to rank them by.
 - [yb.youtube.stats](_autosummary/yb.youtube.stats.html.md): Read live video metadata &amp; engagement numbers from the YouTube Data API v3.
 - [For AI agents](ai-agents.html.md): &#96;yb&#96; ships artifacts for coding agents alongside its code. This page lists
-- [About this build](about-this-build.html.md): This documentation was built on &#42;&#42;2026-10-27 01:07 UTC&#42;&#42; from commit &lt;a href="https://github.com/ree...
+- [About this build](about-this-build.html.md): This documentation was built on &#42;&#42;2026-10-27 01:15 UTC&#42;&#42; from commit &lt;a href="https://github.com/ree...
 
 ## Optional
 
