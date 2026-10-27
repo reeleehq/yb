@@ -57,6 +57,7 @@ from yb.download.bounded import (
     AudioLimitError,
     require_http_url,
     COPYRIGHT_NOTICE,
+    DEPLOYMENT_OPT_KEYS,
 )
 from yb.download.ranges import TimeRange, parse_timestamp
 from yb.download.requirements import (
@@ -78,6 +79,7 @@ __all__ = [
     "AudioLimitError",
     "require_http_url",
     "COPYRIGHT_NOTICE",
+    "DEPLOYMENT_OPT_KEYS",
     "SearchHit",
     "default_download_dir",
     "convert_audio",

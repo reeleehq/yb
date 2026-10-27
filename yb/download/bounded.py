@@ -17,6 +17,8 @@ can never widen them.
 
 from __future__ import annotations
 
+import shutil
+import tempfile
 import urllib.parse
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
@@ -26,12 +28,13 @@ from typing import Any
 from yb.download.youtube import (
     CookiesFile,
     PathLike,
+    _extract_info,
     download_youtube_video,
-    youtube_video_info,
 )
 
-#: Default byte cap (mp3 of a long track is tens of MB).
-DEFAULT_MAX_BYTES = 60 * 1024 * 1024
+#: Default byte cap. Above the mp3 size of a source at the default duration cap
+#: (45 min at 192 kbps is about 65 MB), so a source that passes one passes both.
+DEFAULT_MAX_BYTES = 80 * 1024 * 1024
 
 #: Default duration cap, in seconds (refuses livestream-length and multi-hour sources).
 DEFAULT_MAX_DURATION_S = 45 * 60
@@ -45,6 +48,26 @@ COPYRIGHT_NOTICE = (
     "Downloaded from a user-supplied link — respect the source's copyright and "
     "terms of service; you are responsible for having the right to use it."
 )
+
+#: yt-dlp options a deployment may pass in ``extra_opts``: how to reach and
+#: authenticate to the source, nothing about what is fetched or where it goes.
+DEPLOYMENT_OPT_KEYS = frozenset(
+    {
+        "cookiefile",
+        "cookiesfrombrowser",
+        "http_headers",
+        "proxy",
+        "username",
+        "password",
+        "extractor_args",
+        "source_address",
+        "js_runtimes",
+        "remote_components",
+    }
+)
+
+#: ``_type`` values of a result that holds several media (refused).
+_MULTI_TYPES = frozenset({"playlist", "multi_video"})
 
 _ALLOWED_SCHEMES = frozenset({"http", "https"})
 
@@ -89,9 +112,29 @@ class AudioDownload:
     info: dict[str, Any]
 
 
-def _bounds_opts(max_bytes: int) -> dict[str, Any]:
+def _mp3_path(path: Path) -> Path:
+    """The extractor rewrites the download to ``.mp3``; ``path`` may name the original."""
+    if path.suffix.lower() == f".{AUDIO_CODEC}":
+        return path
+    converted = path.with_suffix(f".{AUDIO_CODEC}")
+    return converted if converted.exists() else path
+
+
+def _pinned_opts(max_bytes: int, max_duration_s: float) -> dict[str, Any]:
+    """Everything that makes this one bounded, single, non-live mp3 download."""
+    from yt_dlp.utils import match_filter_func
+
     return {
         "max_filesize": max_bytes,  # yt-dlp skips/aborts oversized formats
+        "noplaylist": True,
+        "playlist_items": "1",
+        "max_downloads": 1,
+        "keepvideo": False,
+        # `<=?` lets a source with no reported duration through; `!is_live` and
+        # the byte cap bound it.
+        "match_filter": match_filter_func(
+            f"duration <=? {max_duration_s} & !is_live & !is_upcoming"
+        ),
         "postprocessors": [
             {
                 "key": "FFmpegExtractAudio",
@@ -102,12 +145,30 @@ def _bounds_opts(max_bytes: int) -> dict[str, Any]:
     }
 
 
-def _mp3_path(path: Path) -> Path:
-    """The extractor rewrites the download to ``.mp3``; ``path`` may name the original."""
-    if path.suffix.lower() == f".{AUDIO_CODEC}":
-        return path
-    converted = path.with_suffix(f".{AUDIO_CODEC}")
-    return converted if converted.exists() else path
+def _check_deployment_opts(extra_opts: Mapping[str, Any]) -> dict[str, Any]:
+    unknown = sorted(set(extra_opts) - DEPLOYMENT_OPT_KEYS)
+    if unknown:
+        raise ValueError(
+            f"extra_opts may only set {sorted(DEPLOYMENT_OPT_KEYS)}; got {unknown}"
+        )
+    return dict(extra_opts)
+
+
+def _check_preview(preview: dict | None, *, max_duration_s: float) -> None:
+    """Refuse multi-media, live, or over-long sources from their metadata."""
+    preview = preview or {}
+    if preview.get("_type") in _MULTI_TYPES or preview.get("entries"):
+        raise AudioLimitError("playlists are not supported; pass a single video link")
+    if preview.get("is_live") or preview.get("live_status") in {
+        "is_live",
+        "is_upcoming",
+    }:
+        raise AudioLimitError("live streams are not supported")
+    duration = preview.get("duration")
+    if isinstance(duration, (int, float)) and duration > max_duration_s:
+        raise AudioLimitError(
+            f"source is {int(duration)}s long; exceeds the {max_duration_s}s limit"
+        )
 
 
 def download_audio_bounded(
@@ -121,60 +182,77 @@ def download_audio_bounded(
     cookies_file: CookiesFile = None,
     notice: str = COPYRIGHT_NOTICE,
 ) -> AudioDownload:
-    """Download the audio of ``url`` as mp3, refusing what exceeds the caps.
+    """Download the audio of one video link as mp3, refusing what exceeds the caps.
 
-    Order: ``validate_target`` (before any network), a metadata-only fetch to
-    check the duration (before any media bytes), then the download with
-    ``max_filesize``, then a size check on the extracted file.
+    Order: ``validate_target`` on ``url`` (before any network), a metadata-only
+    fetch that refuses playlists, live streams and over-long sources (before any
+    media bytes) and re-validates the resolved page URL, then the download with
+    the caps pinned, then a size check on the extracted file. Work happens in a
+    private temp directory under ``download_dir``, removed on any failure.
 
     Args:
         url: A page link (YouTube, SoundCloud, Bandcamp, ...).
-        download_dir: Where the mp3 is written (use a scratch directory).
+        download_dir: Where the mp3 ends up (the caller owns it from then on).
         max_bytes: Cap on the downloaded and on the extracted file.
         max_duration_s: Cap on the source's duration. A source that reports no
             duration passes this check and is bounded by ``max_bytes`` alone.
-        validate_target: Raises ``ValueError`` to refuse ``url``; see
-            :func:`require_http_url`.
-        extra_opts: Deployment yt-dlp options (credentials, cookies, proxy). The
-            caps are applied after these and cannot be overridden by them.
+        validate_target: Raises ``ValueError`` to refuse a URL; see
+            :func:`require_http_url`. Not an egress sandbox: yt-dlp follows
+            redirects itself.
+        extra_opts: Deployment yt-dlp options, restricted to
+            :data:`DEPLOYMENT_OPT_KEYS` (credentials, cookies, proxy); anything
+            else raises, so no option can widen a cap or redirect the output.
         cookies_file: As in :func:`~yb.download.download_youtube_video`.
         notice: Copyright notice returned in the result.
 
     Raises:
-        ValueError: ``validate_target`` refused ``url``, or a cap is not positive.
-        AudioLimitError: The source is too long or the file too large.
+        ValueError: ``validate_target`` refused a URL, a cap is not positive, or
+            ``extra_opts`` has a key outside :data:`DEPLOYMENT_OPT_KEYS`.
+        AudioLimitError: Playlist, live stream, too long, or too large.
     """
     if max_bytes <= 0 or max_duration_s <= 0:
         raise ValueError("max_bytes and max_duration_s must be positive")
+    deployment_opts = _check_deployment_opts(extra_opts or {})
     validate_target(url)
 
-    deployment_opts = dict(extra_opts or {})
-    preview = youtube_video_info(
-        url, extra_opts=deployment_opts, cookies_file=cookies_file
-    )
-    duration = preview.get("duration")
-    if isinstance(duration, (int, float)) and duration > max_duration_s:
-        raise AudioLimitError(
-            f"source is {int(duration)}s long; exceeds the {max_duration_s}s limit"
-        )
-
-    result = download_youtube_video(
+    preview = _extract_info(
         url,
-        download_dir=download_dir,
-        fmt="bestaudio/best",
-        merge_to=None,
-        extra_opts={**deployment_opts, **_bounds_opts(max_bytes)},
+        {"quiet": True, "skip_download": True, "noplaylist": True},
+        extra_opts=deployment_opts,
         cookies_file=cookies_file,
     )
-    path = _mp3_path(Path(result.path))
-    # max_filesize bounds the download, not the extracted output.
-    if path.stat().st_size > max_bytes:
-        path.unlink(missing_ok=True)
-        raise AudioLimitError(f"downloaded audio exceeds the {max_bytes}-byte limit")
+    _check_preview(preview, max_duration_s=max_duration_s)
+    if resolved := (preview or {}).get("webpage_url"):
+        validate_target(resolved)
+
+    out_dir = Path(download_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    work = Path(tempfile.mkdtemp(prefix=".yb-audio-", dir=out_dir))
+    try:
+        result = download_youtube_video(
+            url,
+            download_dir=work,
+            fmt="bestaudio/best",
+            merge_to=None,
+            extra_opts={**deployment_opts, **_pinned_opts(max_bytes, max_duration_s)},
+            cookies_file=cookies_file,
+        )
+        path = _mp3_path(Path(result.path))
+        if path.suffix.lower() != f".{AUDIO_CODEC}" or not path.is_file():
+            raise AudioLimitError(
+                "source was rejected by the limits (no audio produced)"
+            )
+        # max_filesize bounds the download, not the extracted output.
+        if path.stat().st_size > max_bytes:
+            raise AudioLimitError(f"audio exceeds the {max_bytes}-byte limit")
+        final = out_dir / path.name
+        shutil.move(path, final)
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
     info = result.info or {}
     return AudioDownload(
-        path=path,
-        title=info.get("title") or path.stem,
+        path=final,
+        title=info.get("title") or final.stem,
         duration_s=info.get("duration"),
         notice=notice,
         info=info,
