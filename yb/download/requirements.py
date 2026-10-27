@@ -182,7 +182,7 @@ def has_module(
 
     When ``find_spec`` raises, a module already in ``sys.modules`` still counts as
     present: it raises ``ValueError`` for an imported module whose ``__spec__`` is
-    ``None`` (frozen, bundled or executed directly), which must not read as
+    ``None`` (e.g. executed directly), which must not read as
     "missing".
     """
     try:
@@ -237,7 +237,7 @@ def check_requirements(
             "installed, so YouTube downloads will fail with 'No video formats "
             "found'. Install yt-dlp with its default extras: "
             "pip install 'yt-dlp[default]' (or pip install 'yb[download]'). "
-            f"(looked for module {EJS_MODULE!r} in {sys.executable}). "
+            f"Looked for module {EJS_MODULE!r} in {sys.executable}. "
             f"See {EJS_WIKI_URL}"
         )
     runtime = find_js_runtime(which=which, search_dirs=search_dirs)
