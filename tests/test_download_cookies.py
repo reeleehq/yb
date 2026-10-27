@@ -6,6 +6,7 @@ developer's own ``~/.config/yb`` cannot leak into a test.
 """
 
 import sys
+from pathlib import Path
 import types
 
 import pytest
@@ -44,7 +45,9 @@ class _FakeYDL:
 
 @pytest.fixture
 def ydl(monkeypatch, tmp_path):
-    monkeypatch.setitem(sys.modules, "yt_dlp", types.SimpleNamespace(YoutubeDL=_FakeYDL))
+    monkeypatch.setitem(
+        sys.modules, "yt_dlp", types.SimpleNamespace(YoutubeDL=_FakeYDL)
+    )
     monkeypatch.setattr(req, "check_requirements", lambda **k: [])
     monkeypatch.setattr(req, "find_js_runtime", lambda: None)
     req._preflight_opts.cache_clear()
@@ -58,7 +61,9 @@ def ydl(monkeypatch, tmp_path):
 
 def _fake_cookies(path):
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("# Netscape HTTP Cookie File\n.example.test\tTRUE\t/\tTRUE\t0\tSID\tfake\n")
+    path.write_text(
+        "# Netscape HTTP Cookie File\n.example.test\tTRUE\t/\tTRUE\t0\tSID\tfake\n"
+    )
     return path
 
 
@@ -73,7 +78,9 @@ def _calls(tmp_path):
         "video": lambda **k: download_youtube_video("u", download_dir=out, **k),
         "audio": lambda **k: download_youtube_audio("u", download_dir=out, **k),
         "playlist_info": lambda **k: youtube_playlist_info("list", **k),
-        "playlist": lambda **k: download_youtube_playlist("list", download_dir=out, **k),
+        "playlist": lambda **k: download_youtube_playlist(
+            "list", download_dir=out, **k
+        ),
     }
 
 
@@ -175,7 +182,9 @@ SECRET = "SECRETVALUE123"
 def _bad_cookies(path):
     path.parent.mkdir(parents=True, exist_ok=True)
     # space-separated instead of tab-separated: yt-dlp would echo this line
-    path.write_text(f"# Netscape HTTP Cookie File\n.youtube.com TRUE / TRUE 0 SID {SECRET}\n")
+    path.write_text(
+        f"# Netscape HTTP Cookie File\n.youtube.com TRUE / TRUE 0 SID {SECRET}\n"
+    )
     return path
 
 
@@ -208,7 +217,10 @@ def test_explicit_cookies_file_with_a_browser_source_is_refused(ydl, tmp_path):
     mine = _fake_cookies(tmp_path / "mine.txt")
     with pytest.raises(ValueError, match="browser"):
         download_youtube_playlist(
-            "list", download_dir=tmp_path, cookies_file=mine, cookies_from_browser="safari"
+            "list",
+            download_dir=tmp_path,
+            cookies_file=mine,
+            cookies_from_browser="safari",
         )
     with pytest.raises(ValueError, match="browser"):
         download_youtube_video(
@@ -225,3 +237,72 @@ def test_missing_env_file_warning_points_at_the_caller(ydl, tmp_path, monkeypatc
     with pytest.warns(UserWarning) as w:
         download_youtube_video("u", download_dir=tmp_path)
     assert w[0].filename == __file__
+
+
+# ---- private copy: unwritable file / parallel workers --------------------------
+
+
+@pytest.fixture
+def copy_probe(monkeypatch):
+    """Record, at yt-dlp construction time, the cookiefile path, its mode and content."""
+    probes = []
+    original = _FakeYDL.__init__
+
+    def init(self, opts):
+        original(self, opts)
+        path = opts.get("cookiefile")
+        if path:
+            import os
+            import stat
+
+            probes.append(
+                (path, stat.S_IMODE(os.stat(path).st_mode), open(path).read())
+            )
+
+    monkeypatch.setattr(_FakeYDL, "__init__", init)
+    return probes
+
+
+@pytest.mark.parametrize("name", CALLS)
+def test_unwritable_file_is_replaced_by_a_private_copy_then_deleted(
+    ydl, tmp_path, monkeypatch, copy_probe, name
+):
+    f = _default_file(tmp_path)
+    monkeypatch.setattr(ytdl.os, "access", lambda p, mode: False)
+    _calls(tmp_path)[name]()
+    ((copy, mode, content),) = copy_probe
+    assert copy != str(f) and content == f.read_text()
+    if hasattr(ytdl.os, "geteuid"):  # POSIX permission bits
+        assert mode == 0o600
+    assert not Path(copy).exists()
+    assert f.read_text() == content  # the original is untouched
+
+
+def test_copy_is_deleted_even_when_the_download_fails(
+    ydl, tmp_path, monkeypatch, copy_probe
+):
+    _default_file(tmp_path)
+    monkeypatch.setenv(ytdl.COOKIES_PRIVATE_COPY_ENV, "1")
+
+    def boom(self, url, download=False):
+        raise RuntimeError("net")
+
+    monkeypatch.setattr(_FakeYDL, "extract_info", boom)
+    with pytest.raises(RuntimeError):
+        youtube_video_info("u")
+    assert not Path(copy_probe[0][0]).exists()
+
+
+def test_env_asks_for_a_copy_of_a_writable_file(ydl, tmp_path, monkeypatch, copy_probe):
+    f = _default_file(tmp_path)
+    youtube_video_info("u")
+    assert ydl.seen[-1]["cookiefile"] == str(f)  # writable: as is
+    monkeypatch.setenv(ytdl.COOKIES_PRIVATE_COPY_ENV, "true")
+    youtube_video_info("u")
+    assert ydl.seen[-1]["cookiefile"] != str(f)
+
+
+def test_no_cookies_means_no_copy(ydl, tmp_path, monkeypatch, copy_probe):
+    monkeypatch.setenv(ytdl.COOKIES_PRIVATE_COPY_ENV, "1")
+    youtube_video_info("u")
+    assert "cookiefile" not in ydl.seen[-1] and not copy_probe
