@@ -306,3 +306,25 @@ def test_no_cookies_means_no_copy(ydl, tmp_path, monkeypatch, copy_probe):
     monkeypatch.setenv(ytdl.COOKIES_PRIVATE_COPY_ENV, "1")
     youtube_video_info("u")
     assert "cookiefile" not in ydl.seen[-1] and not copy_probe
+
+
+@pytest.mark.parametrize("name", CALLS)
+def test_cookiefile_given_in_extra_opts_gets_the_copy_too(
+    ydl, tmp_path, monkeypatch, copy_probe, name
+):
+    f = _fake_cookies(tmp_path / "secret" / "cookies.txt")
+    monkeypatch.setattr(ytdl.os, "access", lambda p, mode: False)
+    _calls(tmp_path)[name](extra_opts={"cookiefile": str(f)})
+    ((copy, _, content),) = copy_probe
+    assert copy != str(f) and content == f.read_text() and not Path(copy).exists()
+
+
+@pytest.mark.skipif(
+    not hasattr(ytdl.os, "geteuid") or ytdl.os.geteuid() == 0,
+    reason="needs POSIX permissions and a non-root user",
+)
+def test_really_read_only_file(ydl, tmp_path, copy_probe):
+    f = _default_file(tmp_path)
+    f.chmod(0o444)
+    youtube_video_info("u")
+    assert copy_probe[0][0] != str(f)

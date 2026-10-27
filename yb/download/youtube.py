@@ -44,7 +44,7 @@ COOKIES_FILE_ENV = "YB_COOKIES_FILE"
 
 #: Env var: when truthy (``1``/``true``/``yes``), each call hands yt-dlp a private
 #: temporary copy of the cookies file instead of the file itself (see
-#: :func:`_private_cookie_copy`). Set it for parallel workers sharing one file.
+#: :func:`_final_opts`). Set it for parallel workers sharing one file.
 COOKIES_PRIVATE_COPY_ENV = "YB_COOKIES_PRIVATE_COPY"
 
 #: Values of :data:`COOKIES_PRIVATE_COPY_ENV` that turn it on.
@@ -221,25 +221,32 @@ def _wants_private_cookie_copy(path: str) -> bool:
 
 
 @contextmanager
-def _private_cookie_copy(opts: dict[str, Any]):
-    """Yield ``opts`` (from :func:`_cookie_opts`), with a private copy of the file if needed.
+def _final_opts(
+    opts: dict[str, Any],
+    cookie_opts: dict[str, Any],
+    extra_opts: dict | None,
+):
+    """Yield the merged yt-dlp options (``opts``, cookies, then ``extra_opts``).
 
     yt-dlp rewrites its ``cookiefile`` on exit, so a file that is readable but
     not writable (a read-only secret mount) makes it raise ``PermissionError``
     after a successful download, and parallel workers sharing one file can leave
-    it half-written. In those cases (or when :data:`COOKIES_PRIVATE_COPY_ENV` is
-    set) yt-dlp gets a 0600 temporary copy, deleted on exit; the cookies it
-    refreshes are then not persisted back.
+    it half-written. Whatever the cookie file's source (``cookies_file``, the
+    default, or ``extra_opts``), in those cases (or when
+    :data:`COOKIES_PRIVATE_COPY_ENV` is set) yt-dlp gets a 0600 temporary copy,
+    deleted on exit; the cookies it refreshes are then not persisted back.
     """
-    source = opts.get("cookiefile")
-    if not source or not _wants_private_cookie_copy(source):
-        yield opts
+    merged = {**opts, **cookie_opts, **(extra_opts or {})}
+    source = merged.get("cookiefile")
+    # A missing path is left for yt-dlp to report.
+    if not (source and Path(source).is_file() and _wants_private_cookie_copy(source)):
+        yield merged
         return
     fd, copy = tempfile.mkstemp(prefix="yb-cookies-", suffix=".txt")  # mode 0600
     try:
         with os.fdopen(fd, "wb") as out, open(source, "rb") as src:
             shutil.copyfileobj(src, out)
-        yield {**opts, "cookiefile": copy}
+        yield {**merged, "cookiefile": copy}
     finally:
         Path(copy).unlink(missing_ok=True)
 
@@ -255,8 +262,7 @@ def _extract_info(
     from yt_dlp import YoutubeDL
 
     cookie_opts = _cookie_opts(cookies_file, extra_opts=extra_opts)
-    with _private_cookie_copy(cookie_opts) as cookie_opts:
-        opts = {**base_opts, **cookie_opts, **(extra_opts or {})}
+    with _final_opts(base_opts, cookie_opts, extra_opts) as opts:
         with YoutubeDL(with_runtime_opts(opts)) as ydl:
             return ydl.extract_info(target, download=False)
 
@@ -397,10 +403,8 @@ def download_youtube_video(
     opts.update(pace_opts(pace))
 
     cookie_opts = _cookie_opts(cookies_file, extra_opts=extra_opts)
-    with _private_cookie_copy(cookie_opts) as cookie_opts:
-        opts.update(cookie_opts)
-        opts.update(extra_opts or {})
-        with explain_rate_limit(), YoutubeDL(with_runtime_opts(opts)) as ydl:
+    with _final_opts(opts, cookie_opts, extra_opts) as final:
+        with explain_rate_limit(), YoutubeDL(with_runtime_opts(final)) as ydl:
             info = ydl.extract_info(url, download=True)
 
     path = _resolve_output_path(info, ydl, out_dir, merge_to)
@@ -813,10 +817,8 @@ def download_youtube_playlist(
     cookie_opts = _cookie_opts(
         cookies_file, cookies_from_browser=cookies_from_browser, extra_opts=extra_opts
     )
-    with _private_cookie_copy(cookie_opts) as cookie_opts:
-        opts.update(cookie_opts)
-        opts.update(extra_opts or {})
-        with explain_rate_limit(), YoutubeDL(with_runtime_opts(opts)) as ydl:
+    with _final_opts(opts, cookie_opts, extra_opts) as final:
+        with explain_rate_limit(), YoutubeDL(with_runtime_opts(final)) as ydl:
             info = ydl.extract_info(url, download=True)
 
     results: list[DownloadResult] = []
