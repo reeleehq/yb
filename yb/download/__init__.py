@@ -20,6 +20,12 @@ ffmpeg, see :mod:`yb.download.ranges`). The span is recorded in
 
     >>> clip = download_youtube_audio(url, start="0:07.9", end="0:08.75")  # doctest: +SKIP
 
+To go from a name to a download, search first (:func:`search_youtube`):
+
+    >>> from yb.download import search_youtube  # doctest: +SKIP
+    >>> hits = search_youtube("hanuman chalisa", limit=3)  # doctest: +SKIP
+    >>> download_youtube_audio(hits[0].url)  # doctest: +SKIP
+
 YouTube downloads need a JavaScript runtime (Deno) and yt-dlp's solver
 scripts; :func:`check_requirements` (or ``yb check``) says what's missing and
 how to install it. The first download in a process runs it and warns.
@@ -32,6 +38,8 @@ from yb.download.youtube import (
     youtube_video_info,
     download_youtube_playlist,
     youtube_playlist_info,
+    search_youtube,
+    SearchHit,
     default_download_dir,
     DownloadResult,
     DOWNLOAD_DIR_ENV,
@@ -53,6 +61,8 @@ __all__ = [
     "youtube_video_info",
     "download_youtube_playlist",
     "youtube_playlist_info",
+    "search_youtube",
+    "SearchHit",
     "default_download_dir",
     "convert_audio",
     "AudioConversionError",

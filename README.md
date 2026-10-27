@@ -62,9 +62,11 @@ from yb.download import (
     download_youtube_video,
     download_youtube_audio,
     youtube_video_info,
+    search_youtube,
 )
 
 youtube_video_info(url)  # metadata only, no download
+search_youtube("song name", limit=5)  # -> [SearchHit(id, title, duration, channel, url)]
 download_youtube_video(url)  # best quality -> ~/Downloads/"Title (id).mp4"
 download_youtube_video(
     url,
