@@ -178,11 +178,17 @@ def _fmt_version(version: tuple[int, ...]) -> str:
 def has_module(
     name: str, *, find_spec: Callable[[str], object | None] = importlib.util.find_spec
 ) -> bool:
-    """Whether module ``name`` is importable, without importing it."""
+    """Whether module ``name`` is importable, without importing it.
+
+    When ``find_spec`` raises, a module already in ``sys.modules`` still counts as
+    present: it raises ``ValueError`` for an imported module whose ``__spec__`` is
+    ``None`` (frozen, bundled or executed directly), which must not read as
+    "missing".
+    """
     try:
         return find_spec(name) is not None
     except (ImportError, ValueError):
-        return False
+        return name in sys.modules
 
 
 def has_ejs_scripts(
@@ -231,6 +237,7 @@ def check_requirements(
             "installed, so YouTube downloads will fail with 'No video formats "
             "found'. Install yt-dlp with its default extras: "
             "pip install 'yt-dlp[default]' (or pip install 'yb[download]'). "
+            f"(looked for module {EJS_MODULE!r} in {sys.executable}). "
             f"See {EJS_WIKI_URL}"
         )
     runtime = find_js_runtime(which=which, search_dirs=search_dirs)
