@@ -11,7 +11,10 @@ The destination defaults to ``$YB_DOWNLOAD_DIR`` when set, else ``~/Downloads``.
 from __future__ import annotations
 
 import os
+import shutil
+import tempfile
 import warnings
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
@@ -38,6 +41,14 @@ DOWNLOAD_DIR_ENV = "YB_DOWNLOAD_DIR"
 
 #: Env var naming a Netscape-format cookies file to authenticate downloads with.
 COOKIES_FILE_ENV = "YB_COOKIES_FILE"
+
+#: Env var: when truthy (``1``/``true``/``yes``), each call hands yt-dlp a private
+#: temporary copy of the cookies file instead of the file itself (see
+#: :func:`_final_opts`). Set it for parallel workers sharing one file.
+COOKIES_PRIVATE_COPY_ENV = "YB_COOKIES_PRIVATE_COPY"
+
+#: Values of :data:`COOKIES_PRIVATE_COPY_ENV` that turn it on.
+_TRUTHY = frozenset({"1", "true", "yes"})
 
 #: Cookies file used when :data:`COOKIES_FILE_ENV` is unset and this file exists.
 DEFAULT_COOKIES_FILE = "~/.config/yb/youtube-cookies.txt"
@@ -203,6 +214,43 @@ def _cookie_opts(
     return {"cookiefile": usable} if usable else {}
 
 
+def _wants_private_cookie_copy(path: str) -> bool:
+    """Whether yt-dlp must not get ``path`` itself: unwritable, or the env asks."""
+    env = os.environ.get(COOKIES_PRIVATE_COPY_ENV, "").strip().lower()
+    return env in _TRUTHY or not os.access(path, os.W_OK)
+
+
+@contextmanager
+def _final_opts(
+    opts: dict[str, Any],
+    cookie_opts: dict[str, Any],
+    extra_opts: dict | None,
+):
+    """Yield the merged yt-dlp options (``opts``, cookies, then ``extra_opts``).
+
+    yt-dlp rewrites its ``cookiefile`` on exit, so a file that is readable but
+    not writable (a read-only secret mount) makes it raise ``PermissionError``
+    after a successful download, and parallel workers sharing one file can leave
+    it half-written. Whatever the cookie file's source (``cookies_file``, the
+    default, or ``extra_opts``), in those cases (or when
+    :data:`COOKIES_PRIVATE_COPY_ENV` is set) yt-dlp gets a 0600 temporary copy,
+    deleted on exit; the cookies it refreshes are then not persisted back.
+    """
+    merged = {**opts, **cookie_opts, **(extra_opts or {})}
+    source = merged.get("cookiefile")
+    # A missing path is left for yt-dlp to report.
+    if not (source and Path(source).is_file() and _wants_private_cookie_copy(source)):
+        yield merged
+        return
+    fd, copy = tempfile.mkstemp(prefix="yb-cookies-", suffix=".txt")  # mode 0600
+    try:
+        with os.fdopen(fd, "wb") as out, open(source, "rb") as src:
+            shutil.copyfileobj(src, out)
+        yield {**merged, "cookiefile": copy}
+    finally:
+        Path(copy).unlink(missing_ok=True)
+
+
 def _extract_info(
     target: str,
     base_opts: dict[str, Any],
@@ -213,11 +261,10 @@ def _extract_info(
     """Metadata-only yt-dlp extraction: cookies, then ``extra_opts``, then the JS runtime."""
     from yt_dlp import YoutubeDL
 
-    opts = dict(base_opts)
-    opts.update(_cookie_opts(cookies_file, extra_opts=extra_opts))
-    opts.update(extra_opts or {})
-    with YoutubeDL(with_runtime_opts(opts)) as ydl:
-        return ydl.extract_info(target, download=False)
+    cookie_opts = _cookie_opts(cookies_file, extra_opts=extra_opts)
+    with _final_opts(base_opts, cookie_opts, extra_opts) as opts:
+        with YoutubeDL(with_runtime_opts(opts)) as ydl:
+            return ydl.extract_info(target, download=False)
 
 
 def youtube_video_info(
@@ -304,8 +351,10 @@ def download_youtube_video(
             The file is checked first (``ValueError`` if explicit, else a
             warning, naming only line numbers). It cannot be combined with a
             browser cookie source. yt-dlp rewrites the file with refreshed
-            cookies on exit, so it must be writable and not shared by parallel
-            workers.
+            cookies on exit, so a file that is not writable is handed over as a
+            private temporary copy instead, as is every file when
+            ``$YB_COOKIES_PRIVATE_COPY`` is truthy (use it for parallel workers
+            sharing one file); refreshed cookies are then not persisted.
         pace: Be gentle with YouTube: a :class:`~yb.download.pacing.Pace` or a
             preset name (``"polite"``: sleep 20-60 s between items, 1 s between
             requests, 4 MB/s cap). Default ``None`` adds nothing. Raw yt-dlp
@@ -351,12 +400,12 @@ def download_youtube_video(
                     filename_template, time_range, precise_cuts=precise_cuts
                 )
             )
-    opts.update(_cookie_opts(cookies_file, extra_opts=extra_opts))
     opts.update(pace_opts(pace))
-    opts.update(extra_opts or {})
 
-    with explain_rate_limit(), YoutubeDL(with_runtime_opts(opts)) as ydl:
-        info = ydl.extract_info(url, download=True)
+    cookie_opts = _cookie_opts(cookies_file, extra_opts=extra_opts)
+    with _final_opts(opts, cookie_opts, extra_opts) as final:
+        with explain_rate_limit(), YoutubeDL(with_runtime_opts(final)) as ydl:
+            info = ydl.extract_info(url, download=True)
 
     path = _resolve_output_path(info, ydl, out_dir, merge_to)
     sidecars = _collect_sidecars(
@@ -754,13 +803,6 @@ def download_youtube_playlist(
         opts["download_archive"] = str(Path(download_archive).expanduser())
     if cookies_from_browser:
         opts["cookiesfrombrowser"] = _coerce_cookies_from_browser(cookies_from_browser)
-    opts.update(
-        _cookie_opts(
-            cookies_file,
-            cookies_from_browser=cookies_from_browser,
-            extra_opts=extra_opts,
-        )
-    )
     if extractor_args:
         opts["extractor_args"] = extractor_args
     opts.update(pace_opts(pace))
@@ -771,10 +813,13 @@ def download_youtube_playlist(
             *opts.get("postprocessors", []),
             {"key": "FFmpegMetadata", "add_metadata": True},
         ]
-    opts.update(extra_opts or {})
 
-    with explain_rate_limit(), YoutubeDL(with_runtime_opts(opts)) as ydl:
-        info = ydl.extract_info(url, download=True)
+    cookie_opts = _cookie_opts(
+        cookies_file, cookies_from_browser=cookies_from_browser, extra_opts=extra_opts
+    )
+    with _final_opts(opts, cookie_opts, extra_opts) as final:
+        with explain_rate_limit(), YoutubeDL(with_runtime_opts(final)) as ydl:
+            info = ydl.extract_info(url, download=True)
 
     results: list[DownloadResult] = []
     for entry in (info.get("entries") if info else None) or []:
