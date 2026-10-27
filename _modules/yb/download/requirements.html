@@ -471,11 +471,17 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">has_module</span><span class="p">(</span>
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">find_spec</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">object</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">find_spec</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Whether module ``name`` is importable, without importing it."""</span>
+<span class="w">    </span><span class="sd">"""Whether module ``name`` is importable, without importing it.</span>
+
+<span class="sd">    When ``find_spec`` raises, a module already in ``sys.modules`` still counts as</span>
+<span class="sd">    present: it raises ``ValueError`` for an imported module whose ``__spec__`` is</span>
+<span class="sd">    ``None`` (e.g. executed directly), which must not read as</span>
+<span class="sd">    "missing".</span>
+<span class="sd">    """</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">find_spec</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
     <span class="k">except</span> <span class="p">(</span><span class="ne">ImportError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
-        <span class="k">return</span> <span class="kc">False</span></div>
+        <span class="k">return</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">modules</span></div>
 
 
 
@@ -530,6 +536,7 @@
             <span class="s2">"installed, so YouTube downloads will fail with 'No video formats "</span>
             <span class="s2">"found'. Install yt-dlp with its default extras: "</span>
             <span class="s2">"pip install 'yt-dlp[default]' (or pip install 'yb[download]'). "</span>
+            <span class="sa">f</span><span class="s2">"Looked for module </span><span class="si">{</span><span class="n">EJS_MODULE</span><span class="si">!r}</span><span class="s2"> in </span><span class="si">{</span><span class="n">sys</span><span class="o">.</span><span class="n">executable</span><span class="si">}</span><span class="s2">. "</span>
             <span class="sa">f</span><span class="s2">"See </span><span class="si">{</span><span class="n">EJS_WIKI_URL</span><span class="si">}</span><span class="s2">"</span>
         <span class="p">)</span>
     <span class="n">runtime</span> <span class="o">=</span> <span class="n">find_js_runtime</span><span class="p">(</span><span class="n">which</span><span class="o">=</span><span class="n">which</span><span class="p">,</span> <span class="n">search_dirs</span><span class="o">=</span><span class="n">search_dirs</span><span class="p">)</span>

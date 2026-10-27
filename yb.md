@@ -1,4 +1,4 @@
-> built 2026-10-27 01:22 UTC from 7e9e994 (main) · yb 0.1.25. Details: build_info.json
+> built 2026-10-27 01:34 UTC from 3a8a8a3 (main) · yb 0.1.25. Details: build_info.json
 
 # index.html.md
 
@@ -2139,6 +2139,11 @@ Whether yt-dlp’s challenge-solver scripts (`yt-dlp-ejs`) are installed.
 ### yb.download.requirements.has_module(name, \*, find_spec=<function find_spec>)
 
 Whether module `name` is importable, without importing it.
+
+When `find_spec` raises, a module already in `sys.modules` still counts as
+present: it raises `ValueError` for an imported module whose `__spec__` is
+`None` (e.g. executed directly), which must not read as
+“missing”.
 
 * **Return type:**
   [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
@@ -5565,20 +5570,18 @@ Fetch a video’s live metadata & engagement numbers.
 
 # About this build
 
-This documentation was built on **2026-10-27 01:22 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/7e9e994f0b666f42ab2a4f02ea3067d4c2e02cb2"><code>7e9e994</code></a> on branch <code>main</code>, for **yb 0.1.25** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-10-27 01:34 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/3a8a8a3193bd89ee38a7c6f84c17e612e33a8822"><code>3a8a8a3</code></a> on branch <code>main</code>, for **yb 0.1.25** (from <code>pyproject.toml</code>).
 
-#### WARNING
-The documentation and the package may be misaligned:
-
-- The documented version (0.1.25) is ahead of the latest release on PyPI (0.1.24): these docs describe unreleased code.
+#### NOTE
+Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
 
 ## Source
 
 |                     |                                                                                                                                                    |
 |---------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/yb/commit/7e9e994f0b666f42ab2a4f02ea3067d4c2e02cb2"><code>7e9e994f0b666f42ab2a4f02ea3067d4c2e02cb2</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/yb/commit/3a8a8a3193bd89ee38a7c6f84c17e612e33a8822"><code>3a8a8a3193bd89ee38a7c6f84c17e612e33a8822</code></a> |
 | Branch              | <code>main</code>                                                                                                                                  |
-| Tags at this commit | <code>0.1.25</code>                                                                                                                                |
+| Tags at this commit | none                                                                                                                                               |
 | Working tree        | clean                                                                                                                                              |
 | Remote              | <code>https://github.com/reeleehq/yb</code>                                                                                                        |
 
@@ -5587,9 +5590,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/yb</code>                                                                   |
-| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/40431954391">40431954391</a>          |
+| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/40432504801">40432504801</a>          |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>a53fd2c0b3fc0be37d71fa0406eb40745afe721d</code> (in the history of the built commit) |
+| Event commit | <code>3a8a8a3193bd89ee38a7c6f84c17e612e33a8822</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -5614,13 +5617,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/yb/0.1.24/">0.1.24</a>, older than the documented version (0.1.25).
+Latest release: <a href="https://pypi.org/project/yb/0.1.25/">0.1.25</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/yb && cd yb
-git checkout 7e9e994f0b666f42ab2a4f02ea3067d4c2e02cb2
+git checkout 3a8a8a3193bd89ee38a7c6f84c17e612e33a8822
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

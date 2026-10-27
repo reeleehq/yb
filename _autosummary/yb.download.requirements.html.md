@@ -203,6 +203,11 @@ Whether yt-dlp’s challenge-solver scripts (`yt-dlp-ejs`) are installed.
 
 Whether module `name` is importable, without importing it.
 
+When `find_spec` raises, a module already in `sys.modules` still counts as
+present: it raises `ValueError` for an imported module whose `__spec__` is
+`None` (e.g. executed directly), which must not read as
+“missing”.
+
 * **Return type:**
   [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
 

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "built_at": "2026-10-27T01:22:28Z",
+  "built_at": "2026-10-27T01:34:30Z",
   "package": {
     "name": "yb",
     "version": "0.1.25",
@@ -9,26 +9,24 @@
   },
   "git": {
     "available": true,
-    "commit": "7e9e994f0b666f42ab2a4f02ea3067d4c2e02cb2",
-    "short_commit": "7e9e994",
+    "commit": "3a8a8a3193bd89ee38a7c6f84c17e612e33a8822",
+    "short_commit": "3a8a8a3",
     "branch": "main",
-    "tags": [
-      "0.1.25"
-    ],
+    "tags": [],
     "dirty": false,
     "remote_url": "https://github.com/reeleehq/yb",
-    "commit_url": "https://github.com/reeleehq/yb/commit/7e9e994f0b666f42ab2a4f02ea3067d4c2e02cb2",
+    "commit_url": "https://github.com/reeleehq/yb/commit/3a8a8a3193bd89ee38a7c6f84c17e612e33a8822",
     "error": null
   },
   "ci": {
     "provider": "github",
     "repository": "reeleehq/yb",
-    "sha": "a53fd2c0b3fc0be37d71fa0406eb40745afe721d",
+    "sha": "3a8a8a3193bd89ee38a7c6f84c17e612e33a8822",
     "sha_in_history": true,
     "ref": "refs/heads/main",
     "ref_name": "main",
-    "run_id": "40431954391",
-    "run_url": "https://github.com/reeleehq/yb/actions/runs/40431954391",
+    "run_id": "40432504801",
+    "run_url": "https://github.com/reeleehq/yb/actions/runs/40432504801",
     "server_url": "https://github.com"
   },
   "tools": {
@@ -62,16 +60,14 @@
   },
   "pypi": {
     "checked": true,
-    "latest": "0.1.24",
-    "relation": "ahead",
+    "latest": "0.1.25",
+    "relation": "same",
     "error": null
   },
-  "reproduce": "git clone https://github.com/reeleehq/yb && cd yb\ngit checkout 7e9e994f0b666f42ab2a4f02ea3067d4c2e02cb2\npip install \"epythet==0.2.22\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
+  "reproduce": "git clone https://github.com/reeleehq/yb && cd yb\ngit checkout 3a8a8a3193bd89ee38a7c6f84c17e612e33a8822\npip install \"epythet==0.2.22\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
   "warnings": [],
   "alignment": {
-    "aligned": false,
-    "notes": [
-      "The documented version (0.1.25) is ahead of the latest release on PyPI (0.1.24): these docs describe unreleased code."
-    ]
+    "aligned": true,
+    "notes": []
   }
 }
