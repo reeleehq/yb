@@ -69,7 +69,9 @@ youtube_video_info(url)  # metadata only, no download
 search_youtube(
     "song name", limit=5
 )  # -> [SearchHit(id, title, duration, channel, url)]
-download_audio_bounded(url, download_dir=tmp, max_bytes=..., max_duration_s=...)  # mp3 + caps + copyright notice, for services
+download_audio_bounded(
+    url, download_dir=tmp, max_bytes=..., max_duration_s=...
+)  # mp3 + caps + copyright notice, for services
 download_youtube_video(url)  # best quality -> ~/Downloads/"Title (id).mp4"
 download_youtube_video(
     url,
