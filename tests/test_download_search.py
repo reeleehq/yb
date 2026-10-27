@@ -83,7 +83,7 @@ def test_bad_arguments_fail_before_any_request(fake_ydl, query, limit):
     assert "query" not in fake_ydl
 
 
-def test_playlist_flat_rows_share_the_search_parser(fake_ydl):
+def test_playlist_flat_rows_share_the_url_rule_but_never_invent_one(fake_ydl):
     fake_ydl["result"] = {
         "id": "pl",
         "entries": [
@@ -98,10 +98,6 @@ def test_playlist_flat_rows_share_the_search_parser(fake_ydl):
     assert rows == [
         {"id": "a1", "title": "A", "webpage_url": "https://x/a1", "duration": 5},
         {"id": "b2", "title": "B", "webpage_url": "https://x/b2", "duration": None},
-        {
-            "id": "c3",
-            "title": None,
-            "webpage_url": "https://www.youtube.com/watch?v=c3",
-            "duration": None,
-        },
+        # no URL of its own: stays None (no made-up YouTube link)
+        {"id": "c3", "title": None, "webpage_url": None, "duration": None},
     ]  # `{}` and `None` entries are skipped

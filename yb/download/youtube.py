@@ -609,28 +609,34 @@ def search_youtube(
     return [_search_hit(e) for e in entries if e and (e.get("id") or e.get("url"))]
 
 
+def _entry_url(entry: dict) -> str | None:
+    """The URL a yt-dlp flat entry carries itself (shared by search and playlist rows)."""
+    return entry.get("url") or entry.get("webpage_url") or None
+
+
 def _search_hit(entry: dict) -> SearchHit:
-    """The one parser of a yt-dlp flat-extraction entry (search and playlist rows)."""
     video_id = entry.get("id") or ""
+    watch_url = f"https://www.youtube.com/watch?v={video_id}" if video_id else ""
     return SearchHit(
         id=video_id,
         title=entry.get("title") or "",
         duration=entry.get("duration"),
         channel=entry.get("channel") or entry.get("uploader"),
-        url=entry.get("url")
-        or entry.get("webpage_url")
-        or (f"https://www.youtube.com/watch?v={video_id}" if video_id else ""),
+        url=_entry_url(entry) or watch_url,
     )
 
 
 def _flat_playlist_entry(entry: dict) -> dict[str, Any]:
-    """A :func:`youtube_playlist_info` row (``webpage_url`` key) from a flat entry."""
-    hit = _search_hit(entry)
-    return {  # missing values stay None, as before the shared parser
-        "id": hit.id or None,
-        "title": hit.title or None,
-        "webpage_url": hit.url or None,
-        "duration": hit.duration,
+    """A :func:`youtube_playlist_info` row (``webpage_url`` key) from a flat entry.
+
+    Unlike a search hit, a missing URL stays ``None``: playlists may come from
+    non-YouTube extractors, where a made-up watch URL would be wrong.
+    """
+    return {
+        "id": entry.get("id"),
+        "title": entry.get("title"),
+        "webpage_url": _entry_url(entry),
+        "duration": entry.get("duration"),
     }
 
 
