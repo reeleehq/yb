@@ -90,7 +90,10 @@ def test_playlist_polite_audio_archive_items(ydl, tmp_path):
     assert o["playlist_items"] == "1-42"
     assert o["download_archive"] == str(tmp_path / "archive.txt")
     assert o["format"] == "bestaudio/best" and "merge_output_format" not in o
-    assert o["outtmpl"].endswith("%(playlist_index)03d_%(id)s/%(id)s.%(ext)s")
+    # str(Path) uses backslashes on Windows; yt-dlp accepts either.
+    assert o["outtmpl"].replace("\\", "/").endswith(
+        "%(playlist_index)03d_%(id)s/%(id)s.%(ext)s"
+    )
     assert {"key": "FFmpegMetadata", "add_metadata": True} in o["postprocessors"]
     assert o["writeinfojson"] and o["writedescription"] and o["writethumbnail"]
 
