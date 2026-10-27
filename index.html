@@ -348,7 +348,9 @@ one — the error only surfaces when you actually call that feature. You also ne
 <span class="n">search_youtube</span><span class="p">(</span>
     <span class="s2">"song name"</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="mi">5</span>
 <span class="p">)</span>  <span class="c1"># -&gt; [SearchHit(id, title, duration, channel, url)]</span>
-<span class="n">download_audio_bounded</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">download_dir</span><span class="o">=</span><span class="n">tmp</span><span class="p">,</span> <span class="n">max_bytes</span><span class="o">=...</span><span class="p">,</span> <span class="n">max_duration_s</span><span class="o">=...</span><span class="p">)</span>  <span class="c1"># mp3 + caps + copyright notice, for services</span>
+<span class="n">download_audio_bounded</span><span class="p">(</span>
+    <span class="n">url</span><span class="p">,</span> <span class="n">download_dir</span><span class="o">=</span><span class="n">tmp</span><span class="p">,</span> <span class="n">max_bytes</span><span class="o">=...</span><span class="p">,</span> <span class="n">max_duration_s</span><span class="o">=...</span>
+<span class="p">)</span>  <span class="c1"># mp3 + caps + copyright notice, for services</span>
 <span class="n">download_youtube_video</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>  <span class="c1"># best quality -&gt; ~/Downloads/"Title (id).mp4"</span>
 <span class="n">download_youtube_video</span><span class="p">(</span>
     <span class="n">url</span><span class="p">,</span>
@@ -373,7 +375,11 @@ and point yb at it with <code class="docutils literal notranslate"><span class="
 with no extra argument. Pass <code class="docutils literal notranslate"><span class="pre">cookies_file=</span></code> to choose one per call (<code class="docutils literal notranslate"><span class="pre">False</span></code>
 turns the default off). An explicit <code class="docutils literal notranslate"><span class="pre">cookies_from_browser=</span></code> or a <code class="docutils literal notranslate"><span class="pre">cookiefile</span></code> /
 <code class="docutils literal notranslate"><span class="pre">cookiesfrombrowser</span></code> in <code class="docutils literal notranslate"><span class="pre">extra_opts=</span></code> always wins. With no file and no env var,
-nothing changes. Never commit the file.</p>
+nothing changes. Never commit the file. yt-dlp rewrites the file on exit, so a
+file that is not writable (read-only mount) is handed over as a private temporary
+copy automatically; set <code class="docutils literal notranslate"><span class="pre">YB_COOKIES_PRIVATE_COPY=1</span></code> to always do that (parallel
+workers sharing one file; every worker must set it). Refreshed cookies are then
+not saved back.</p>
 <p><strong>Audio format.</strong> <code class="docutils literal notranslate"><span class="pre">download_youtube_audio</span></code> keeps whatever the source offers by
 default (YouTube’s best audio is normally Opus in a <code class="docutils literal notranslate"><span class="pre">.webm</span></code> container). That
 default needs no ffmpeg and avoids re-encoding one lossy format into another.
@@ -651,7 +657,7 @@ it, and the <code class="docutils literal notranslate"><span class="pre">music</
 </section>
 </section>
 
-<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-10-27 01:15 UTC from <a href="https://github.com/reeleehq/yb/commit/9d3a2511b7e720af6b32dcff7536fb1808055b6d">9d3a251</a> (main) · yb 0.1.23 · <a href="about-this-build.html">about this build</a></p>
+<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-10-27 01:22 UTC from <a href="https://github.com/reeleehq/yb/commit/7e9e994f0b666f42ab2a4f02ea3067d4c2e02cb2">7e9e994</a> (main) · yb 0.1.25 · <a href="about-this-build.html">about this build</a></p>
         </article>
       </div>
       <footer>
@@ -721,7 +727,7 @@ it, and the <code class="docutils literal notranslate"><span class="pre">music</
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=2d24694c"></script>
+</div><script src="_static/documentation_options.js?v=6c475c9a"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>

@@ -71,7 +71,9 @@ youtube_video_info(url)  # metadata only, no download
 search_youtube(
     "song name", limit=5
 )  # -> [SearchHit(id, title, duration, channel, url)]
-download_audio_bounded(url, download_dir=tmp, max_bytes=..., max_duration_s=...)  # mp3 + caps + copyright notice, for services
+download_audio_bounded(
+    url, download_dir=tmp, max_bytes=..., max_duration_s=...
+)  # mp3 + caps + copyright notice, for services
 download_youtube_video(url)  # best quality -> ~/Downloads/"Title (id).mp4"
 download_youtube_video(
     url,
@@ -97,7 +99,11 @@ and point yb at it with `YB_COOKIES_FILE=/path/cookies.txt` (or just put it at
 with no extra argument. Pass `cookies_file=` to choose one per call (`False`
 turns the default off). An explicit `cookies_from_browser=` or a `cookiefile` /
 `cookiesfrombrowser` in `extra_opts=` always wins. With no file and no env var,
-nothing changes. Never commit the file.
+nothing changes. Never commit the file. yt-dlp rewrites the file on exit, so a
+file that is not writable (read-only mount) is handed over as a private temporary
+copy automatically; set `YB_COOKIES_PRIVATE_COPY=1` to always do that (parallel
+workers sharing one file; every worker must set it). Refreshed cookies are then
+not saved back.
 
 **Audio format.** `download_youtube_audio` keeps whatever the source offers by
 default (YouTube’s best audio is normally Opus in a `.webm` container). That

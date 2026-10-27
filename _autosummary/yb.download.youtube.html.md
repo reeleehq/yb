@@ -11,16 +11,17 @@ The destination defaults to `$YB_DOWNLOAD_DIR` when set, else `~/Downloads`.
 
 ### Module Attributes
 
-| [`OnConvertError`](#yb.download.youtube.OnConvertError)       | What [`download_youtube_audio()`](#yb.download.youtube.download_youtube_audio) does when a format conversion fails.     |
-|-----------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
-| [`DOWNLOAD_DIR_ENV`](#yb.download.youtube.DOWNLOAD_DIR_ENV)     | Env var that overrides the default download directory.                                                                  |
-| [`COOKIES_FILE_ENV`](#yb.download.youtube.COOKIES_FILE_ENV)     | Env var naming a Netscape-format cookies file to authenticate downloads with.                                           |
-| [`DEFAULT_COOKIES_FILE`](#yb.download.youtube.DEFAULT_COOKIES_FILE) | Cookies file used when [`COOKIES_FILE_ENV`](#yb.download.youtube.COOKIES_FILE_ENV) is unset and this file exists. |
-| [`CookiesFile`](#yb.download.youtube.CookiesFile)          | a path, `None` (look for a default), or `False` (none).                                                                 |
-| [`DEFAULT_OUTTMPL`](#yb.download.youtube.DEFAULT_OUTTMPL)      | human title plus the stable id, e.g. "My Talk (dQw4...).mp4".                                                           |
-| [`ITEM_FOLDER_OUTTMPL`](#yb.download.youtube.ITEM_FOLDER_OUTTMPL)  | `001_<id>/<id>.<ext>`, sidecars beside it.                                                                              |
-| [`DEFAULT_AUDIO_FMT`](#yb.download.youtube.DEFAULT_AUDIO_FMT)    | yt-dlp format selector for the best audio-only stream.                                                                  |
-| [`MAX_SEARCH_LIMIT`](#yb.download.youtube.MAX_SEARCH_LIMIT)     | Cap on `limit` so a typo does not turn into a thousand-result query.                                                    |
+| [`OnConvertError`](#yb.download.youtube.OnConvertError)           | What [`download_youtube_audio()`](#yb.download.youtube.download_youtube_audio) does when a format conversion fails.                                   |
+|---------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`DOWNLOAD_DIR_ENV`](#yb.download.youtube.DOWNLOAD_DIR_ENV)         | Env var that overrides the default download directory.                                                                                                |
+| [`COOKIES_FILE_ENV`](#yb.download.youtube.COOKIES_FILE_ENV)         | Env var naming a Netscape-format cookies file to authenticate downloads with.                                                                         |
+| [`COOKIES_PRIVATE_COPY_ENV`](#yb.download.youtube.COOKIES_PRIVATE_COPY_ENV) | when truthy (`1`/`true`/`yes`), each call hands yt-dlp a private temporary copy of the cookies file instead of the file itself (see `_final_opts()`). |
+| [`DEFAULT_COOKIES_FILE`](#yb.download.youtube.DEFAULT_COOKIES_FILE)     | Cookies file used when [`COOKIES_FILE_ENV`](#yb.download.youtube.COOKIES_FILE_ENV) is unset and this file exists.                               |
+| [`CookiesFile`](#yb.download.youtube.CookiesFile)              | a path, `None` (look for a default), or `False` (none).                                                                                               |
+| [`DEFAULT_OUTTMPL`](#yb.download.youtube.DEFAULT_OUTTMPL)          | human title plus the stable id, e.g. "My Talk (dQw4...).mp4".                                                                                         |
+| [`ITEM_FOLDER_OUTTMPL`](#yb.download.youtube.ITEM_FOLDER_OUTTMPL)      | `001_<id>/<id>.<ext>`, sidecars beside it.                                                                                                            |
+| [`DEFAULT_AUDIO_FMT`](#yb.download.youtube.DEFAULT_AUDIO_FMT)        | yt-dlp format selector for the best audio-only stream.                                                                                                |
+| [`MAX_SEARCH_LIMIT`](#yb.download.youtube.MAX_SEARCH_LIMIT)         | Cap on `limit` so a typo does not turn into a thousand-result query.                                                                                  |
 
 ### Functions
 
@@ -44,6 +45,15 @@ The destination defaults to `$YB_DOWNLOAD_DIR` when set, else `~/Downloads`.
 ### yb.download.youtube.COOKIES_FILE_ENV *= 'YB_COOKIES_FILE'*
 
 Env var naming a Netscape-format cookies file to authenticate downloads with.
+
+### yb.download.youtube.COOKIES_PRIVATE_COPY_ENV *= 'YB_COOKIES_PRIVATE_COPY'*
+
+when truthy (`1`/`true`/`yes`), each call hands yt-dlp a private
+temporary copy of the cookies file instead of the file itself (see
+`_final_opts()`). Set it for parallel workers sharing one file.
+
+* **Type:**
+  Env var
 
 ### yb.download.youtube.CookiesFile
 
@@ -351,8 +361,10 @@ named `Title (video_id).mp4` in `~/Downloads`.
     The file is checked first (`ValueError` if explicit, else a
     warning, naming only line numbers). It cannot be combined with a
     browser cookie source. yt-dlp rewrites the file with refreshed
-    cookies on exit, so it must be writable and not shared by parallel
-    workers.
+    cookies on exit, so a file that is not writable is handed over as a
+    private temporary copy instead, as is every file when
+    `$YB_COOKIES_PRIVATE_COPY` is truthy (use it for parallel workers
+    sharing one file); refreshed cookies are then not persisted.
   * **pace** ([`Pace`](yb.download.pacing.html.md#yb.download.pacing.Pace) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Be gentle with YouTube: a [`Pace`](yb.download.pacing.html.md#yb.download.pacing.Pace) or a
     preset name (`"polite"`: sleep 20-60 s between items, 1 s between
     requests, 4 MB/s cap). Default `None` adds nothing. Raw yt-dlp

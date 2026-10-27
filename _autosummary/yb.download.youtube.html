@@ -300,22 +300,25 @@ also save) is overridable, and any raw yt-dlp option can be passed through.</p>
 <tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.youtube.COOKIES_FILE_ENV" title="yb.download.youtube.COOKIES_FILE_ENV"><code class="xref py py-obj docutils literal notranslate"><span class="pre">COOKIES_FILE_ENV</span></code></a></p></td>
 <td><p>Env var naming a Netscape-format cookies file to authenticate downloads with.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#yb.download.youtube.DEFAULT_COOKIES_FILE" title="yb.download.youtube.DEFAULT_COOKIES_FILE"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DEFAULT_COOKIES_FILE</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#yb.download.youtube.COOKIES_PRIVATE_COPY_ENV" title="yb.download.youtube.COOKIES_PRIVATE_COPY_ENV"><code class="xref py py-obj docutils literal notranslate"><span class="pre">COOKIES_PRIVATE_COPY_ENV</span></code></a></p></td>
+<td><p>when truthy (<code class="docutils literal notranslate"><span class="pre">1</span></code>/<code class="docutils literal notranslate"><span class="pre">true</span></code>/<code class="docutils literal notranslate"><span class="pre">yes</span></code>), each call hands yt-dlp a private temporary copy of the cookies file instead of the file itself (see <code class="xref py py-func docutils literal notranslate"><span class="pre">_final_opts()</span></code>).</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.youtube.DEFAULT_COOKIES_FILE" title="yb.download.youtube.DEFAULT_COOKIES_FILE"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DEFAULT_COOKIES_FILE</span></code></a></p></td>
 <td><p>Cookies file used when <a class="reference internal" href="#yb.download.youtube.COOKIES_FILE_ENV" title="yb.download.youtube.COOKIES_FILE_ENV"><code class="xref py py-data docutils literal notranslate"><span class="pre">COOKIES_FILE_ENV</span></code></a> is unset and this file exists.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.youtube.CookiesFile" title="yb.download.youtube.CookiesFile"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CookiesFile</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#yb.download.youtube.CookiesFile" title="yb.download.youtube.CookiesFile"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CookiesFile</span></code></a></p></td>
 <td><p>a path, <code class="docutils literal notranslate"><span class="pre">None</span></code> (look for a default), or <code class="docutils literal notranslate"><span class="pre">False</span></code> (none).</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#yb.download.youtube.DEFAULT_OUTTMPL" title="yb.download.youtube.DEFAULT_OUTTMPL"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DEFAULT_OUTTMPL</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.youtube.DEFAULT_OUTTMPL" title="yb.download.youtube.DEFAULT_OUTTMPL"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DEFAULT_OUTTMPL</span></code></a></p></td>
 <td><p>human title plus the stable id, e.g. &quot;My Talk (dQw4...).mp4&quot;.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.youtube.ITEM_FOLDER_OUTTMPL" title="yb.download.youtube.ITEM_FOLDER_OUTTMPL"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ITEM_FOLDER_OUTTMPL</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#yb.download.youtube.ITEM_FOLDER_OUTTMPL" title="yb.download.youtube.ITEM_FOLDER_OUTTMPL"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ITEM_FOLDER_OUTTMPL</span></code></a></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">001_&lt;id&gt;/&lt;id&gt;.&lt;ext&gt;</span></code>, sidecars beside it.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#yb.download.youtube.DEFAULT_AUDIO_FMT" title="yb.download.youtube.DEFAULT_AUDIO_FMT"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DEFAULT_AUDIO_FMT</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.youtube.DEFAULT_AUDIO_FMT" title="yb.download.youtube.DEFAULT_AUDIO_FMT"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DEFAULT_AUDIO_FMT</span></code></a></p></td>
 <td><p>yt-dlp format selector for the best audio-only stream.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.youtube.MAX_SEARCH_LIMIT" title="yb.download.youtube.MAX_SEARCH_LIMIT"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MAX_SEARCH_LIMIT</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#yb.download.youtube.MAX_SEARCH_LIMIT" title="yb.download.youtube.MAX_SEARCH_LIMIT"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MAX_SEARCH_LIMIT</span></code></a></p></td>
 <td><p>Cap on <code class="docutils literal notranslate"><span class="pre">limit</span></code> so a typo does not turn into a thousand-result query.</p></td>
 </tr>
 </tbody>
@@ -372,6 +375,19 @@ also save) is overridable, and any raw yt-dlp option can be passed through.</p>
 <dt class="sig sig-object py" id="yb.download.youtube.COOKIES_FILE_ENV">
 <span class="sig-prename descclassname"><span class="pre">yb.download.youtube.</span></span><span class="sig-name descname"><span class="pre">COOKIES_FILE_ENV</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'YB_COOKIES_FILE'</span></span><a class="headerlink" href="#yb.download.youtube.COOKIES_FILE_ENV" title="Link to this definition">¶</a></dt>
 <dd><p>Env var naming a Netscape-format cookies file to authenticate downloads with.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="yb.download.youtube.COOKIES_PRIVATE_COPY_ENV">
+<span class="sig-prename descclassname"><span class="pre">yb.download.youtube.</span></span><span class="sig-name descname"><span class="pre">COOKIES_PRIVATE_COPY_ENV</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'YB_COOKIES_PRIVATE_COPY'</span></span><a class="headerlink" href="#yb.download.youtube.COOKIES_PRIVATE_COPY_ENV" title="Link to this definition">¶</a></dt>
+<dd><p>when truthy (<code class="docutils literal notranslate"><span class="pre">1</span></code>/<code class="docutils literal notranslate"><span class="pre">true</span></code>/<code class="docutils literal notranslate"><span class="pre">yes</span></code>), each call hands yt-dlp a private
+temporary copy of the cookies file instead of the file itself (see
+<code class="xref py py-func docutils literal notranslate"><span class="pre">_final_opts()</span></code>). Set it for parallel workers sharing one file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Env var</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py data">
@@ -748,8 +764,10 @@ cookie option suppresses that default; <code class="docutils literal notranslate
 The file is checked first (<code class="docutils literal notranslate"><span class="pre">ValueError</span></code> if explicit, else a
 warning, naming only line numbers). It cannot be combined with a
 browser cookie source. yt-dlp rewrites the file with refreshed
-cookies on exit, so it must be writable and not shared by parallel
-workers.</p></li>
+cookies on exit, so a file that is not writable is handed over as a
+private temporary copy instead, as is every file when
+<code class="docutils literal notranslate"><span class="pre">$YB_COOKIES_PRIVATE_COPY</span></code> is truthy (use it for parallel workers
+sharing one file); refreshed cookies are then not persisted.</p></li>
 <li><p><strong>pace</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="yb.download.pacing.html#yb.download.pacing.Pace" title="yb.download.pacing.Pace"><code class="xref py py-class docutils literal notranslate"><span class="pre">Pace</span></code></a> | <a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a> | <span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code></a></span></span>) – Be gentle with YouTube: a <a class="reference internal" href="yb.download.pacing.html#yb.download.pacing.Pace" title="yb.download.pacing.Pace"><code class="xref py py-class docutils literal notranslate"><span class="pre">Pace</span></code></a> or a
 preset name (<code class="docutils literal notranslate"><span class="pre">&quot;polite&quot;</span></code>: sleep 20-60 s between items, 1 s between
 requests, 4 MB/s cap). Default <code class="docutils literal notranslate"><span class="pre">None</span></code> adds nothing. Raw yt-dlp
@@ -906,6 +924,7 @@ the title/duration/chapters before deciding to download.</p>
             <ul>
 <li><a class="reference internal" href="#">yb.download.youtube</a><ul>
 <li><a class="reference internal" href="#yb.download.youtube.COOKIES_FILE_ENV"><code class="docutils literal notranslate"><span class="pre">COOKIES_FILE_ENV</span></code></a></li>
+<li><a class="reference internal" href="#yb.download.youtube.COOKIES_PRIVATE_COPY_ENV"><code class="docutils literal notranslate"><span class="pre">COOKIES_PRIVATE_COPY_ENV</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.youtube.CookiesFile"><code class="docutils literal notranslate"><span class="pre">CookiesFile</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.youtube.DEFAULT_AUDIO_FMT"><code class="docutils literal notranslate"><span class="pre">DEFAULT_AUDIO_FMT</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.youtube.DEFAULT_COOKIES_FILE"><code class="docutils literal notranslate"><span class="pre">DEFAULT_COOKIES_FILE</span></code></a></li>
@@ -942,7 +961,7 @@ the title/duration/chapters before deciding to download.</p>
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=2d24694c"></script>
+</div><script src="../_static/documentation_options.js?v=6c475c9a"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>

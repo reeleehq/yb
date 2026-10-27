@@ -320,8 +320,10 @@ named `Title (video_id).mp4` in `~/Downloads`.
     The file is checked first (`ValueError` if explicit, else a
     warning, naming only line numbers). It cannot be combined with a
     browser cookie source. yt-dlp rewrites the file with refreshed
-    cookies on exit, so it must be writable and not shared by parallel
-    workers.
+    cookies on exit, so a file that is not writable is handed over as a
+    private temporary copy instead, as is every file when
+    `$YB_COOKIES_PRIVATE_COPY` is truthy (use it for parallel workers
+    sharing one file); refreshed cookies are then not persisted.
   * **pace** ([`Pace`](yb.download.pacing.html.md#yb.download.pacing.Pace) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Be gentle with YouTube: a [`Pace`](yb.download.pacing.html.md#yb.download.pacing.Pace) or a
     preset name (`"polite"`: sleep 20-60 s between items, 1 s between
     requests, 4 MB/s cap). Default `None` adds nothing. Raw yt-dlp

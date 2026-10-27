@@ -1,4 +1,4 @@
-> built 2026-10-27 01:15 UTC from 9d3a251 (main) · yb 0.1.23. Details: build_info.json
+> built 2026-10-27 01:22 UTC from 7e9e994 (main) · yb 0.1.25. Details: build_info.json
 
 # index.html.md
 
@@ -75,7 +75,9 @@ youtube_video_info(url)  # metadata only, no download
 search_youtube(
     "song name", limit=5
 )  # -> [SearchHit(id, title, duration, channel, url)]
-download_audio_bounded(url, download_dir=tmp, max_bytes=..., max_duration_s=...)  # mp3 + caps + copyright notice, for services
+download_audio_bounded(
+    url, download_dir=tmp, max_bytes=..., max_duration_s=...
+)  # mp3 + caps + copyright notice, for services
 download_youtube_video(url)  # best quality -> ~/Downloads/"Title (id).mp4"
 download_youtube_video(
     url,
@@ -101,7 +103,11 @@ and point yb at it with `YB_COOKIES_FILE=/path/cookies.txt` (or just put it at
 with no extra argument. Pass `cookies_file=` to choose one per call (`False`
 turns the default off). An explicit `cookies_from_browser=` or a `cookiefile` /
 `cookiesfrombrowser` in `extra_opts=` always wins. With no file and no env var,
-nothing changes. Never commit the file.
+nothing changes. Never commit the file. yt-dlp rewrites the file on exit, so a
+file that is not writable (read-only mount) is handed over as a private temporary
+copy automatically; set `YB_COOKIES_PRIVATE_COPY=1` to always do that (parallel
+workers sharing one file; every worker must set it). Refreshed cookies are then
+not saved back.
 
 **Audio format.** `download_youtube_audio` keeps whatever the source offers by
 default (YouTube’s best audio is normally Opus in a `.webm` container). That
@@ -1548,8 +1554,10 @@ named `Title (video_id).mp4` in `~/Downloads`.
     The file is checked first (`ValueError` if explicit, else a
     warning, naming only line numbers). It cannot be combined with a
     browser cookie source. yt-dlp rewrites the file with refreshed
-    cookies on exit, so it must be writable and not shared by parallel
-    workers.
+    cookies on exit, so a file that is not writable is handed over as a
+    private temporary copy instead, as is every file when
+    `$YB_COOKIES_PRIVATE_COPY` is truthy (use it for parallel workers
+    sharing one file); refreshed cookies are then not persisted.
   * **pace** ([`Pace`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.Pace) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Be gentle with YouTube: a [`Pace`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.Pace) or a
     preset name (`"polite"`: sleep 20-60 s between items, 1 s between
     requests, 4 MB/s cap). Default `None` adds nothing. Raw yt-dlp
@@ -2182,16 +2190,17 @@ The destination defaults to `$YB_DOWNLOAD_DIR` when set, else `~/Downloads`.
 
 ### Module Attributes
 
-| [`OnConvertError`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.OnConvertError)       | What [`download_youtube_audio()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_audio) does when a format conversion fails.     |
-|-----------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
-| [`DOWNLOAD_DIR_ENV`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DOWNLOAD_DIR_ENV)     | Env var that overrides the default download directory.                                                                  |
-| [`COOKIES_FILE_ENV`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.COOKIES_FILE_ENV)     | Env var naming a Netscape-format cookies file to authenticate downloads with.                                           |
-| [`DEFAULT_COOKIES_FILE`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DEFAULT_COOKIES_FILE) | Cookies file used when [`COOKIES_FILE_ENV`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.COOKIES_FILE_ENV) is unset and this file exists. |
-| [`CookiesFile`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.CookiesFile)          | a path, `None` (look for a default), or `False` (none).                                                                 |
-| [`DEFAULT_OUTTMPL`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DEFAULT_OUTTMPL)      | human title plus the stable id, e.g. "My Talk (dQw4...).mp4".                                                           |
-| [`ITEM_FOLDER_OUTTMPL`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.ITEM_FOLDER_OUTTMPL)  | `001_<id>/<id>.<ext>`, sidecars beside it.                                                                              |
-| [`DEFAULT_AUDIO_FMT`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DEFAULT_AUDIO_FMT)    | yt-dlp format selector for the best audio-only stream.                                                                  |
-| [`MAX_SEARCH_LIMIT`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.MAX_SEARCH_LIMIT)     | Cap on `limit` so a typo does not turn into a thousand-result query.                                                    |
+| [`OnConvertError`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.OnConvertError)           | What [`download_youtube_audio()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_audio) does when a format conversion fails.                                   |
+|---------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`DOWNLOAD_DIR_ENV`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DOWNLOAD_DIR_ENV)         | Env var that overrides the default download directory.                                                                                                |
+| [`COOKIES_FILE_ENV`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.COOKIES_FILE_ENV)         | Env var naming a Netscape-format cookies file to authenticate downloads with.                                                                         |
+| [`COOKIES_PRIVATE_COPY_ENV`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.COOKIES_PRIVATE_COPY_ENV) | when truthy (`1`/`true`/`yes`), each call hands yt-dlp a private temporary copy of the cookies file instead of the file itself (see `_final_opts()`). |
+| [`DEFAULT_COOKIES_FILE`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DEFAULT_COOKIES_FILE)     | Cookies file used when [`COOKIES_FILE_ENV`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.COOKIES_FILE_ENV) is unset and this file exists.                               |
+| [`CookiesFile`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.CookiesFile)              | a path, `None` (look for a default), or `False` (none).                                                                                               |
+| [`DEFAULT_OUTTMPL`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DEFAULT_OUTTMPL)          | human title plus the stable id, e.g. "My Talk (dQw4...).mp4".                                                                                         |
+| [`ITEM_FOLDER_OUTTMPL`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.ITEM_FOLDER_OUTTMPL)      | `001_<id>/<id>.<ext>`, sidecars beside it.                                                                                                            |
+| [`DEFAULT_AUDIO_FMT`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DEFAULT_AUDIO_FMT)        | yt-dlp format selector for the best audio-only stream.                                                                                                |
+| [`MAX_SEARCH_LIMIT`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.MAX_SEARCH_LIMIT)         | Cap on `limit` so a typo does not turn into a thousand-result query.                                                                                  |
 
 ### Functions
 
@@ -2215,6 +2224,15 @@ The destination defaults to `$YB_DOWNLOAD_DIR` when set, else `~/Downloads`.
 ### yb.download.youtube.COOKIES_FILE_ENV *= 'YB_COOKIES_FILE'*
 
 Env var naming a Netscape-format cookies file to authenticate downloads with.
+
+### yb.download.youtube.COOKIES_PRIVATE_COPY_ENV *= 'YB_COOKIES_PRIVATE_COPY'*
+
+when truthy (`1`/`true`/`yes`), each call hands yt-dlp a private
+temporary copy of the cookies file instead of the file itself (see
+`_final_opts()`). Set it for parallel workers sharing one file.
+
+* **Type:**
+  Env var
 
 ### yb.download.youtube.CookiesFile
 
@@ -2522,8 +2540,10 @@ named `Title (video_id).mp4` in `~/Downloads`.
     The file is checked first (`ValueError` if explicit, else a
     warning, naming only line numbers). It cannot be combined with a
     browser cookie source. yt-dlp rewrites the file with refreshed
-    cookies on exit, so it must be writable and not shared by parallel
-    workers.
+    cookies on exit, so a file that is not writable is handed over as a
+    private temporary copy instead, as is every file when
+    `$YB_COOKIES_PRIVATE_COPY` is truthy (use it for parallel workers
+    sharing one file); refreshed cookies are then not persisted.
   * **pace** ([`Pace`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.Pace) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Be gentle with YouTube: a [`Pace`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.Pace) or a
     preset name (`"polite"`: sleep 20-60 s between items, 1 s between
     requests, 4 MB/s cap). Default `None` adds nothing. Raw yt-dlp
@@ -2926,8 +2946,10 @@ named `Title (video_id).mp4` in `~/Downloads`.
     The file is checked first (`ValueError` if explicit, else a
     warning, naming only line numbers). It cannot be combined with a
     browser cookie source. yt-dlp rewrites the file with refreshed
-    cookies on exit, so it must be writable and not shared by parallel
-    workers.
+    cookies on exit, so a file that is not writable is handed over as a
+    private temporary copy instead, as is every file when
+    `$YB_COOKIES_PRIVATE_COPY` is truthy (use it for parallel workers
+    sharing one file); refreshed cookies are then not persisted.
   * **pace** ([`Pace`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.Pace) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Be gentle with YouTube: a [`Pace`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.Pace) or a
     preset name (`"polite"`: sleep 20-60 s between items, 1 s between
     requests, 4 MB/s cap). Default `None` adds nothing. Raw yt-dlp
@@ -5543,18 +5565,20 @@ Fetch a video’s live metadata & engagement numbers.
 
 # About this build
 
-This documentation was built on **2026-10-27 01:15 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/9d3a2511b7e720af6b32dcff7536fb1808055b6d"><code>9d3a251</code></a> on branch <code>main</code>, for **yb 0.1.23** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-10-27 01:22 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/7e9e994f0b666f42ab2a4f02ea3067d4c2e02cb2"><code>7e9e994</code></a> on branch <code>main</code>, for **yb 0.1.25** (from <code>pyproject.toml</code>).
 
-#### NOTE
-Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
+#### WARNING
+The documentation and the package may be misaligned:
+
+- The documented version (0.1.25) is ahead of the latest release on PyPI (0.1.24): these docs describe unreleased code.
 
 ## Source
 
 |                     |                                                                                                                                                    |
 |---------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/yb/commit/9d3a2511b7e720af6b32dcff7536fb1808055b6d"><code>9d3a2511b7e720af6b32dcff7536fb1808055b6d</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/yb/commit/7e9e994f0b666f42ab2a4f02ea3067d4c2e02cb2"><code>7e9e994f0b666f42ab2a4f02ea3067d4c2e02cb2</code></a> |
 | Branch              | <code>main</code>                                                                                                                                  |
-| Tags at this commit | none                                                                                                                                               |
+| Tags at this commit | <code>0.1.25</code>                                                                                                                                |
 | Working tree        | clean                                                                                                                                              |
 | Remote              | <code>https://github.com/reeleehq/yb</code>                                                                                                        |
 
@@ -5563,9 +5587,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/yb</code>                                                                   |
-| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/40431338206">40431338206</a>          |
+| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/40431954391">40431954391</a>          |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>9d3a2511b7e720af6b32dcff7536fb1808055b6d</code> (in the history of the built commit) |
+| Event commit | <code>a53fd2c0b3fc0be37d71fa0406eb40745afe721d</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -5590,13 +5614,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/yb/0.1.23/">0.1.23</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/yb/0.1.24/">0.1.24</a>, older than the documented version (0.1.25).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/yb && cd yb
-git checkout 9d3a2511b7e720af6b32dcff7536fb1808055b6d
+git checkout 7e9e994f0b666f42ab2a4f02ea3067d4c2e02cb2
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

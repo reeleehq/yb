@@ -11,6 +11,7 @@ yb.download.youtube
       OnConvertError
       DOWNLOAD_DIR_ENV
       COOKIES_FILE_ENV
+      COOKIES_PRIVATE_COPY_ENV
       DEFAULT_COOKIES_FILE
       CookiesFile
       DEFAULT_OUTTMPL

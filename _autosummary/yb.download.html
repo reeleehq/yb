@@ -1037,8 +1037,10 @@ cookie option suppresses that default; <code class="docutils literal notranslate
 The file is checked first (<code class="docutils literal notranslate"><span class="pre">ValueError</span></code> if explicit, else a
 warning, naming only line numbers). It cannot be combined with a
 browser cookie source. yt-dlp rewrites the file with refreshed
-cookies on exit, so it must be writable and not shared by parallel
-workers.</p></li>
+cookies on exit, so a file that is not writable is handed over as a
+private temporary copy instead, as is every file when
+<code class="docutils literal notranslate"><span class="pre">$YB_COOKIES_PRIVATE_COPY</span></code> is truthy (use it for parallel workers
+sharing one file); refreshed cookies are then not persisted.</p></li>
 <li><p><strong>pace</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="yb.download.pacing.html#yb.download.pacing.Pace" title="yb.download.pacing.Pace"><code class="xref py py-class docutils literal notranslate"><span class="pre">Pace</span></code></a> | <a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a> | <span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code></a></span></span>) – Be gentle with YouTube: a <a class="reference internal" href="yb.download.pacing.html#yb.download.pacing.Pace" title="yb.download.pacing.Pace"><code class="xref py py-class docutils literal notranslate"><span class="pre">Pace</span></code></a> or a
 preset name (<code class="docutils literal notranslate"><span class="pre">&quot;polite&quot;</span></code>: sleep 20-60 s between items, 1 s between
 requests, 4 MB/s cap). Default <code class="docutils literal notranslate"><span class="pre">None</span></code> adds nothing. Raw yt-dlp
@@ -1317,7 +1319,7 @@ the title/duration/chapters before deciding to download.</p>
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=2d24694c"></script>
+</div><script src="../_static/documentation_options.js?v=6c475c9a"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
