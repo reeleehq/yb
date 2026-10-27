@@ -20,6 +20,7 @@ The destination defaults to `$YB_DOWNLOAD_DIR` when set, else `~/Downloads`.
 | [`DEFAULT_OUTTMPL`](#yb.download.youtube.DEFAULT_OUTTMPL)      | human title plus the stable id, e.g. "My Talk (dQw4...).mp4".                                                           |
 | [`ITEM_FOLDER_OUTTMPL`](#yb.download.youtube.ITEM_FOLDER_OUTTMPL)  | `001_<id>/<id>.<ext>`, sidecars beside it.                                                                              |
 | [`DEFAULT_AUDIO_FMT`](#yb.download.youtube.DEFAULT_AUDIO_FMT)    | yt-dlp format selector for the best audio-only stream.                                                                  |
+| [`MAX_SEARCH_LIMIT`](#yb.download.youtube.MAX_SEARCH_LIMIT)     | Cap on `limit` so a typo does not turn into a thousand-result query.                                                    |
 
 ### Functions
 
@@ -30,13 +31,15 @@ The destination defaults to `$YB_DOWNLOAD_DIR` when set, else `~/Downloads`.
 | [`download_youtube_playlist`](#yb.download.youtube.download_youtube_playlist)(url, \*[, ...])      | Download all (or a selected subset of) a YouTube playlist's videos.           |
 | [`download_youtube_video`](#yb.download.youtube.download_youtube_video)(url, \*[, ...])         | Download a YouTube video to `download_dir` (default `~/Downloads`).           |
 | [`glob_escape`](#yb.download.youtube.glob_escape)(name)                              | Escape glob metacharacters in a literal filename stem.                        |
+| [`search_youtube`](#yb.download.youtube.search_youtube)(query, \*[, limit, ...])        | Search YouTube by name; returns up to `limit` hits, best match first.         |
 | [`youtube_playlist_info`](#yb.download.youtube.youtube_playlist_info)(url, \*[, ...])          | Fetch a playlist's per-video metadata without downloading.                    |
 | [`youtube_video_info`](#yb.download.youtube.youtube_video_info)(url, \*[, extra_opts, ...]) | Fetch a video's metadata without downloading it.                              |
 
 ### Classes
 
-| [`DownloadResult`](#yb.download.youtube.DownloadResult)(path, info[, sidecars])   | Outcome of a download.   |
-|-------------------------------------------------------------------------------------------|--------------------------|
+| [`DownloadResult`](#yb.download.youtube.DownloadResult)(path, info[, sidecars])       | Outcome of a download.                                                                                              |
+|-----------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
+| [`SearchHit`](#yb.download.youtube.SearchHit)(id, title, duration, channel, url) | One row of [`search_youtube()`](#yb.download.youtube.search_youtube) (flat extraction: no per-video fetch). |
 
 ### yb.download.youtube.COOKIES_FILE_ENV *= 'YB_COOKIES_FILE'*
 
@@ -109,11 +112,23 @@ The YouTube video id.
 * **Type:**
   Template for `item_folders=True`
 
+### yb.download.youtube.MAX_SEARCH_LIMIT *= 50*
+
+Cap on `limit` so a typo does not turn into a thousand-result query.
+
 ### yb.download.youtube.OnConvertError
 
 What [`download_youtube_audio()`](#yb.download.youtube.download_youtube_audio) does when a format conversion fails.
 
 alias of [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[‘raise’, ‘warn’]
+
+### *class* yb.download.youtube.SearchHit(id, title, duration, channel, url)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+One row of [`search_youtube()`](#yb.download.youtube.search_youtube) (flat extraction: no per-video fetch).
+
+`duration` is in seconds and may be `None` (live streams, some results).
 
 ### yb.download.youtube.default_cookies_file()
 
@@ -357,6 +372,31 @@ Escape glob metacharacters in a literal filename stem.
 
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
+### yb.download.youtube.search_youtube(query, , limit=5, extra_opts=None, cookies_file=None)
+
+Search YouTube by name; returns up to `limit` hits, best match first.
+
+Hand a hit’s `url` to [`download_youtube_audio()`](#yb.download.youtube.download_youtube_audio) /
+[`download_youtube_video()`](#yb.download.youtube.download_youtube_video):
+
+```pycon
+>>> hits = search_youtube("हनुमान चालीसा हरिहरन", limit=6)
+>>> download_youtube_audio(hits[0].url)
+```
+
+Uses yt-dlp’s `ytsearchN:` with flat extraction (one request, no per-video
+fetch), sharing the cookie and JS-runtime handling of the downloads.
+
+* **Parameters:**
+  * **query** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – What to search for (any script).
+  * **limit** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – How many results, 1..:data:`MAX_SEARCH_LIMIT`.
+  * **extra_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Additional raw yt-dlp options (merged last).
+  * **cookies_file** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[[`False`](https://docs.python.org/3/builtins/constants.html#False)], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – See [`download_youtube_video()`](#yb.download.youtube.download_youtube_video).
+* **Raises:**
+  [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `query` is blank or `limit` is out of range.
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`SearchHit`](#yb.download.youtube.SearchHit)]
 
 ### yb.download.youtube.youtube_playlist_info(url, , playlist_items=None, flat=True, extra_opts=None, cookies_file=None)
 

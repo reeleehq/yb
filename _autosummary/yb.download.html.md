@@ -28,6 +28,14 @@ ffmpeg, see [`yb.download.ranges`](yb.download.ranges.html.md#module-yb.download
 >>> clip = download_youtube_audio(url, start="0:07.9", end="0:08.75")
 ```
 
+To go from a name to a download, search first ([`search_youtube()`](#yb.download.search_youtube)):
+
+```pycon
+>>> from yb.download import search_youtube
+>>> hits = search_youtube("hanuman chalisa", limit=3)
+>>> download_youtube_audio(hits[0].url)
+```
+
 YouTube downloads need a JavaScript runtime (Deno) and yt-dlp’s solver
 scripts; [`check_requirements()`](#yb.download.check_requirements) (or `yb check`) says what’s missing and
 how to install it. The first download in a process runs it and warns.
@@ -40,6 +48,7 @@ how to install it. The first download in a process runs it and warns.
 | [`youtube_video_info`](#yb.download.youtube_video_info)(url, \*[, extra_opts, ...]) | Fetch a video's metadata without downloading it.                              |
 | [`download_youtube_playlist`](#yb.download.download_youtube_playlist)(url, \*[, ...])      | Download all (or a selected subset of) a YouTube playlist's videos.           |
 | [`youtube_playlist_info`](#yb.download.youtube_playlist_info)(url, \*[, ...])          | Fetch a playlist's per-video metadata without downloading.                    |
+| [`search_youtube`](#yb.download.search_youtube)(query, \*[, limit, ...])        | Search YouTube by name; returns up to `limit` hits, best match first.         |
 | [`default_download_dir`](#yb.download.default_download_dir)()                         | Resolve the default download directory (`$YB_DOWNLOAD_DIR` or `~/Downloads`). |
 | [`convert_audio`](#yb.download.convert_audio)(src, audio_format, \*[, ...])    | Convert `src` to `audio_format`, returning the resulting path.                |
 | [`check_requirements`](#yb.download.check_requirements)(\*[, warn, which, ...])     | Check what YouTube downloads need, and say how to fix what's missing.         |
@@ -48,11 +57,12 @@ how to install it. The first download in a process runs it and warns.
 
 ### Classes
 
-| [`DownloadResult`](#yb.download.DownloadResult)(path, info[, sidecars])          | Outcome of a download.                 |
-|--------------------------------------------------------------------------------------------------|----------------------------------------|
-| [`JsRuntime`](#yb.download.JsRuntime)(name, path, on_path)                  | A JavaScript runtime found for yt-dlp. |
-| [`Pace`](#yb.download.Pace)([sleep_interval, max_sleep_interval, ...]) | How gently to talk to YouTube.         |
-| [`TimeRange`](#yb.download.TimeRange)([start, end])                         | A span of a video, in seconds.         |
+| [`SearchHit`](#yb.download.SearchHit)(id, title, duration, channel, url)    | One row of [`search_youtube()`](#yb.download.search_youtube) (flat extraction: no per-video fetch).   |
+|--------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------|
+| [`DownloadResult`](#yb.download.DownloadResult)(path, info[, sidecars])          | Outcome of a download.                                                                                                |
+| [`JsRuntime`](#yb.download.JsRuntime)(name, path, on_path)                  | A JavaScript runtime found for yt-dlp.                                                                                |
+| [`Pace`](#yb.download.Pace)([sleep_interval, max_sleep_interval, ...]) | How gently to talk to YouTube.                                                                                        |
+| [`TimeRange`](#yb.download.TimeRange)([start, end])                         | A span of a video, in seconds.                                                                                        |
 
 ### Exceptions
 
@@ -174,6 +184,14 @@ Maximum download rate, e.g. `"4M"` or `"500K"` (bytes/s).
 Bases: [`RuntimeError`](https://docs.python.org/3/builtins/exceptions.html#RuntimeError)
 
 YouTube refused the request (HTTP 429 or a “confirm you’re not a bot” wall).
+
+### *class* yb.download.SearchHit(id, title, duration, channel, url)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+One row of [`search_youtube()`](#yb.download.search_youtube) (flat extraction: no per-video fetch).
+
+`duration` is in seconds and may be `None` (live streams, some results).
 
 ### *class* yb.download.TimeRange(start=0.0, end=None)
 
@@ -492,6 +510,31 @@ Seconds from a number or a `"[[h:]m:]s[.fraction]"` string.
   [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `value` is negative, not finite, or not a timestamp.
 * **Return type:**
   [`float`](https://docs.python.org/3/builtins/functions.html#float)
+
+### yb.download.search_youtube(query, , limit=5, extra_opts=None, cookies_file=None)
+
+Search YouTube by name; returns up to `limit` hits, best match first.
+
+Hand a hit’s `url` to [`download_youtube_audio()`](#yb.download.download_youtube_audio) /
+[`download_youtube_video()`](#yb.download.download_youtube_video):
+
+```pycon
+>>> hits = search_youtube("हनुमान चालीसा हरिहरन", limit=6)
+>>> download_youtube_audio(hits[0].url)
+```
+
+Uses yt-dlp’s `ytsearchN:` with flat extraction (one request, no per-video
+fetch), sharing the cookie and JS-runtime handling of the downloads.
+
+* **Parameters:**
+  * **query** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – What to search for (any script).
+  * **limit** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – How many results, 1..:data:`MAX_SEARCH_LIMIT`.
+  * **extra_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Additional raw yt-dlp options (merged last).
+  * **cookies_file** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[[`False`](https://docs.python.org/3/builtins/constants.html#False)], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – See [`download_youtube_video()`](#yb.download.download_youtube_video).
+* **Raises:**
+  [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `query` is blank or `limit` is out of range.
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`SearchHit`](yb.download.youtube.html.md#yb.download.youtube.SearchHit)]
 
 ### yb.download.youtube_playlist_info(url, , playlist_items=None, flat=True, extra_opts=None, cookies_file=None)
 

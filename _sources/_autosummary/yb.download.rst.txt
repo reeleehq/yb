@@ -13,6 +13,7 @@ yb.download
       youtube_video_info
       download_youtube_playlist
       youtube_playlist_info
+      search_youtube
       default_download_dir
       convert_audio
       check_requirements
@@ -23,6 +24,7 @@ yb.download
 
    .. autosummary::
    
+      SearchHit
       DownloadResult
       JsRuntime
       Pace

@@ -484,6 +484,23 @@
     <span class="k">return</span> <span class="p">{</span><span class="s2">"cookiefile"</span><span class="p">:</span> <span class="n">usable</span><span class="p">}</span> <span class="k">if</span> <span class="n">usable</span> <span class="k">else</span> <span class="p">{}</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_extract_info</span><span class="p">(</span>
+    <span class="n">target</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">base_opts</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">extra_opts</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">cookies_file</span><span class="p">:</span> <span class="n">CookiesFile</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Metadata-only yt-dlp extraction: cookies, then ``extra_opts``, then the JS runtime."""</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">yt_dlp</span><span class="w"> </span><span class="kn">import</span> <span class="n">YoutubeDL</span>
+
+    <span class="n">opts</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">base_opts</span><span class="p">)</span>
+    <span class="n">opts</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_cookie_opts</span><span class="p">(</span><span class="n">cookies_file</span><span class="p">,</span> <span class="n">extra_opts</span><span class="o">=</span><span class="n">extra_opts</span><span class="p">))</span>
+    <span class="n">opts</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">extra_opts</span> <span class="ow">or</span> <span class="p">{})</span>
+    <span class="k">with</span> <span class="n">YoutubeDL</span><span class="p">(</span><span class="n">with_runtime_opts</span><span class="p">(</span><span class="n">opts</span><span class="p">))</span> <span class="k">as</span> <span class="n">ydl</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">ydl</span><span class="o">.</span><span class="n">extract_info</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+
 <div class="viewcode-block" id="youtube_video_info">
 <a class="viewcode-back" href="../../../_autosummary/yb.download.youtube.html#yb.youtube_video_info">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">youtube_video_info</span><span class="p">(</span>
@@ -499,13 +516,12 @@
 
 <span class="sd">    ``cookies_file``: see :func:`download_youtube_video`.</span>
 <span class="sd">    """</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">yt_dlp</span><span class="w"> </span><span class="kn">import</span> <span class="n">YoutubeDL</span>
-
-    <span class="n">opts</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"quiet"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"skip_download"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"noplaylist"</span><span class="p">:</span> <span class="kc">True</span><span class="p">}</span>
-    <span class="n">opts</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_cookie_opts</span><span class="p">(</span><span class="n">cookies_file</span><span class="p">,</span> <span class="n">extra_opts</span><span class="o">=</span><span class="n">extra_opts</span><span class="p">))</span>
-    <span class="n">opts</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">extra_opts</span> <span class="ow">or</span> <span class="p">{})</span>
-    <span class="k">with</span> <span class="n">YoutubeDL</span><span class="p">(</span><span class="n">with_runtime_opts</span><span class="p">(</span><span class="n">opts</span><span class="p">))</span> <span class="k">as</span> <span class="n">ydl</span><span class="p">:</span>
-        <span class="n">info</span> <span class="o">=</span> <span class="n">ydl</span><span class="o">.</span><span class="n">extract_info</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">info</span> <span class="o">=</span> <span class="n">_extract_info</span><span class="p">(</span>
+        <span class="n">url</span><span class="p">,</span>
+        <span class="p">{</span><span class="s2">"quiet"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"skip_download"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"noplaylist"</span><span class="p">:</span> <span class="kc">True</span><span class="p">},</span>
+        <span class="n">extra_opts</span><span class="o">=</span><span class="n">extra_opts</span><span class="p">,</span>
+        <span class="n">cookies_file</span><span class="o">=</span><span class="n">cookies_file</span><span class="p">,</span>
+    <span class="p">)</span>
     <span class="k">return</span> <span class="n">_trim_info</span><span class="p">(</span><span class="n">info</span><span class="p">)</span></div>
 
 
@@ -774,6 +790,83 @@
 
 
 
+<div class="viewcode-block" id="SearchHit">
+<a class="viewcode-back" href="../../../_autosummary/yb.download.youtube.html#yb.SearchHit">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">SearchHit</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""One row of :func:`search_youtube` (flat extraction: no per-video fetch).</span>
+
+<span class="sd">    ``duration`` is in seconds and may be ``None`` (live streams, some results).</span>
+<span class="sd">    """</span>
+
+    <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">title</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">duration</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">channel</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">url</span><span class="p">:</span> <span class="nb">str</span></div>
+
+
+
+<span class="c1">#: Cap on ``limit`` so a typo does not turn into a thousand-result query.</span>
+<span class="n">MAX_SEARCH_LIMIT</span> <span class="o">=</span> <span class="mi">50</span>
+
+
+<div class="viewcode-block" id="search_youtube">
+<a class="viewcode-back" href="../../../_autosummary/yb.download.youtube.html#yb.search_youtube">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">search_youtube</span><span class="p">(</span>
+    <span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
+    <span class="n">extra_opts</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">cookies_file</span><span class="p">:</span> <span class="n">CookiesFile</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">SearchHit</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Search YouTube by name; returns up to ``limit`` hits, best match first.</span>
+
+<span class="sd">    Hand a hit's ``url`` to :func:`download_youtube_audio` /</span>
+<span class="sd">    :func:`download_youtube_video`:</span>
+
+<span class="sd">        &gt;&gt;&gt; hits = search_youtube("हनुमान चालीसा हरिहरन", limit=6)  # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; download_youtube_audio(hits[0].url)  # doctest: +SKIP</span>
+
+<span class="sd">    Uses yt-dlp's ``ytsearchN:`` with flat extraction (one request, no per-video</span>
+<span class="sd">    fetch), sharing the cookie and JS-runtime handling of the downloads.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        query: What to search for (any script).</span>
+<span class="sd">        limit: How many results, 1..:data:`MAX_SEARCH_LIMIT`.</span>
+<span class="sd">        extra_opts: Additional raw yt-dlp options (merged last).</span>
+<span class="sd">        cookies_file: See :func:`download_youtube_video`.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: If ``query`` is blank or ``limit`` is out of range.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">query</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"query must not be blank"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="mi">1</span> <span class="o">&lt;=</span> <span class="n">limit</span> <span class="o">&lt;=</span> <span class="n">MAX_SEARCH_LIMIT</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"limit must be in 1..</span><span class="si">{</span><span class="n">MAX_SEARCH_LIMIT</span><span class="si">}</span><span class="s2">, got </span><span class="si">{</span><span class="n">limit</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+    <span class="n">info</span> <span class="o">=</span> <span class="n">_extract_info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">"ytsearch</span><span class="si">{</span><span class="n">limit</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">query</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+        <span class="p">{</span><span class="s2">"quiet"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"skip_download"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"extract_flat"</span><span class="p">:</span> <span class="kc">True</span><span class="p">},</span>
+        <span class="n">extra_opts</span><span class="o">=</span><span class="n">extra_opts</span><span class="p">,</span>
+        <span class="n">cookies_file</span><span class="o">=</span><span class="n">cookies_file</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">entries</span> <span class="o">=</span> <span class="p">(</span><span class="n">info</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"entries"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">_search_hit</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">entries</span> <span class="k">if</span> <span class="n">e</span> <span class="ow">and</span> <span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">e</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"url"</span><span class="p">))]</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_search_hit</span><span class="p">(</span><span class="n">entry</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SearchHit</span><span class="p">:</span>
+    <span class="n">video_id</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">""</span>
+    <span class="k">return</span> <span class="n">SearchHit</span><span class="p">(</span>
+        <span class="nb">id</span><span class="o">=</span><span class="n">video_id</span><span class="p">,</span>
+        <span class="n">title</span><span class="o">=</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"title"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">,</span>
+        <span class="n">duration</span><span class="o">=</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"duration"</span><span class="p">),</span>
+        <span class="n">channel</span><span class="o">=</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"channel"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"uploader"</span><span class="p">),</span>
+        <span class="n">url</span><span class="o">=</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"url"</span><span class="p">)</span> <span class="ow">or</span> <span class="sa">f</span><span class="s2">"https://www.youtube.com/watch?v=</span><span class="si">{</span><span class="n">video_id</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
 <div class="viewcode-block" id="youtube_playlist_info">
 <a class="viewcode-back" href="../../../_autosummary/yb.download.youtube.html#yb.youtube_playlist_info">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">youtube_playlist_info</span><span class="p">(</span>
@@ -800,8 +893,6 @@
 <span class="sd">        extra_opts: Additional raw yt-dlp options (merged last).</span>
 <span class="sd">        cookies_file: See :func:`download_youtube_video`.</span>
 <span class="sd">    """</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">yt_dlp</span><span class="w"> </span><span class="kn">import</span> <span class="n">YoutubeDL</span>
-
     <span class="n">opts</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
         <span class="s2">"quiet"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
         <span class="s2">"skip_download"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
@@ -810,10 +901,7 @@
     <span class="p">}</span>
     <span class="k">if</span> <span class="n">playlist_items</span><span class="p">:</span>
         <span class="n">opts</span><span class="p">[</span><span class="s2">"playlist_items"</span><span class="p">]</span> <span class="o">=</span> <span class="n">playlist_items</span>
-    <span class="n">opts</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_cookie_opts</span><span class="p">(</span><span class="n">cookies_file</span><span class="p">,</span> <span class="n">extra_opts</span><span class="o">=</span><span class="n">extra_opts</span><span class="p">))</span>
-    <span class="n">opts</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">extra_opts</span> <span class="ow">or</span> <span class="p">{})</span>
-    <span class="k">with</span> <span class="n">YoutubeDL</span><span class="p">(</span><span class="n">with_runtime_opts</span><span class="p">(</span><span class="n">opts</span><span class="p">))</span> <span class="k">as</span> <span class="n">ydl</span><span class="p">:</span>
-        <span class="n">info</span> <span class="o">=</span> <span class="n">ydl</span><span class="o">.</span><span class="n">extract_info</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">info</span> <span class="o">=</span> <span class="n">_extract_info</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">opts</span><span class="p">,</span> <span class="n">extra_opts</span><span class="o">=</span><span class="n">extra_opts</span><span class="p">,</span> <span class="n">cookies_file</span><span class="o">=</span><span class="n">cookies_file</span><span class="p">)</span>
 
     <span class="n">raw_entries</span> <span class="o">=</span> <span class="p">(</span><span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"entries"</span><span class="p">)</span> <span class="k">if</span> <span class="n">info</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]</span>
     <span class="k">if</span> <span class="n">flat</span><span class="p">:</span>
@@ -1127,7 +1215,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=a4d587c1"></script>
+</div><script src="../../../_static/documentation_options.js?v=84641d2a"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

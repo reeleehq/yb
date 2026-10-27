@@ -1,4 +1,4 @@
-> built 2026-10-22 01:35 UTC from 028f0e3 (main) · yb 0.1.21. Details: build_info.json
+> built 2026-10-27 01:07 UTC from 15aebb8 (main) · yb 0.1.22. Details: build_info.json
 
 # index.html.md
 
@@ -68,9 +68,11 @@ from yb.download import (
     download_youtube_video,
     download_youtube_audio,
     youtube_video_info,
+    search_youtube,
 )
 
 youtube_video_info(url)  # metadata only, no download
+search_youtube("song name", limit=5)  # -> [SearchHit(id, title, duration, channel, url)]
 download_youtube_video(url)  # best quality -> ~/Downloads/"Title (id).mp4"
 download_youtube_video(
     url,
@@ -833,6 +835,14 @@ ffmpeg, see [`yb.download.ranges`](_autosummary/yb.download.ranges.html.md#modul
 >>> clip = download_youtube_audio(url, start="0:07.9", end="0:08.75")
 ```
 
+To go from a name to a download, search first ([`search_youtube()`](_autosummary/yb.download.html.md#yb.download.search_youtube)):
+
+```pycon
+>>> from yb.download import search_youtube
+>>> hits = search_youtube("hanuman chalisa", limit=3)
+>>> download_youtube_audio(hits[0].url)
+```
+
 YouTube downloads need a JavaScript runtime (Deno) and yt-dlp’s solver
 scripts; [`check_requirements()`](_autosummary/yb.download.html.md#yb.download.check_requirements) (or `yb check`) says what’s missing and
 how to install it. The first download in a process runs it and warns.
@@ -845,6 +855,7 @@ how to install it. The first download in a process runs it and warns.
 | [`youtube_video_info`](_autosummary/yb.download.html.md#yb.download.youtube_video_info)(url, \*[, extra_opts, ...]) | Fetch a video's metadata without downloading it.                              |
 | [`download_youtube_playlist`](_autosummary/yb.download.html.md#yb.download.download_youtube_playlist)(url, \*[, ...])      | Download all (or a selected subset of) a YouTube playlist's videos.           |
 | [`youtube_playlist_info`](_autosummary/yb.download.html.md#yb.download.youtube_playlist_info)(url, \*[, ...])          | Fetch a playlist's per-video metadata without downloading.                    |
+| [`search_youtube`](_autosummary/yb.download.html.md#yb.download.search_youtube)(query, \*[, limit, ...])        | Search YouTube by name; returns up to `limit` hits, best match first.         |
 | [`default_download_dir`](_autosummary/yb.download.html.md#yb.download.default_download_dir)()                         | Resolve the default download directory (`$YB_DOWNLOAD_DIR` or `~/Downloads`). |
 | [`convert_audio`](_autosummary/yb.download.html.md#yb.download.convert_audio)(src, audio_format, \*[, ...])    | Convert `src` to `audio_format`, returning the resulting path.                |
 | [`check_requirements`](_autosummary/yb.download.html.md#yb.download.check_requirements)(\*[, warn, which, ...])     | Check what YouTube downloads need, and say how to fix what's missing.         |
@@ -853,11 +864,12 @@ how to install it. The first download in a process runs it and warns.
 
 ### Classes
 
-| [`DownloadResult`](_autosummary/yb.download.html.md#yb.download.DownloadResult)(path, info[, sidecars])          | Outcome of a download.                 |
-|--------------------------------------------------------------------------------------------------|----------------------------------------|
-| [`JsRuntime`](_autosummary/yb.download.html.md#yb.download.JsRuntime)(name, path, on_path)                  | A JavaScript runtime found for yt-dlp. |
-| [`Pace`](_autosummary/yb.download.html.md#yb.download.Pace)([sleep_interval, max_sleep_interval, ...]) | How gently to talk to YouTube.         |
-| [`TimeRange`](_autosummary/yb.download.html.md#yb.download.TimeRange)([start, end])                         | A span of a video, in seconds.         |
+| [`SearchHit`](_autosummary/yb.download.html.md#yb.download.SearchHit)(id, title, duration, channel, url)    | One row of [`search_youtube()`](_autosummary/yb.download.html.md#yb.download.search_youtube) (flat extraction: no per-video fetch).   |
+|--------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------|
+| [`DownloadResult`](_autosummary/yb.download.html.md#yb.download.DownloadResult)(path, info[, sidecars])          | Outcome of a download.                                                                                                |
+| [`JsRuntime`](_autosummary/yb.download.html.md#yb.download.JsRuntime)(name, path, on_path)                  | A JavaScript runtime found for yt-dlp.                                                                                |
+| [`Pace`](_autosummary/yb.download.html.md#yb.download.Pace)([sleep_interval, max_sleep_interval, ...]) | How gently to talk to YouTube.                                                                                        |
+| [`TimeRange`](_autosummary/yb.download.html.md#yb.download.TimeRange)([start, end])                         | A span of a video, in seconds.                                                                                        |
 
 ### Exceptions
 
@@ -979,6 +991,14 @@ Maximum download rate, e.g. `"4M"` or `"500K"` (bytes/s).
 Bases: [`RuntimeError`](https://docs.python.org/3/builtins/exceptions.html#RuntimeError)
 
 YouTube refused the request (HTTP 429 or a “confirm you’re not a bot” wall).
+
+### *class* yb.download.SearchHit(id, title, duration, channel, url)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+One row of [`search_youtube()`](_autosummary/yb.download.html.md#yb.download.search_youtube) (flat extraction: no per-video fetch).
+
+`duration` is in seconds and may be `None` (live streams, some results).
 
 ### *class* yb.download.TimeRange(start=0.0, end=None)
 
@@ -1297,6 +1317,31 @@ Seconds from a number or a `"[[h:]m:]s[.fraction]"` string.
   [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `value` is negative, not finite, or not a timestamp.
 * **Return type:**
   [`float`](https://docs.python.org/3/builtins/functions.html#float)
+
+### yb.download.search_youtube(query, , limit=5, extra_opts=None, cookies_file=None)
+
+Search YouTube by name; returns up to `limit` hits, best match first.
+
+Hand a hit’s `url` to [`download_youtube_audio()`](_autosummary/yb.download.html.md#yb.download.download_youtube_audio) /
+[`download_youtube_video()`](_autosummary/yb.download.html.md#yb.download.download_youtube_video):
+
+```pycon
+>>> hits = search_youtube("हनुमान चालीसा हरिहरन", limit=6)
+>>> download_youtube_audio(hits[0].url)
+```
+
+Uses yt-dlp’s `ytsearchN:` with flat extraction (one request, no per-video
+fetch), sharing the cookie and JS-runtime handling of the downloads.
+
+* **Parameters:**
+  * **query** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – What to search for (any script).
+  * **limit** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – How many results, 1..:data:`MAX_SEARCH_LIMIT`.
+  * **extra_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Additional raw yt-dlp options (merged last).
+  * **cookies_file** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[[`False`](https://docs.python.org/3/builtins/constants.html#False)], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – See [`download_youtube_video()`](_autosummary/yb.download.html.md#yb.download.download_youtube_video).
+* **Raises:**
+  [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `query` is blank or `limit` is out of range.
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`SearchHit`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.SearchHit)]
 
 ### yb.download.youtube_playlist_info(url, , playlist_items=None, flat=True, extra_opts=None, cookies_file=None)
 
@@ -1867,6 +1912,7 @@ The destination defaults to `$YB_DOWNLOAD_DIR` when set, else `~/Downloads`.
 | [`DEFAULT_OUTTMPL`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DEFAULT_OUTTMPL)      | human title plus the stable id, e.g. "My Talk (dQw4...).mp4".                                                           |
 | [`ITEM_FOLDER_OUTTMPL`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.ITEM_FOLDER_OUTTMPL)  | `001_<id>/<id>.<ext>`, sidecars beside it.                                                                              |
 | [`DEFAULT_AUDIO_FMT`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DEFAULT_AUDIO_FMT)    | yt-dlp format selector for the best audio-only stream.                                                                  |
+| [`MAX_SEARCH_LIMIT`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.MAX_SEARCH_LIMIT)     | Cap on `limit` so a typo does not turn into a thousand-result query.                                                    |
 
 ### Functions
 
@@ -1877,13 +1923,15 @@ The destination defaults to `$YB_DOWNLOAD_DIR` when set, else `~/Downloads`.
 | [`download_youtube_playlist`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_playlist)(url, \*[, ...])      | Download all (or a selected subset of) a YouTube playlist's videos.           |
 | [`download_youtube_video`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_video)(url, \*[, ...])         | Download a YouTube video to `download_dir` (default `~/Downloads`).           |
 | [`glob_escape`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.glob_escape)(name)                              | Escape glob metacharacters in a literal filename stem.                        |
+| [`search_youtube`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.search_youtube)(query, \*[, limit, ...])        | Search YouTube by name; returns up to `limit` hits, best match first.         |
 | [`youtube_playlist_info`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.youtube_playlist_info)(url, \*[, ...])          | Fetch a playlist's per-video metadata without downloading.                    |
 | [`youtube_video_info`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.youtube_video_info)(url, \*[, extra_opts, ...]) | Fetch a video's metadata without downloading it.                              |
 
 ### Classes
 
-| [`DownloadResult`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DownloadResult)(path, info[, sidecars])   | Outcome of a download.   |
-|-------------------------------------------------------------------------------------------|--------------------------|
+| [`DownloadResult`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DownloadResult)(path, info[, sidecars])       | Outcome of a download.                                                                                              |
+|-----------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
+| [`SearchHit`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.SearchHit)(id, title, duration, channel, url) | One row of [`search_youtube()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.search_youtube) (flat extraction: no per-video fetch). |
 
 ### yb.download.youtube.COOKIES_FILE_ENV *= 'YB_COOKIES_FILE'*
 
@@ -1956,11 +2004,23 @@ The YouTube video id.
 * **Type:**
   Template for `item_folders=True`
 
+### yb.download.youtube.MAX_SEARCH_LIMIT *= 50*
+
+Cap on `limit` so a typo does not turn into a thousand-result query.
+
 ### yb.download.youtube.OnConvertError
 
 What [`download_youtube_audio()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_audio) does when a format conversion fails.
 
 alias of [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[‘raise’, ‘warn’]
+
+### *class* yb.download.youtube.SearchHit(id, title, duration, channel, url)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+One row of [`search_youtube()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.search_youtube) (flat extraction: no per-video fetch).
+
+`duration` is in seconds and may be `None` (live streams, some results).
 
 ### yb.download.youtube.default_cookies_file()
 
@@ -2204,6 +2264,31 @@ Escape glob metacharacters in a literal filename stem.
 
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
+### yb.download.youtube.search_youtube(query, , limit=5, extra_opts=None, cookies_file=None)
+
+Search YouTube by name; returns up to `limit` hits, best match first.
+
+Hand a hit’s `url` to [`download_youtube_audio()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_audio) /
+[`download_youtube_video()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_video):
+
+```pycon
+>>> hits = search_youtube("हनुमान चालीसा हरिहरन", limit=6)
+>>> download_youtube_audio(hits[0].url)
+```
+
+Uses yt-dlp’s `ytsearchN:` with flat extraction (one request, no per-video
+fetch), sharing the cookie and JS-runtime handling of the downloads.
+
+* **Parameters:**
+  * **query** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – What to search for (any script).
+  * **limit** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – How many results, 1..:data:`MAX_SEARCH_LIMIT`.
+  * **extra_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Additional raw yt-dlp options (merged last).
+  * **cookies_file** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[[`False`](https://docs.python.org/3/builtins/constants.html#False)], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – See [`download_youtube_video()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_video).
+* **Raises:**
+  [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `query` is blank or `limit` is out of range.
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`SearchHit`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.SearchHit)]
 
 ### yb.download.youtube.youtube_playlist_info(url, , playlist_items=None, flat=True, extra_opts=None, cookies_file=None)
 
@@ -5179,18 +5264,18 @@ Fetch a video’s live metadata & engagement numbers.
 
 # About this build
 
-This documentation was built on **2026-10-22 01:35 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/028f0e3501a74381ba8634ea8fc43e734554068c"><code>028f0e3</code></a> on branch <code>main</code>, for **yb 0.1.21** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-10-27 01:07 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/15aebb8a2b2299d7169050ac7d9c6edfa1eec3bf"><code>15aebb8</code></a> on branch <code>main</code>, for **yb 0.1.22** (from <code>pyproject.toml</code>).
 
 #### WARNING
 The documentation and the package may be misaligned:
 
-- The documented version (0.1.21) is behind the latest release on PyPI (0.1.22): `pip install yb` gives newer code than these docs describe.
+- The documented version (0.1.22) is behind the latest release on PyPI (0.1.23): `pip install yb` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                    |
 |---------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/yb/commit/028f0e3501a74381ba8634ea8fc43e734554068c"><code>028f0e3501a74381ba8634ea8fc43e734554068c</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/yb/commit/15aebb8a2b2299d7169050ac7d9c6edfa1eec3bf"><code>15aebb8a2b2299d7169050ac7d9c6edfa1eec3bf</code></a> |
 | Branch              | <code>main</code>                                                                                                                                  |
 | Tags at this commit | none                                                                                                                                               |
 | Working tree        | clean                                                                                                                                              |
@@ -5201,9 +5286,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/yb</code>                                                                   |
-| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/39706367753">39706367753</a>          |
+| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/40430472552">40430472552</a>          |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>028f0e3501a74381ba8634ea8fc43e734554068c</code> (in the history of the built commit) |
+| Event commit | <code>15aebb8a2b2299d7169050ac7d9c6edfa1eec3bf</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -5228,13 +5313,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/yb/0.1.22/">0.1.22</a>, newer than the documented version (0.1.21).
+Latest release: <a href="https://pypi.org/project/yb/0.1.23/">0.1.23</a>, newer than the documented version (0.1.22).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/yb && cd yb
-git checkout 028f0e3501a74381ba8634ea8fc43e734554068c
+git checkout 15aebb8a2b2299d7169050ac7d9c6edfa1eec3bf
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

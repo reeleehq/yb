@@ -1,32 +1,32 @@
 {
   "schema_version": 1,
-  "built_at": "2026-10-22T01:35:28Z",
+  "built_at": "2026-10-27T01:07:31Z",
   "package": {
     "name": "yb",
-    "version": "0.1.21",
+    "version": "0.1.22",
     "display_name": "yb",
     "source": "pyproject.toml"
   },
   "git": {
     "available": true,
-    "commit": "028f0e3501a74381ba8634ea8fc43e734554068c",
-    "short_commit": "028f0e3",
+    "commit": "15aebb8a2b2299d7169050ac7d9c6edfa1eec3bf",
+    "short_commit": "15aebb8",
     "branch": "main",
     "tags": [],
     "dirty": false,
     "remote_url": "https://github.com/reeleehq/yb",
-    "commit_url": "https://github.com/reeleehq/yb/commit/028f0e3501a74381ba8634ea8fc43e734554068c",
+    "commit_url": "https://github.com/reeleehq/yb/commit/15aebb8a2b2299d7169050ac7d9c6edfa1eec3bf",
     "error": null
   },
   "ci": {
     "provider": "github",
     "repository": "reeleehq/yb",
-    "sha": "028f0e3501a74381ba8634ea8fc43e734554068c",
+    "sha": "15aebb8a2b2299d7169050ac7d9c6edfa1eec3bf",
     "sha_in_history": true,
     "ref": "refs/heads/main",
     "ref_name": "main",
-    "run_id": "39706367753",
-    "run_url": "https://github.com/reeleehq/yb/actions/runs/39706367753",
+    "run_id": "40430472552",
+    "run_url": "https://github.com/reeleehq/yb/actions/runs/40430472552",
     "server_url": "https://github.com"
   },
   "tools": {
@@ -56,20 +56,20 @@
   },
   "site": {
     "modules_documented": 25,
-    "objects_documented": 335
+    "objects_documented": 340
   },
   "pypi": {
     "checked": true,
-    "latest": "0.1.22",
+    "latest": "0.1.23",
     "relation": "behind",
     "error": null
   },
-  "reproduce": "git clone https://github.com/reeleehq/yb && cd yb\ngit checkout 028f0e3501a74381ba8634ea8fc43e734554068c\npip install \"epythet==0.2.22\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
+  "reproduce": "git clone https://github.com/reeleehq/yb && cd yb\ngit checkout 15aebb8a2b2299d7169050ac7d9c6edfa1eec3bf\npip install \"epythet==0.2.22\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
   "warnings": [],
   "alignment": {
     "aligned": false,
     "notes": [
-      "The documented version (0.1.21) is behind the latest release on PyPI (0.1.22): `pip install yb` gives newer code than these docs describe."
+      "The documented version (0.1.22) is behind the latest release on PyPI (0.1.23): `pip install yb` gives newer code than these docs describe."
     ]
   }
 }

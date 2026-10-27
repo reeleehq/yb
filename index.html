@@ -340,9 +340,11 @@ one — the error only surfaces when you actually call that feature. You also ne
     <span class="n">download_youtube_video</span><span class="p">,</span>
     <span class="n">download_youtube_audio</span><span class="p">,</span>
     <span class="n">youtube_video_info</span><span class="p">,</span>
+    <span class="n">search_youtube</span><span class="p">,</span>
 <span class="p">)</span>
 
 <span class="n">youtube_video_info</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>  <span class="c1"># metadata only, no download</span>
+<span class="n">search_youtube</span><span class="p">(</span><span class="s2">"song name"</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>  <span class="c1"># -&gt; [SearchHit(id, title, duration, channel, url)]</span>
 <span class="n">download_youtube_video</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>  <span class="c1"># best quality -&gt; ~/Downloads/"Title (id).mp4"</span>
 <span class="n">download_youtube_video</span><span class="p">(</span>
     <span class="n">url</span><span class="p">,</span>
@@ -645,7 +647,7 @@ it, and the <code class="docutils literal notranslate"><span class="pre">music</
 </section>
 </section>
 
-<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-10-22 01:35 UTC from <a href="https://github.com/reeleehq/yb/commit/028f0e3501a74381ba8634ea8fc43e734554068c">028f0e3</a> (main) · yb 0.1.21 · <a href="about-this-build.html">about this build</a></p>
+<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-10-27 01:07 UTC from <a href="https://github.com/reeleehq/yb/commit/15aebb8a2b2299d7169050ac7d9c6edfa1eec3bf">15aebb8</a> (main) · yb 0.1.22 · <a href="about-this-build.html">about this build</a></p>
         </article>
       </div>
       <footer>
@@ -715,7 +717,7 @@ it, and the <code class="docutils literal notranslate"><span class="pre">music</
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=a4d587c1"></script>
+</div><script src="_static/documentation_options.js?v=84641d2a"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>

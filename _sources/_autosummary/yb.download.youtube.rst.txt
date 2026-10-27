@@ -16,6 +16,7 @@ yb.download.youtube
       DEFAULT_OUTTMPL
       ITEM_FOLDER_OUTTMPL
       DEFAULT_AUDIO_FMT
+      MAX_SEARCH_LIMIT
    
    .. rubric:: Functions
 
@@ -27,6 +28,7 @@ yb.download.youtube
       download_youtube_playlist
       download_youtube_video
       glob_escape
+      search_youtube
       youtube_playlist_info
       youtube_video_info
    
@@ -35,4 +37,5 @@ yb.download.youtube
    .. autosummary::
    
       DownloadResult
+      SearchHit
    
