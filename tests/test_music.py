@@ -296,3 +296,38 @@ def test_prepare_folder_renders_each_song_with_its_rotated_visual(
     assert all(v.video.exists() for v in videos)
     assert [v.render.visual for v in videos] == ["cqt", "waves", "cqt"]
     assert [v.content.title for v in videos] == ["One", "Two", "Three"]
+
+
+def test_publish_folder_forwards_the_synthetic_flag_and_lets_the_config_pick_privacy(
+    monkeypatch,
+):
+    import yb.youtube.auth as auth
+    import yb.youtube.publish as yp
+    from yb.music.publish import publish_folder
+
+    got = []
+    monkeypatch.setattr(auth, "get_service", lambda *a, **k: object())
+    monkeypatch.setattr(yp, "publish_content", lambda c, **k: got.append(k) or {})
+    publish_folder(
+        "unused",
+        prepared=_fake_prepared(["One"]),
+        contains_synthetic_media=False,
+        progress=False,
+    )
+    assert got[0]["contains_synthetic_media"] is False
+    assert got[0]["privacy_status"] is None  # the profile's config decides
+
+
+def test_publish_music_forwards_the_synthetic_flag(monkeypatch):
+    import yb.youtube.publish as yp
+    from yb.music.publish import publish_music
+
+    got = []
+    monkeypatch.setattr(yp, "publish_content", lambda c, **k: got.append(k) or {})
+    publish_music(
+        [],
+        prepared=_fake_prepared(["One"]),
+        contains_synthetic_media=True,
+        progress=False,
+    )
+    assert got[0]["contains_synthetic_media"] is True
