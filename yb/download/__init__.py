@@ -39,6 +39,7 @@ from yb.audio_convert import AudioConversionError, convert_audio
 from yb.download.youtube import (
     download_youtube_video,
     download_youtube_audio,
+    download_youtube_subtitles,
     youtube_video_info,
     download_youtube_playlist,
     youtube_playlist_info,
@@ -72,6 +73,7 @@ from yb.download.requirements import (
 __all__ = [
     "download_youtube_video",
     "download_youtube_audio",
+    "download_youtube_subtitles",
     "youtube_video_info",
     "download_youtube_playlist",
     "youtube_playlist_info",
