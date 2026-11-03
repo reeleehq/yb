@@ -13,6 +13,7 @@ from __future__ import annotations
 import os
 import shutil
 import tempfile
+import urllib.parse
 import warnings
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -760,7 +761,8 @@ def download_youtube_audio(
 class SearchHit:
     """One row of :func:`search_youtube` (flat extraction: no per-video fetch).
 
-    ``duration`` is in seconds and may be ``None`` (live streams, some results).
+    ``duration`` is in seconds and may be ``None`` (live streams, some results),
+    as may ``view_count``.
     """
 
     id: str
@@ -768,16 +770,28 @@ class SearchHit:
     duration: float | None
     channel: str | None
     url: str
+    view_count: int | None = None
 
 
 #: Cap on ``limit`` so a typo does not turn into a thousand-result query.
 MAX_SEARCH_LIMIT = 50
+
+#: YouTube's search results page; yt-dlp extracts it as a playlist of hits.
+SEARCH_RESULTS_URL = "https://www.youtube.com/results"
+
+#: YouTube's ``sp`` search parameter restricting hits to the Creative Commons
+#: licence. Undocumented; verified empirically (every hit's full info carried
+#: ``license = "Creative Commons Attribution license (reuse allowed)"``).
+CREATIVE_COMMONS_SP = "EgIwAQ%3D%3D"
 
 
 def search_youtube(
     query: str,
     *,
     limit: int = 5,
+    creative_commons: bool = False,
+    min_s: float | None = None,
+    max_s: float | None = None,
     extra_opts: dict | None = None,
     cookies_file: CookiesFile = None,
 ) -> list[SearchHit]:
@@ -789,31 +803,65 @@ def search_youtube(
         >>> hits = search_youtube("हनुमान चालीसा हरिहरन", limit=6)  # doctest: +SKIP
         >>> download_youtube_audio(hits[0].url)  # doctest: +SKIP
 
-    Uses yt-dlp's ``ytsearchN:`` with flat extraction (one request, no per-video
-    fetch), sharing the cookie and JS-runtime handling of the downloads.
+    Candidates for a pipeline to screen before fetching anything, e.g. reusable
+    clips of a useful length:
+
+        >>> search_youtube("house dance footwork", limit=20, creative_commons=True,
+        ...                min_s=45, max_s=900)  # doctest: +SKIP
+
+    Uses flat extraction (one request, no per-video fetch), sharing the cookie
+    and JS-runtime handling of the downloads: yt-dlp's ``ytsearchN:``, or the
+    search results page when a YouTube search filter is asked for.
 
     Args:
         query: What to search for (any script).
-        limit: How many results, 1..:data:`MAX_SEARCH_LIMIT`.
+        limit: How many results to search, 1..:data:`MAX_SEARCH_LIMIT`.
+        creative_commons: Only videos their uploader licensed as Creative
+            Commons (YouTube's own search filter). The filter is YouTube's
+            declaration; check a hit's full info (``license``) before relying
+            on it.
+        min_s, max_s: Keep only hits whose duration is within these bounds
+            (seconds, inclusive). Applied to the ``limit`` results, so fewer may
+            come back; a hit with no reported duration is dropped when either
+            bound is set.
         extra_opts: Additional raw yt-dlp options (merged last).
         cookies_file: See :func:`download_youtube_video`.
 
     Raises:
-        ValueError: If ``query`` is blank or ``limit`` is out of range.
+        ValueError: If ``query`` is blank, ``limit`` is out of range, or
+            ``min_s`` is above ``max_s``.
     """
     if not query.strip():
         raise ValueError("query must not be blank")
     if not 1 <= limit <= MAX_SEARCH_LIMIT:
         raise ValueError(f"limit must be in 1..{MAX_SEARCH_LIMIT}, got {limit}")
+    if min_s is not None and max_s is not None and min_s > max_s:
+        raise ValueError(f"min_s ({min_s}) is above max_s ({max_s})")
 
-    info = _extract_info(
-        f"ytsearch{limit}:{query}",
-        {"quiet": True, "skip_download": True, "extract_flat": True},
-        extra_opts=extra_opts,
-        cookies_file=cookies_file,
-    )
+    opts: dict[str, Any] = {"quiet": True, "skip_download": True, "extract_flat": True}
+    if creative_commons:
+        target = _search_results_url(query, sp=CREATIVE_COMMONS_SP)
+        opts["playlistend"] = limit
+    else:
+        target = f"ytsearch{limit}:{query}"
+    info = _extract_info(target, opts, extra_opts=extra_opts, cookies_file=cookies_file)
     entries = (info or {}).get("entries") or []
-    return [_search_hit(e) for e in entries if e and (e.get("id") or e.get("url"))]
+    hits = [_search_hit(e) for e in entries if e and (e.get("id") or e.get("url"))]
+    return [h for h in hits[:limit] if _within(h.duration, min_s, max_s)]
+
+
+def _search_results_url(query: str, *, sp: str) -> str:
+    """The results page for ``query`` with YouTube's ``sp`` filter applied."""
+    return f"{SEARCH_RESULTS_URL}?{urllib.parse.urlencode({'search_query': query, 'sp': sp})}"
+
+
+def _within(duration: float | None, min_s: float | None, max_s: float | None) -> bool:
+    """Whether ``duration`` is within the bounds; unknown passes only with no bound."""
+    if min_s is None and max_s is None:
+        return True
+    if duration is None:
+        return False
+    return (min_s is None or duration >= min_s) and (max_s is None or duration <= max_s)
 
 
 def _entry_url(entry: dict) -> str | None:
@@ -830,6 +878,7 @@ def _search_hit(entry: dict) -> SearchHit:
         duration=entry.get("duration"),
         channel=entry.get("channel") or entry.get("uploader"),
         url=_entry_url(entry) or watch_url,
+        view_count=entry.get("view_count"),
     )
 
 
