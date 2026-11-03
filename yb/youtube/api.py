@@ -15,6 +15,7 @@ from typing import Sequence
 
 from mixing.chapters import Chapter
 from yb.content import format_chapter_lines
+from yb.config import PRIVACY_STATUSES  # re-exported by yb.youtube
 
 PathLike = str | Path
 
@@ -117,7 +118,6 @@ def update_video_fields(
 
 
 #: Privacy values ``videos.update(part="status")`` accepts, least visible first.
-PRIVACY_STATUSES = ("private", "unlisted", "public")
 
 
 class VisibilityDropWarning(UserWarning):

@@ -98,3 +98,54 @@ def test_the_config_file_key(tmp_path):
     path.write_text('{"profiles": {"ai": {"contains_synthetic_media": true}}}')
     assert load_config(path, profile="ai").contains_synthetic_media is True
     assert load_config(path).contains_synthetic_media is None
+
+
+def test_a_call_privacy_wins_over_an_explicit_config(bodies):
+    """Pre-existing leak: privacy_status was ignored when config= was passed."""
+    seen, media = bodies
+    for publish, first in [
+        (P.publish_content, _content(media)),
+        (P.publish_video, VideoMetadata(title="t", description="d")),
+    ]:
+        args = (first,) if publish is P.publish_content else (media, first)
+        publish(
+            *args,
+            privacy_status="private",
+            config=YbConfig(privacy_status="public"),
+            playlist=None,
+            service=object(),
+            progress=False,
+        )
+        assert seen[-1]["status"]["privacyStatus"] == "private"
+
+
+@pytest.mark.parametrize(
+    "kw,error",
+    [
+        ({"contains_synthetic_media": "false"}, TypeError),
+        ({"contains_synthetic_media": 1}, TypeError),
+        ({"privacy_status": "Public"}, ValueError),
+        ({"playlist_privacy_status": "secret"}, ValueError),
+    ],
+)
+def test_config_values_are_checked(kw, error):
+    with pytest.raises(error):
+        YbConfig(**kw)
+
+
+def test_metadata_cleanup_is_idempotent():
+    from dataclasses import replace
+
+    meta = VideoMetadata(title="a" * 99 + " b", description="d")
+    assert replace(meta).title == meta.title == "a" * 99
+
+
+def test_music_publish_forwards_the_flag(monkeypatch, tmp_path):
+    music = pytest.importorskip("yb.music.publish")
+    got = []
+    monkeypatch.setattr(P, "publish_content", lambda c, **kw: got.append(kw) or {})
+    video = type("MV", (), {"content": _content(tmp_path / "s.mp4")})()
+    music.publish_music(
+        [], prepared=[video], contains_synthetic_media=False, progress=False
+    )
+    assert got[0]["contains_synthetic_media"] is False

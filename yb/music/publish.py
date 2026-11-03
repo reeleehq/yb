@@ -218,6 +218,7 @@ def publish_music(
     prepared: Sequence[MusicVideo] | None = None,
     progress: bool = True,
     service=None,
+    contains_synthetic_media: bool | None = None,
     **kwargs,
 ) -> list[dict]:
     """Render ``songs`` as music videos and upload them to YouTube.
@@ -238,6 +239,10 @@ def publish_music(
         category_id: YouTube category (default: Music).
         prepared: Already-prepared :class:`MusicVideo` objects — skips rendering
             (useful to review the videos before they go up).
+        contains_synthetic_media: YouTube's realistic-synthetic disclosure, as
+            in :func:`yb.youtube.publish_content` (``None`` = the config's).
+            A visualizer is stylised, so ``False`` overrides a profile default
+            of ``true``.
         progress: Print upload progress.
         service: An authenticated YouTube service to reuse across the batch.
         **kwargs: Forwarded to :func:`prepare_music_video`.
@@ -269,6 +274,7 @@ def publish_music(
                 attach_caption=False,
                 progress=progress,
                 service=service,
+                contains_synthetic_media=contains_synthetic_media,
             )
         )
     return results
@@ -384,6 +390,7 @@ def publish_folder(
     playlist=None,
     prepared: Sequence[MusicVideo] | None = None,
     progress: bool = True,
+    contains_synthetic_media: bool | None = None,
     **kwargs,
 ) -> list[dict]:
     """Render every ``(song, cover)`` pair in ``folder`` and upload the album.
@@ -406,6 +413,8 @@ def publish_folder(
         prepared: Already-rendered :class:`MusicVideo` objects to upload as-is
             (skip rendering — e.g. the return of :func:`prepare_folder`).
         progress: Print progress.
+        contains_synthetic_media: As in :func:`publish_music` (``None`` = the
+            config's; ``False`` overrides a profile default for visualizers).
         **kwargs: Forwarded to :func:`prepare_music_video`.
 
     Returns:
@@ -458,6 +467,7 @@ def publish_folder(
                 attach_caption=False,
                 progress=progress,
                 service=service,
+                contains_synthetic_media=contains_synthetic_media,
             )
             results.append({**result, "title": title, "visual": visual, "ok": True})
         except Exception as e:  # one bad upload must not discard the batch's successes

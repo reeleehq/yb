@@ -53,8 +53,9 @@ class VideoMetadata:
     contains_synthetic_media: bool | None = None
 
     def __post_init__(self):
-        self.title = self.title.strip()[:_TITLE_MAX]
-        self.description = self.description.strip()[:_DESC_MAX]
+        # rstrip after the cut, so cleaning twice (``dataclasses.replace``) is a no-op
+        self.title = self.title.strip()[:_TITLE_MAX].rstrip()
+        self.description = self.description.strip()[:_DESC_MAX].rstrip()
         self.tags = _cap_tags(self.tags, _TAGS_TOTAL_MAX)
 
     @classmethod

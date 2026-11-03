@@ -61,6 +61,9 @@ DEFAULT_PRIVACY_STATUS = "unlisted"
 #: only you see it — ideal for a personal "find my uploads" playlist.
 DEFAULT_PLAYLIST_PRIVACY_STATUS = "private"
 
+#: The privacy values YouTube accepts.
+PRIVACY_STATUSES = ("private", "unlisted", "public")
+
 
 #: Environment variable naming the profile to use when none is passed.
 PROFILE_ENV = "YB_PROFILE"
@@ -117,6 +120,20 @@ class YbConfig:
     channel_id: str | None = None
     login_hint: str | None = None
     contains_synthetic_media: bool | None = None
+
+    def __post_init__(self):
+        for name in ("privacy_status", "playlist_privacy_status"):
+            if getattr(self, name) not in PRIVACY_STATUSES:
+                raise ValueError(
+                    f"{name} must be one of {PRIVACY_STATUSES}, "
+                    f"not {getattr(self, name)!r}"
+                )
+        flag = self.contains_synthetic_media
+        if flag is not None and not isinstance(flag, bool):
+            raise TypeError(
+                "contains_synthetic_media must be true, false or null, not "
+                f"{self.contains_synthetic_media!r}"
+            )
 
     @classmethod
     def from_mapping(cls, mapping: dict | None) -> "YbConfig":

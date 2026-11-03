@@ -173,9 +173,16 @@ def _maybe_add_to_playlist(
     )
 
 
-def _synthetic(explicit: bool | None, cfg: YbConfig) -> bool | None:
-    """The call's synthetic-media flag, else the config's (``None`` = unset)."""
-    return explicit if explicit is not None else cfg.contains_synthetic_media
+def _resolve_config(config: YbConfig | None, profile: str | None, **call) -> YbConfig:
+    """The profile's config (or ``config``), with every non-``None`` call value on top.
+
+    One precedence rule for every setting: the call, then the config, then the
+    built-in default. (Before this, ``privacy_status`` passed alongside
+    ``config=`` was ignored, so a call asking for ``"private"`` could upload
+    with the config's ``"public"``.)
+    """
+    base = config or load_config(profile=profile)
+    return replace(base, **{k: v for k, v in call.items() if v is not None})
 
 
 def publish_content(
@@ -233,7 +240,12 @@ def publish_content(
             ``err.result`` holds the video id and what was done. Pass
             ``resume=err.result`` to finish without uploading again (yb#21).
     """
-    cfg = config or load_config(profile=profile, privacy_status=privacy_status)
+    cfg = _resolve_config(
+        config,
+        profile,
+        privacy_status=privacy_status,
+        contains_synthetic_media=contains_synthetic_media,
+    )
     privacy_status = cfg.privacy_status
     service = service or get_service(
         client_secrets_file=client_secrets_file,
@@ -247,7 +259,7 @@ def publish_content(
         content,
         category_id=category_id,
         with_chapters=with_chapters,
-        contains_synthetic_media=_synthetic(contains_synthetic_media, cfg),
+        contains_synthetic_media=cfg.contains_synthetic_media,
     )
     body = meta.insert_body(privacy_status=privacy_status)
 
@@ -396,7 +408,7 @@ def publish_video(
     ``cred_kwargs`` reach :func:`~yb.youtube.auth.get_credentials` (e.g.
     ``open_browser=False, port=8080`` for headless consent).
     """
-    cfg = config or load_config(profile=profile, privacy_status=privacy_status)
+    cfg = _resolve_config(config, profile, privacy_status=privacy_status)
     privacy_status = cfg.privacy_status
     service = service or get_service(
         client_secrets_file=client_secrets_file,
@@ -406,10 +418,13 @@ def publish_video(
     )
     if cfg.channel_id:  # refuse to upload to the wrong account's channel
         check_channel(service, cfg.channel_id)
-    metadata = replace(
-        metadata,
-        contains_synthetic_media=_synthetic(metadata.contains_synthetic_media, cfg),
-    )
+    if (
+        metadata.contains_synthetic_media is None
+        and cfg.contains_synthetic_media is not None
+    ):
+        metadata = replace(
+            metadata, contains_synthetic_media=cfg.contains_synthetic_media
+        )
     body = metadata.insert_body(privacy_status=privacy_status)
 
     def upload():
