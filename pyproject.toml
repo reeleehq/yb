@@ -34,6 +34,9 @@ music = ["muvid>=0.0.7"]
 # `[default]` brings the JS challenge-solver scripts YouTube now requires; a JS
 # runtime (Deno) must also be installed: see README / `yb check`.
 download = ["yt-dlp[default]"]
+# PO-token provider plugin for servers YouTube answers with HTTP 403 (it also
+# needs its token server running: see README / `yb check`).
+pot = ["bgutil-ytdlp-pot-provider"]
 # `yb.podcast` — ID3 chapter frames + RSS episode feeds.
 podcast = ["mutagen", "feedgen"]
 # LLM-backed metadata/chapter copywriting (title/description/keywords).

@@ -111,6 +111,10 @@ copy automatically; set `YB_COOKIES_PRIVATE_COPY=1` to always do that (parallel
 workers sharing one file; every worker must set it). Refreshed cookies are then
 not saved back.
 
+**When cookies stop working (servers).** YouTube rotates the cookies of a browser session that stays open, and from then on every request gets "Sign in to confirm you're not a bot". `yb check --online` tests the cookies file against one public video and says when it was rotated or refused. Export cookies that do not rotate: open a private / incognito window, log in to YouTube, go to `https://www.youtube.com/robots.txt` in that same tab, export the youtube.com cookies (Netscape format), then close the private window right away and never reopen that session (yt-dlp's [cookie guide](https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies)).
+
+**HTTP 403 on the video data: PO tokens.** Some servers pass the bot check (metadata loads) but get HTTP 403 on the media, and automatic captions are missing "because a PO token was not provided". yt-dlp then needs a PO-token provider: `pip install 'yb[pot]'` (the [bgutil-ytdlp-pot-provider](https://github.com/Brainicism/bgutil-ytdlp-pot-provider) plugin, picked up by yt-dlp automatically) and run its token server, a system dependency: `docker run -d -p 4416:4416 --init brainicism/bgutil-ytdlp-pot-provider` (or its Node script). `yb check` says whether the plugin is installed. While the media is refused, the subtitles alone may still come down: `download_youtube_subtitles(url)`.
+
 **Audio format.** `download_youtube_audio` keeps whatever the source offers by
 default (YouTube's best audio is normally Opus in a `.webm` container). That
 default needs no ffmpeg and avoids re-encoding one lossy format into another.

@@ -15,9 +15,12 @@ publishing; never uploads)::
     yb whoami --profile reelee
 
 ``check``: are YouTube downloads ready (JS runtime, solver scripts)? Prints what
-is missing and how to install it; exit status 1 if anything is::
+is missing and how to install it; exit status 1 if anything is. ``--online``
+also tests the cookies file against a public video (one request; catches
+rotated cookies before a real download does)::
 
     yb check
+    yb check --online
 """
 
 from __future__ import annotations
@@ -92,14 +95,22 @@ def _whoami(args: argparse.Namespace) -> int:
 
 
 def _check(args: argparse.Namespace) -> int:
-    from yb.download.requirements import check_requirements, find_js_runtime
+    from yb.download import requirements as req
 
-    problems = check_requirements(warn=False)
+    problems = req.check_requirements(warn=False)
+    if args.online and req.has_module(req.YT_DLP_MODULE):
+        from yb.download.probe import check_cookies
+
+        problems += check_cookies()
     for p in problems:
         print(f"- {p}", file=sys.stderr)
-    if runtime := find_js_runtime():
+    if runtime := req.find_js_runtime():
         where = "on PATH" if runtime.on_path else "off PATH; yb passes yt-dlp its path"
         print(f"JS runtime: {runtime.name} at {runtime.path} ({where})")
+    if pot := req.installed_version(req.PO_TOKEN_PROVIDER_DIST):
+        print(f"PO-token provider: {req.PO_TOKEN_PROVIDER_DIST} {pot}")
+    else:
+        print(f"Note: {req.PO_TOKEN_HINT}")
     if not problems:
         print("Downloads ready.")
     return 1 if problems else 0
@@ -140,6 +151,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     whoami.set_defaults(run=_whoami)
     check = commands.add_parser(
         "check", help="are YouTube downloads ready? (JS runtime, solver scripts)"
+    )
+    check.add_argument(
+        "--online",
+        action="store_true",
+        help="also test the cookies file against a public video (one request)",
     )
     check.set_defaults(run=_check)
     args = parser.parse_args(argv)
