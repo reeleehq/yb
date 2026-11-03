@@ -104,7 +104,8 @@ BACKOFF_HINT = (
     "(playlist_items='1-20') also helps."
 )
 
-_BLOCK_PATTERNS = re.compile(
+#: What yt-dlp says when YouTube blocks or bot-checks the client.
+BLOCK_PATTERNS = re.compile(
     r"HTTP Error 429|Too Many Requests|confirm you.re not a bot|Sign in to confirm",
     re.IGNORECASE,
 )
@@ -115,7 +116,9 @@ def explain_rate_limit() -> Iterator[None]:
     """Re-raise yt-dlp errors that look like a block as :class:`RateLimitedError`."""
     try:
         yield
+    except RateLimitedError:
+        raise  # already explained
     except Exception as exc:
-        if _BLOCK_PATTERNS.search(str(exc)):
+        if BLOCK_PATTERNS.search(str(exc)):
             raise RateLimitedError(f"{BACKOFF_HINT}\nyt-dlp said: {exc}") from exc
         raise
