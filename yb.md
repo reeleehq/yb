@@ -1,4 +1,4 @@
-> built 2026-11-03 13:39 UTC from 81c23b0 (main) · yb 0.1.27. Details: build_info.json
+> built 2026-11-03 13:58 UTC from c3d2eb1 (main) · yb 0.1.29. Details: build_info.json
 
 # index.html.md
 
@@ -87,12 +87,15 @@ download_youtube_video(
     subtitle_langs=("en", "fr"),
 )
 
+download_youtube_subtitles(url, download_dir="~/clips")  # subtitles only, no media
 download_youtube_audio(url)  # audio only, source format -> "Title (id).webm"
 download_youtube_audio(url, audio_format="mp3")  # ...converted (needs ffmpeg)
 download_youtube_audio(url, audio_format="mp3", bitrate="320k")
 ```
 
 **Links from untrusted users.** `download_audio_bounded` is the one to call from a service: `validate_target` (your SSRF policy; the default only requires http(s)) is applied to every URL yt-dlp requests, including the media a page points at and where a redirect chain ends (the hops in between are requested blind, their content never returned); the byte cap and the `timeout_s` wall-clock budget hold even when the size is unknown; formats needing an external downloader are never selected; no cookies are sent unless you pass `cookies_file=`. It raises `ValueError` subclasses for every refusal (`AudioTargetError`, `AudioLimitError`, `AudioSourceError`), `RateLimitedError` when the source pushes back, and `ImportError` (with the install command) when yt-dlp is missing.
+
+**Subtitles are best-effort** (`download_youtube_video` / `download_youtube_audio`; not yet playlists). YouTube rate-limits its captions endpoint before the video one, so when only the subtitle fetch fails the video is downloaded without them: `result.subtitles_error` says why, a warning is issued, and `download_youtube_subtitles` fetches them later. Pass `on_subtitle_error="raise"` when the subtitles are not optional.
 
 The destination defaults to `$YB_DOWNLOAD_DIR` (else `~/Downloads`). Every knob
 — format, filename template, which sidecar metadata to also save — is
@@ -1090,6 +1093,7 @@ how to install it. The first download in a process runs it and warns.
 | [`download_youtube_video`](_autosummary/yb.download.html.md#yb.download.download_youtube_video)(url, \*[, ...])         | Download a YouTube video to `download_dir` (default `~/Downloads`).           |
 |-------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
 | [`download_youtube_audio`](_autosummary/yb.download.html.md#yb.download.download_youtube_audio)(url, \*[, ...])         | Download only a video's audio (no video stream).                              |
+| [`download_youtube_subtitles`](_autosummary/yb.download.html.md#yb.download.download_youtube_subtitles)(url, \*[, ...])     | Download only a video's subtitles (no media); returns the files written.      |
 | [`youtube_video_info`](_autosummary/yb.download.html.md#yb.download.youtube_video_info)(url, \*[, extra_opts, ...]) | Fetch a video's metadata without downloading it.                              |
 | [`download_youtube_playlist`](_autosummary/yb.download.html.md#yb.download.download_youtube_playlist)(url, \*[, ...])      | Download all (or a selected subset of) a YouTube playlist's videos.           |
 | [`youtube_playlist_info`](_autosummary/yb.download.html.md#yb.download.youtube_playlist_info)(url, \*[, ...])          | Fetch a playlist's per-video metadata without downloading.                    |
@@ -1107,7 +1111,7 @@ how to install it. The first download in a process runs it and warns.
 | [`AudioDownload`](_autosummary/yb.download.html.md#yb.download.AudioDownload)(path, title, duration_s, ...)     | A bounded audio download.                                                                                           |
 |--------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
 | [`SearchHit`](_autosummary/yb.download.html.md#yb.download.SearchHit)(id, title, duration, channel, url)    | One row of [`search_youtube()`](_autosummary/yb.download.html.md#yb.download.search_youtube) (flat extraction: no per-video fetch). |
-| [`DownloadResult`](_autosummary/yb.download.html.md#yb.download.DownloadResult)(path, info[, sidecars])          | Outcome of a download.                                                                                              |
+| [`DownloadResult`](_autosummary/yb.download.html.md#yb.download.DownloadResult)(path, info[, sidecars, ...])     | Outcome of a download.                                                                                              |
 | [`JsRuntime`](_autosummary/yb.download.html.md#yb.download.JsRuntime)(name, path, on_path)                  | A JavaScript runtime found for yt-dlp.                                                                              |
 | [`Pace`](_autosummary/yb.download.html.md#yb.download.Pace)([sleep_interval, max_sleep_interval, ...]) | How gently to talk to YouTube.                                                                                      |
 | [`TimeRange`](_autosummary/yb.download.html.md#yb.download.TimeRange)([start, end])                         | A span of a video, in seconds.                                                                                      |
@@ -1194,7 +1198,7 @@ Bases: [`UserWarning`](https://docs.python.org/3/builtins/exceptions.html#UserWa
 
 A download prerequisite (JS runtime, solver scripts) looks missing.
 
-### *class* yb.download.DownloadResult(path, info, sidecars=dict())
+### *class* yb.download.DownloadResult(path, info, sidecars=dict(), subtitles_error=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -1221,6 +1225,16 @@ Map of extra artifacts written (`info_json`, `thumbnail`,
 
 * **Type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]
+
+#### subtitles_error
+
+Why some or all of the requested subtitles are missing,
+when the video was downloaded without them
+(`on_subtitle_error="warn"`); fetch them later with
+[`download_youtube_subtitles()`](_autosummary/yb.download.html.md#yb.download.download_youtube_subtitles).
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 #### *property* video_id *: [str](https://docs.python.org/3/builtins/stdtypes.html#str)*
 
@@ -1434,7 +1448,7 @@ never collide); on any failure that directory is removed.
 * **Return type:**
   [`AudioDownload`](_autosummary/yb.download.bounded.html.md#yb.download.bounded.AudioDownload)
 
-### yb.download.download_youtube_audio(url, , download_dir=None, audio_format=None, bitrate=None, keep_original=False, on_error='raise', fmt='bestaudio/best', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None, pace=None)
+### yb.download.download_youtube_audio(url, , download_dir=None, audio_format=None, bitrate=None, keep_original=False, on_error='raise', fmt='bestaudio/best', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None, pace=None, on_subtitle_error='warn')
 
 Download only a video’s audio (no video stream).
 
@@ -1478,6 +1492,7 @@ Pass `audio_format` to get a specific format instead:
   * **quiet** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Suppress yt-dlp console output.
   * **extra_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Any additional raw yt-dlp options (merged last, so they win).
   * **pace** ([`Pace`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.Pace) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – As in [`download_youtube_video()`](_autosummary/yb.download.html.md#yb.download.download_youtube_video).
+  * **on_subtitle_error** ([`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`'raise'`, `'warn'`]) – As in [`download_youtube_video()`](_autosummary/yb.download.html.md#yb.download.download_youtube_video).
   * **start** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`float`](https://docs.python.org/3/builtins/functions.html#float) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – 
 
     Download only a span, as in
@@ -1586,7 +1601,41 @@ stream, e.g. `.m4a`, without re-encoding).
   in playlist order. Entries skipped by selection/filter or that failed
   (under `ignoreerrors`) are omitted.
 
-### yb.download.download_youtube_video(url, , download_dir=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None, pace=None)
+### yb.download.download_youtube_subtitles(url, , download_dir=None, subtitle_langs=('en',), auto_subtitles=True, filename_template='%(title)s (%(id)s).%(ext)s', quiet=True, extra_opts=None, cookies_file=None, pace=None)
+
+Download only a video’s subtitles (no media); returns the files written.
+
+The companion of `on_subtitle_error="warn"`: when a video came down
+without its subtitles (`result.subtitles_error`), fetch them later into
+the same folder, named like the video so they sit beside it:
+
+```pycon
+>>> r = download_youtube_video(url, write_subtitles=True)
+>>> if r.subtitles_error:
+...     download_youtube_subtitles(url, download_dir=r.path.parent)
+```
+
+* **Parameters:**
+  * **url** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – The video URL (or id).
+  * **download_dir** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Destination directory (default [`default_download_dir()`](_autosummary/yb.download.html.md#yb.download.default_download_dir)).
+  * **subtitle_langs** ([`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis)]) – Languages to fetch.
+  * **auto_subtitles** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Also fetch auto-generated subtitles (default `True`).
+  * **filename_template** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – As in [`download_youtube_video()`](_autosummary/yb.download.html.md#yb.download.download_youtube_video) (the subtitle
+    extension is added to it).
+  * **quiet** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Suppress yt-dlp console output.
+  * **extra_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Additional raw yt-dlp options (merged last).
+  * **cookies_file** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[[`False`](https://docs.python.org/3/builtins/constants.html#False)], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – See [`download_youtube_video()`](_autosummary/yb.download.html.md#yb.download.download_youtube_video).
+  * **pace** ([`Pace`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.Pace) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – As in [`download_youtube_video()`](_autosummary/yb.download.html.md#yb.download.download_youtube_video); `"polite"` is the usual
+    choice right after the captions endpoint answered 429.
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)]
+* **Returns:**
+  The subtitle files beside the video’s name (any language, `.vtt` or
+  `.srt`), including ones an earlier run left there.
+* **Raises:**
+  [**RateLimitedError**](_autosummary/yb.download.html.md#yb.download.RateLimitedError) – On HTTP 429 or a “confirm you’re not a bot” wall.
+
+### yb.download.download_youtube_video(url, , download_dir=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None, pace=None, on_subtitle_error='warn')
 
 Download a YouTube video to `download_dir` (default `~/Downloads`).
 
@@ -1645,14 +1694,23 @@ named `Title (video_id).mp4` in `~/Downloads`.
     preset name (`"polite"`: sleep 20-60 s between items, 1 s between
     requests, 4 MB/s cap). Default `None` adds nothing. Raw yt-dlp
     options in `extra_opts` win over it.
+  * **on_subtitle_error** ([`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`'raise'`, `'warn'`]) – When subtitles were asked for and only their fetch
+    fails (YouTube rate-limits its captions endpoint before the video
+    one): `"warn"` (default) warns, retries once without subtitles
+    (even if `extra_opts` asks for them), and records the reason in
+    `result.subtitles_error`; `"raise"` propagates the error (a
+    [`RateLimitedError`](_autosummary/yb.download.html.md#yb.download.RateLimitedError) for a 429, saying only the
+    subtitles were refused). Playlist downloads are not covered.
 * **Return type:**
   [`DownloadResult`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DownloadResult)
 * **Returns:**
   A [`DownloadResult`](_autosummary/yb.download.html.md#yb.download.DownloadResult) with the media path, trimmed `info`, and any
   `sidecars` written.
 * **Raises:**
-  [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `start`/`end` is not a timestamp, or `end` is not
-      after `start`. Raised before anything is fetched or written.
+  * [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `start`/`end` is not a timestamp, `end` is not
+        after `start`, or `on_subtitle_error` is unknown. Raised before
+        anything is fetched or written.
+  * [**RateLimitedError**](_autosummary/yb.download.html.md#yb.download.RateLimitedError) – On HTTP 429 or a “confirm you’re not a bot” wall.
 
 ### yb.download.find_js_runtime(\*, which=<function which>, search_dirs=None)
 
@@ -2333,17 +2391,19 @@ The destination defaults to `$YB_DOWNLOAD_DIR` when set, else `~/Downloads`.
 
 ### Module Attributes
 
-| [`OnConvertError`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.OnConvertError)           | What [`download_youtube_audio()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_audio) does when a format conversion fails.                                   |
-|---------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`DOWNLOAD_DIR_ENV`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DOWNLOAD_DIR_ENV)         | Env var that overrides the default download directory.                                                                                                |
-| [`COOKIES_FILE_ENV`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.COOKIES_FILE_ENV)         | Env var naming a Netscape-format cookies file to authenticate downloads with.                                                                         |
-| [`COOKIES_PRIVATE_COPY_ENV`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.COOKIES_PRIVATE_COPY_ENV) | when truthy (`1`/`true`/`yes`), each call hands yt-dlp a private temporary copy of the cookies file instead of the file itself (see `_final_opts()`). |
-| [`DEFAULT_COOKIES_FILE`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DEFAULT_COOKIES_FILE)     | Cookies file used when [`COOKIES_FILE_ENV`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.COOKIES_FILE_ENV) is unset and this file exists.                               |
-| [`CookiesFile`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.CookiesFile)              | a path, `None` (look for a default), or `False` (none).                                                                                               |
-| [`DEFAULT_OUTTMPL`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DEFAULT_OUTTMPL)          | human title plus the stable id, e.g. "My Talk (dQw4...).mp4".                                                                                         |
-| [`ITEM_FOLDER_OUTTMPL`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.ITEM_FOLDER_OUTTMPL)      | `001_<id>/<id>.<ext>`, sidecars beside it.                                                                                                            |
-| [`DEFAULT_AUDIO_FMT`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DEFAULT_AUDIO_FMT)        | yt-dlp format selector for the best audio-only stream.                                                                                                |
-| [`MAX_SEARCH_LIMIT`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.MAX_SEARCH_LIMIT)         | Cap on `limit` so a typo does not turn into a thousand-result query.                                                                                  |
+| [`OnConvertError`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.OnConvertError)           | What [`download_youtube_audio()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_audio) does when a format conversion fails.                                                                                                                        |
+|---------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`OnSubtitleError`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.OnSubtitleError)          | What [`download_youtube_video()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_video) does when only the subtitles fail: `"warn"` warns and downloads the video without them (`result.subtitles_error` says why), `"raise"` propagates the error. |
+| [`SUBTITLE_FAILURE_MARKER`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.SUBTITLE_FAILURE_MARKER)  | How yt-dlp's error starts when a subtitle fetch (not the video) failed.                                                                                                                                                                    |
+| [`DOWNLOAD_DIR_ENV`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DOWNLOAD_DIR_ENV)         | Env var that overrides the default download directory.                                                                                                                                                                                     |
+| [`COOKIES_FILE_ENV`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.COOKIES_FILE_ENV)         | Env var naming a Netscape-format cookies file to authenticate downloads with.                                                                                                                                                              |
+| [`COOKIES_PRIVATE_COPY_ENV`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.COOKIES_PRIVATE_COPY_ENV) | when truthy (`1`/`true`/`yes`), each call hands yt-dlp a private temporary copy of the cookies file instead of the file itself (see `_final_opts()`).                                                                                      |
+| [`DEFAULT_COOKIES_FILE`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DEFAULT_COOKIES_FILE)     | Cookies file used when [`COOKIES_FILE_ENV`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.COOKIES_FILE_ENV) is unset and this file exists.                                                                                                                    |
+| [`CookiesFile`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.CookiesFile)              | a path, `None` (look for a default), or `False` (none).                                                                                                                                                                                    |
+| [`DEFAULT_OUTTMPL`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DEFAULT_OUTTMPL)          | human title plus the stable id, e.g. "My Talk (dQw4...).mp4".                                                                                                                                                                              |
+| [`ITEM_FOLDER_OUTTMPL`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.ITEM_FOLDER_OUTTMPL)      | `001_<id>/<id>.<ext>`, sidecars beside it.                                                                                                                                                                                                 |
+| [`DEFAULT_AUDIO_FMT`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DEFAULT_AUDIO_FMT)        | yt-dlp format selector for the best audio-only stream.                                                                                                                                                                                     |
+| [`MAX_SEARCH_LIMIT`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.MAX_SEARCH_LIMIT)         | Cap on `limit` so a typo does not turn into a thousand-result query.                                                                                                                                                                       |
 
 ### Functions
 
@@ -2352,6 +2412,7 @@ The destination defaults to `$YB_DOWNLOAD_DIR` when set, else `~/Downloads`.
 | [`default_download_dir`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.default_download_dir)()                            | Resolve the default download directory (`$YB_DOWNLOAD_DIR` or `~/Downloads`). |
 | [`download_youtube_audio`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_audio)(url, \*[, ...])            | Download only a video's audio (no video stream).                              |
 | [`download_youtube_playlist`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_playlist)(url, \*[, ...])         | Download all (or a selected subset of) a YouTube playlist's videos.           |
+| [`download_youtube_subtitles`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_subtitles)(url, \*[, ...])        | Download only a video's subtitles (no media); returns the files written.      |
 | [`download_youtube_video`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_video)(url, \*[, ...])            | Download a YouTube video to `download_dir` (default `~/Downloads`).           |
 | [`glob_escape`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.glob_escape)(name)                                 | Escape glob metacharacters in a literal filename stem.                        |
 | [`resolve_output_path`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.resolve_output_path)(info, ydl, out_dir, merge_to) | Best-effort resolution of the final media path yt-dlp produced.               |
@@ -2364,9 +2425,9 @@ The destination defaults to `$YB_DOWNLOAD_DIR` when set, else `~/Downloads`.
 
 ### Classes
 
-| [`DownloadResult`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DownloadResult)(path, info[, sidecars])       | Outcome of a download.                                                                                              |
-|-----------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
-| [`SearchHit`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.SearchHit)(id, title, duration, channel, url) | One row of [`search_youtube()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.search_youtube) (flat extraction: no per-video fetch). |
+| [`DownloadResult`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DownloadResult)(path, info[, sidecars, ...])   | Outcome of a download.                                                                                              |
+|------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
+| [`SearchHit`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.SearchHit)(id, title, duration, channel, url)  | One row of [`search_youtube()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.search_youtube) (flat extraction: no per-video fetch). |
 
 ### yb.download.youtube.COOKIES_FILE_ENV *= 'YB_COOKIES_FILE'*
 
@@ -2409,7 +2470,7 @@ human title plus the stable id, e.g. “My Talk (dQw4…).mp4”.
 
 Env var that overrides the default download directory.
 
-### *class* yb.download.youtube.DownloadResult(path, info, sidecars=dict())
+### *class* yb.download.youtube.DownloadResult(path, info, sidecars=dict(), subtitles_error=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -2437,6 +2498,16 @@ Map of extra artifacts written (`info_json`, `thumbnail`,
 * **Type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]
 
+#### subtitles_error
+
+Why some or all of the requested subtitles are missing,
+when the video was downloaded without them
+(`on_subtitle_error="warn"`); fetch them later with
+[`download_youtube_subtitles()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_subtitles).
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
 #### *property* video_id *: [str](https://docs.python.org/3/builtins/stdtypes.html#str)*
 
 The YouTube video id.
@@ -2457,6 +2528,19 @@ Cap on `limit` so a typo does not turn into a thousand-result query.
 What [`download_youtube_audio()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_audio) does when a format conversion fails.
 
 alias of [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[‘raise’, ‘warn’]
+
+### yb.download.youtube.OnSubtitleError
+
+What [`download_youtube_video()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_video) does when only the subtitles fail:
+`"warn"` warns and downloads the video without them
+(`result.subtitles_error` says why), `"raise"` propagates the error. The
+same vocabulary as [`OnConvertError`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.OnConvertError).
+
+alias of [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[‘raise’, ‘warn’]
+
+### yb.download.youtube.SUBTITLE_FAILURE_MARKER *= 'Unable to download video subtitles'*
+
+How yt-dlp’s error starts when a subtitle fetch (not the video) failed.
 
 ### *class* yb.download.youtube.SearchHit(id, title, duration, channel, url)
 
@@ -2484,7 +2568,7 @@ Resolve the default download directory (`$YB_DOWNLOAD_DIR` or `~/Downloads`).
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
-### yb.download.youtube.download_youtube_audio(url, , download_dir=None, audio_format=None, bitrate=None, keep_original=False, on_error='raise', fmt='bestaudio/best', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None, pace=None)
+### yb.download.youtube.download_youtube_audio(url, , download_dir=None, audio_format=None, bitrate=None, keep_original=False, on_error='raise', fmt='bestaudio/best', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None, pace=None, on_subtitle_error='warn')
 
 Download only a video’s audio (no video stream).
 
@@ -2528,6 +2612,7 @@ Pass `audio_format` to get a specific format instead:
   * **quiet** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Suppress yt-dlp console output.
   * **extra_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Any additional raw yt-dlp options (merged last, so they win).
   * **pace** ([`Pace`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.Pace) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – As in [`download_youtube_video()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_video).
+  * **on_subtitle_error** ([`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`'raise'`, `'warn'`]) – As in [`download_youtube_video()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_video).
   * **start** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`float`](https://docs.python.org/3/builtins/functions.html#float) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – 
 
     Download only a span, as in
@@ -2636,7 +2721,41 @@ stream, e.g. `.m4a`, without re-encoding).
   in playlist order. Entries skipped by selection/filter or that failed
   (under `ignoreerrors`) are omitted.
 
-### yb.download.youtube.download_youtube_video(url, , download_dir=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None, pace=None)
+### yb.download.youtube.download_youtube_subtitles(url, , download_dir=None, subtitle_langs=('en',), auto_subtitles=True, filename_template='%(title)s (%(id)s).%(ext)s', quiet=True, extra_opts=None, cookies_file=None, pace=None)
+
+Download only a video’s subtitles (no media); returns the files written.
+
+The companion of `on_subtitle_error="warn"`: when a video came down
+without its subtitles (`result.subtitles_error`), fetch them later into
+the same folder, named like the video so they sit beside it:
+
+```pycon
+>>> r = download_youtube_video(url, write_subtitles=True)
+>>> if r.subtitles_error:
+...     download_youtube_subtitles(url, download_dir=r.path.parent)
+```
+
+* **Parameters:**
+  * **url** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – The video URL (or id).
+  * **download_dir** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Destination directory (default [`default_download_dir()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.default_download_dir)).
+  * **subtitle_langs** ([`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis)]) – Languages to fetch.
+  * **auto_subtitles** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Also fetch auto-generated subtitles (default `True`).
+  * **filename_template** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – As in [`download_youtube_video()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_video) (the subtitle
+    extension is added to it).
+  * **quiet** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Suppress yt-dlp console output.
+  * **extra_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Additional raw yt-dlp options (merged last).
+  * **cookies_file** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[[`False`](https://docs.python.org/3/builtins/constants.html#False)], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – See [`download_youtube_video()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_video).
+  * **pace** ([`Pace`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.Pace) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – As in [`download_youtube_video()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_video); `"polite"` is the usual
+    choice right after the captions endpoint answered 429.
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)]
+* **Returns:**
+  The subtitle files beside the video’s name (any language, `.vtt` or
+  `.srt`), including ones an earlier run left there.
+* **Raises:**
+  [**RateLimitedError**](_autosummary/yb.download.html.md#yb.download.RateLimitedError) – On HTTP 429 or a “confirm you’re not a bot” wall.
+
+### yb.download.youtube.download_youtube_video(url, , download_dir=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None, pace=None, on_subtitle_error='warn')
 
 Download a YouTube video to `download_dir` (default `~/Downloads`).
 
@@ -2695,14 +2814,23 @@ named `Title (video_id).mp4` in `~/Downloads`.
     preset name (`"polite"`: sleep 20-60 s between items, 1 s between
     requests, 4 MB/s cap). Default `None` adds nothing. Raw yt-dlp
     options in `extra_opts` win over it.
+  * **on_subtitle_error** ([`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`'raise'`, `'warn'`]) – When subtitles were asked for and only their fetch
+    fails (YouTube rate-limits its captions endpoint before the video
+    one): `"warn"` (default) warns, retries once without subtitles
+    (even if `extra_opts` asks for them), and records the reason in
+    `result.subtitles_error`; `"raise"` propagates the error (a
+    [`RateLimitedError`](_autosummary/yb.download.html.md#yb.download.RateLimitedError) for a 429, saying only the
+    subtitles were refused). Playlist downloads are not covered.
 * **Return type:**
   [`DownloadResult`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DownloadResult)
 * **Returns:**
   A [`DownloadResult`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DownloadResult) with the media path, trimmed `info`, and any
   `sidecars` written.
 * **Raises:**
-  [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `start`/`end` is not a timestamp, or `end` is not
-      after `start`. Raised before anything is fetched or written.
+  * [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `start`/`end` is not a timestamp, `end` is not
+        after `start`, or `on_subtitle_error` is unknown. Raised before
+        anything is fetched or written.
+  * [**RateLimitedError**](_autosummary/yb.download.html.md#yb.download.RateLimitedError) – On HTTP 429 or a “confirm you’re not a bot” wall.
 
 ### yb.download.youtube.glob_escape(name)
 
@@ -2998,7 +3126,7 @@ Config file location (`$XDG_CONFIG_HOME` or `~/.config`).
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
-### yb.download_youtube_audio(url, , download_dir=None, audio_format=None, bitrate=None, keep_original=False, on_error='raise', fmt='bestaudio/best', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None, pace=None)
+### yb.download_youtube_audio(url, , download_dir=None, audio_format=None, bitrate=None, keep_original=False, on_error='raise', fmt='bestaudio/best', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None, pace=None, on_subtitle_error='warn')
 
 Download only a video’s audio (no video stream).
 
@@ -3042,6 +3170,7 @@ Pass `audio_format` to get a specific format instead:
   * **quiet** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Suppress yt-dlp console output.
   * **extra_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Any additional raw yt-dlp options (merged last, so they win).
   * **pace** ([`Pace`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.Pace) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – As in [`download_youtube_video()`](_autosummary/yb.html.md#yb.download_youtube_video).
+  * **on_subtitle_error** ([`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`'raise'`, `'warn'`]) – As in [`download_youtube_video()`](_autosummary/yb.html.md#yb.download_youtube_video).
   * **start** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`float`](https://docs.python.org/3/builtins/functions.html#float) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – 
 
     Download only a span, as in
@@ -3072,7 +3201,7 @@ Pass `audio_format` to get a specific format instead:
   * [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `on_error` is not `"raise"` or `"warn"`.
   * [**AudioConversionError**](_autosummary/yb.audio_convert.html.md#yb.audio_convert.AudioConversionError) – If conversion fails and `on_error="raise"`.
 
-### yb.download_youtube_video(url, , download_dir=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None, pace=None)
+### yb.download_youtube_video(url, , download_dir=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None, pace=None, on_subtitle_error='warn')
 
 Download a YouTube video to `download_dir` (default `~/Downloads`).
 
@@ -3131,14 +3260,23 @@ named `Title (video_id).mp4` in `~/Downloads`.
     preset name (`"polite"`: sleep 20-60 s between items, 1 s between
     requests, 4 MB/s cap). Default `None` adds nothing. Raw yt-dlp
     options in `extra_opts` win over it.
+  * **on_subtitle_error** ([`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`'raise'`, `'warn'`]) – When subtitles were asked for and only their fetch
+    fails (YouTube rate-limits its captions endpoint before the video
+    one): `"warn"` (default) warns, retries once without subtitles
+    (even if `extra_opts` asks for them), and records the reason in
+    `result.subtitles_error`; `"raise"` propagates the error (a
+    [`RateLimitedError`](_autosummary/yb.download.html.md#yb.download.RateLimitedError) for a 429, saying only the
+    subtitles were refused). Playlist downloads are not covered.
 * **Return type:**
   [`DownloadResult`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DownloadResult)
 * **Returns:**
   A `DownloadResult` with the media path, trimmed `info`, and any
   `sidecars` written.
 * **Raises:**
-  [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `start`/`end` is not a timestamp, or `end` is not
-      after `start`. Raised before anything is fetched or written.
+  * [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `start`/`end` is not a timestamp, `end` is not
+        after `start`, or `on_subtitle_error` is unknown. Raised before
+        anything is fetched or written.
+  * [**RateLimitedError**](_autosummary/yb.download.html.md#yb.download.RateLimitedError) – On HTTP 429 or a “confirm you’re not a bot” wall.
 
 ### yb.format_chapter_lines(chapters)
 
@@ -5742,18 +5880,20 @@ Fetch a video’s live metadata & engagement numbers.
 
 # About this build
 
-This documentation was built on **2026-11-03 13:39 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/81c23b079962ecbd94eae583b6236283be784dda"><code>81c23b0</code></a> on branch <code>main</code>, for **yb 0.1.27** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-03 13:58 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/c3d2eb1df9add3d2bb418fad5f3d7559110f2339"><code>c3d2eb1</code></a> on branch <code>main</code>, for **yb 0.1.29** (from <code>pyproject.toml</code>).
 
-#### NOTE
-Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
+#### WARNING
+The documentation and the package may be misaligned:
+
+- The documented version (0.1.29) is ahead of the latest release on PyPI (0.1.28): these docs describe unreleased code.
 
 ## Source
 
 |                     |                                                                                                                                                    |
 |---------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/yb/commit/81c23b079962ecbd94eae583b6236283be784dda"><code>81c23b079962ecbd94eae583b6236283be784dda</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/yb/commit/c3d2eb1df9add3d2bb418fad5f3d7559110f2339"><code>c3d2eb1df9add3d2bb418fad5f3d7559110f2339</code></a> |
 | Branch              | <code>main</code>                                                                                                                                  |
-| Tags at this commit | none                                                                                                                                               |
+| Tags at this commit | <code>0.1.29</code>                                                                                                                                |
 | Working tree        | clean                                                                                                                                              |
 | Remote              | <code>https://github.com/reeleehq/yb</code>                                                                                                        |
 
@@ -5762,9 +5902,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/yb</code>                                                                   |
-| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/41643275224">41643275224</a>          |
+| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/41647592394">41647592394</a>          |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>81c23b079962ecbd94eae583b6236283be784dda</code> (in the history of the built commit) |
+| Event commit | <code>85c5d1609641d7b1d100e292554782d3462d7afe</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -5789,13 +5929,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/yb/0.1.27/">0.1.27</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/yb/0.1.28/">0.1.28</a>, older than the documented version (0.1.29).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/yb && cd yb
-git checkout 81c23b079962ecbd94eae583b6236283be784dda
+git checkout c3d2eb1df9add3d2bb418fad5f3d7559110f2339
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

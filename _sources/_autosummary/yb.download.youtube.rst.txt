@@ -9,6 +9,8 @@ yb.download.youtube
    .. autosummary::
    
       OnConvertError
+      OnSubtitleError
+      SUBTITLE_FAILURE_MARKER
       DOWNLOAD_DIR_ENV
       COOKIES_FILE_ENV
       COOKIES_PRIVATE_COPY_ENV
@@ -27,6 +29,7 @@ yb.download.youtube
       default_download_dir
       download_youtube_audio
       download_youtube_playlist
+      download_youtube_subtitles
       download_youtube_video
       glob_escape
       resolve_output_path

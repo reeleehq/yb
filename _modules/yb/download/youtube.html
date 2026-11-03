@@ -301,7 +301,7 @@
     <span class="n">range_opts</span><span class="p">,</span>
     <span class="n">ranged_filename_template</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">yb.download.pacing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pace</span><span class="p">,</span> <span class="n">explain_rate_limit</span><span class="p">,</span> <span class="n">pace_opts</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">yb.download.pacing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pace</span><span class="p">,</span> <span class="n">RateLimitedError</span><span class="p">,</span> <span class="n">explain_rate_limit</span><span class="p">,</span> <span class="n">pace_opts</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">yb.download.requirements</span><span class="w"> </span><span class="kn">import</span> <span class="n">YT_DLP_INSTALL_HINT</span><span class="p">,</span> <span class="n">with_runtime_opts</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">yb.download.warn</span><span class="w"> </span><span class="kn">import</span> <span class="n">warn_at_caller</span>
 
@@ -311,6 +311,20 @@
 <span class="n">OnConvertError</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"raise"</span><span class="p">,</span> <span class="s2">"warn"</span><span class="p">]</span>
 
 <span class="n">_ON_CONVERT_ERROR_CHOICES</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s2">"raise"</span><span class="p">,</span> <span class="s2">"warn"</span><span class="p">})</span>
+
+<span class="c1">#: What :func:`download_youtube_video` does when only the subtitles fail:</span>
+<span class="c1">#: ``"warn"`` warns and downloads the video without them</span>
+<span class="c1">#: (``result.subtitles_error`` says why), ``"raise"`` propagates the error. The</span>
+<span class="c1">#: same vocabulary as :data:`OnConvertError`.</span>
+<span class="n">OnSubtitleError</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"raise"</span><span class="p">,</span> <span class="s2">"warn"</span><span class="p">]</span>
+
+<span class="n">_ON_SUBTITLE_ERROR_CHOICES</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s2">"raise"</span><span class="p">,</span> <span class="s2">"warn"</span><span class="p">})</span>
+
+<span class="c1">#: How yt-dlp's error starts when a subtitle fetch (not the video) failed.</span>
+<span class="n">SUBTITLE_FAILURE_MARKER</span> <span class="o">=</span> <span class="s2">"Unable to download video subtitles"</span>
+
+<span class="c1">#: yt-dlp options that ask for subtitle files.</span>
+<span class="n">_SUBTITLE_OPT_KEYS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"writesubtitles"</span><span class="p">,</span> <span class="s2">"writeautomaticsub"</span><span class="p">)</span>
 
 <span class="c1">#: Env var that overrides the default download directory.</span>
 <span class="n">DOWNLOAD_DIR_ENV</span> <span class="o">=</span> <span class="s2">"YB_DOWNLOAD_DIR"</span>
@@ -369,6 +383,15 @@
 <span class="p">)</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_output_dir</span><span class="p">(</span><span class="n">download_dir</span><span class="p">:</span> <span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""``download_dir`` (default :func:`default_download_dir`), created."""</span>
+    <span class="n">out_dir</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">Path</span><span class="p">(</span><span class="n">download_dir</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span> <span class="k">if</span> <span class="n">download_dir</span> <span class="k">else</span> <span class="n">default_download_dir</span><span class="p">()</span>
+    <span class="p">)</span>
+    <span class="n">out_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">out_dir</span>
+
+
 <div class="viewcode-block" id="default_download_dir">
 <a class="viewcode-back" href="../../../_autosummary/yb.download.youtube.html#yb.default_download_dir">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">default_download_dir</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
@@ -391,11 +414,16 @@
 <span class="sd">        info: A trimmed metadata dict (see :data:`_INFO_FIELDS`).</span>
 <span class="sd">        sidecars: Map of extra artifacts written (``info_json``, ``thumbnail``,</span>
 <span class="sd">            ``description``, ``subtitles`` → path(s)).</span>
+<span class="sd">        subtitles_error: Why some or all of the requested subtitles are missing,</span>
+<span class="sd">            when the video was downloaded without them</span>
+<span class="sd">            (``on_subtitle_error="warn"``); fetch them later with</span>
+<span class="sd">            :func:`download_youtube_subtitles`.</span>
 <span class="sd">    """</span>
 
     <span class="n">path</span><span class="p">:</span> <span class="n">Path</span>
     <span class="n">info</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
     <span class="n">sidecars</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
+    <span class="n">subtitles_error</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">video_id</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
@@ -645,6 +673,7 @@
     <span class="n">precise_cuts</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">cookies_file</span><span class="p">:</span> <span class="n">CookiesFile</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">pace</span><span class="p">:</span> <span class="n">Pace</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">on_subtitle_error</span><span class="p">:</span> <span class="n">OnSubtitleError</span> <span class="o">=</span> <span class="s2">"warn"</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DownloadResult</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Download a YouTube video to ``download_dir`` (default ``~/Downloads``).</span>
 
@@ -695,21 +724,30 @@
 <span class="sd">            preset name (``"polite"``: sleep 20-60 s between items, 1 s between</span>
 <span class="sd">            requests, 4 MB/s cap). Default ``None`` adds nothing. Raw yt-dlp</span>
 <span class="sd">            options in ``extra_opts`` win over it.</span>
+<span class="sd">        on_subtitle_error: When subtitles were asked for and only their fetch</span>
+<span class="sd">            fails (YouTube rate-limits its captions endpoint before the video</span>
+<span class="sd">            one): ``"warn"`` (default) warns, retries once without subtitles</span>
+<span class="sd">            (even if ``extra_opts`` asks for them), and records the reason in</span>
+<span class="sd">            ``result.subtitles_error``; ``"raise"`` propagates the error (a</span>
+<span class="sd">            :class:`~yb.download.RateLimitedError` for a 429, saying only the</span>
+<span class="sd">            subtitles were refused). Playlist downloads are not covered.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        A :class:`DownloadResult` with the media path, trimmed ``info``, and any</span>
 <span class="sd">        ``sidecars`` written.</span>
 
 <span class="sd">    Raises:</span>
-<span class="sd">        ValueError: If ``start``/``end`` is not a timestamp, or ``end`` is not</span>
-<span class="sd">            after ``start``. Raised before anything is fetched or written.</span>
+<span class="sd">        ValueError: If ``start``/``end`` is not a timestamp, ``end`` is not</span>
+<span class="sd">            after ``start``, or ``on_subtitle_error`` is unknown. Raised before</span>
+<span class="sd">            anything is fetched or written.</span>
+<span class="sd">        RateLimitedError: On HTTP 429 or a "confirm you're not a bot" wall.</span>
 <span class="sd">    """</span>
     <span class="n">time_range</span> <span class="o">=</span> <span class="n">TimeRange</span><span class="o">.</span><span class="n">of</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="n">end</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">time_range</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">precise_cuts</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"precise_cuts needs a start and/or end to cut at"</span><span class="p">)</span>
+    <span class="n">_check_choice</span><span class="p">(</span><span class="s2">"on_subtitle_error"</span><span class="p">,</span> <span class="n">on_subtitle_error</span><span class="p">,</span> <span class="n">_ON_SUBTITLE_ERROR_CHOICES</span><span class="p">)</span>
 
-    <span class="n">out_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">download_dir</span><span class="p">)</span> <span class="k">if</span> <span class="n">download_dir</span> <span class="k">else</span> <span class="n">default_download_dir</span><span class="p">()</span>
-    <span class="n">out_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">out_dir</span> <span class="o">=</span> <span class="n">_output_dir</span><span class="p">(</span><span class="n">download_dir</span><span class="p">)</span>
 
     <span class="n">opts</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
         <span class="s2">"format"</span><span class="p">:</span> <span class="n">fmt</span><span class="p">,</span>
@@ -736,12 +774,13 @@
             <span class="p">)</span>
     <span class="n">opts</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">pace_opts</span><span class="p">(</span><span class="n">pace</span><span class="p">))</span>
 
-    <span class="k">with</span> <span class="p">(</span>
-        <span class="n">explain_rate_limit</span><span class="p">(),</span>
-        <span class="n">youtube_dl</span><span class="p">(</span><span class="n">opts</span><span class="p">,</span> <span class="n">extra_opts</span><span class="o">=</span><span class="n">extra_opts</span><span class="p">,</span> <span class="n">cookies_file</span><span class="o">=</span><span class="n">cookies_file</span><span class="p">)</span> <span class="k">as</span> <span class="n">ydl</span><span class="p">,</span>
-    <span class="p">):</span>
-        <span class="n">info</span> <span class="o">=</span> <span class="n">ydl</span><span class="o">.</span><span class="n">extract_info</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
+    <span class="n">ydl</span><span class="p">,</span> <span class="n">info</span><span class="p">,</span> <span class="n">subtitles_error</span> <span class="o">=</span> <span class="n">_download_with_subtitle_fallback</span><span class="p">(</span>
+        <span class="n">url</span><span class="p">,</span>
+        <span class="n">opts</span><span class="p">,</span>
+        <span class="n">extra_opts</span><span class="o">=</span><span class="n">extra_opts</span><span class="p">,</span>
+        <span class="n">cookies_file</span><span class="o">=</span><span class="n">cookies_file</span><span class="p">,</span>
+        <span class="n">on_subtitle_error</span><span class="o">=</span><span class="n">on_subtitle_error</span><span class="p">,</span>
+    <span class="p">)</span>
     <span class="n">path</span> <span class="o">=</span> <span class="n">resolve_output_path</span><span class="p">(</span><span class="n">info</span><span class="p">,</span> <span class="n">ydl</span><span class="p">,</span> <span class="n">out_dir</span><span class="p">,</span> <span class="n">merge_to</span><span class="p">)</span>
     <span class="n">sidecars</span> <span class="o">=</span> <span class="n">_collect_sidecars</span><span class="p">(</span>
         <span class="n">info</span><span class="p">,</span>
@@ -754,7 +793,139 @@
     <span class="n">trimmed</span> <span class="o">=</span> <span class="n">trim_info</span><span class="p">(</span><span class="n">info</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">time_range</span> <span class="ow">and</span> <span class="s2">"download_ranges"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="n">extra_opts</span> <span class="ow">or</span> <span class="p">{}):</span>
         <span class="n">trimmed</span><span class="p">[</span><span class="n">INFO_RANGE_KEY</span><span class="p">]</span> <span class="o">=</span> <span class="n">time_range</span><span class="o">.</span><span class="n">as_info</span><span class="p">()</span>
-    <span class="k">return</span> <span class="n">DownloadResult</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="n">info</span><span class="o">=</span><span class="n">trimmed</span><span class="p">,</span> <span class="n">sidecars</span><span class="o">=</span><span class="n">sidecars</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="n">DownloadResult</span><span class="p">(</span>
+        <span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="n">info</span><span class="o">=</span><span class="n">trimmed</span><span class="p">,</span> <span class="n">sidecars</span><span class="o">=</span><span class="n">sidecars</span><span class="p">,</span> <span class="n">subtitles_error</span><span class="o">=</span><span class="n">subtitles_error</span>
+    <span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_download_with_subtitle_fallback</span><span class="p">(</span>
+    <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">opts</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">extra_opts</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">cookies_file</span><span class="p">:</span> <span class="n">CookiesFile</span><span class="p">,</span>
+    <span class="n">on_subtitle_error</span><span class="p">:</span> <span class="n">OnSubtitleError</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="nb">dict</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""``(ydl, info, subtitles_error)``: download, retrying once without subtitles.</span>
+
+<span class="sd">    The retry applies only when the failure was the subtitle fetch, and turns</span>
+<span class="sd">    subtitles off in ``extra_opts`` too (merged last, it would turn them back on).</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">fetch</span><span class="p">(</span><span class="n">base</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">extra</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="k">with</span> <span class="p">(</span>
+            <span class="n">explain_rate_limit</span><span class="p">(),</span>
+            <span class="n">youtube_dl</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="n">extra_opts</span><span class="o">=</span><span class="n">extra</span><span class="p">,</span> <span class="n">cookies_file</span><span class="o">=</span><span class="n">cookies_file</span><span class="p">)</span> <span class="k">as</span> <span class="n">ydl</span><span class="p">,</span>
+        <span class="p">):</span>
+            <span class="k">return</span> <span class="n">ydl</span><span class="p">,</span> <span class="n">ydl</span><span class="o">.</span><span class="n">extract_info</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">(</span><span class="o">*</span><span class="n">fetch</span><span class="p">(</span><span class="n">opts</span><span class="p">,</span> <span class="n">extra_opts</span><span class="p">),</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="n">subtitles_error</span> <span class="o">=</span> <span class="n">_subtitle_failure</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">subtitles_error</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span>
+        <span class="k">if</span> <span class="n">on_subtitle_error</span> <span class="o">==</span> <span class="s2">"raise"</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">exc</span><span class="p">,</span> <span class="n">RateLimitedError</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">RateLimitedError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"Only the subtitles were refused (</span><span class="si">{</span><span class="n">subtitles_error</span><span class="si">}</span><span class="s2">); "</span>
+                    <span class="s2">"on_subtitle_error='warn' downloads the video without them."</span>
+                <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+            <span class="k">raise</span>
+        <span class="n">warn_at_caller</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Downloading without subtitles: </span><span class="si">{</span><span class="n">subtitles_error</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="n">off</span> <span class="o">=</span> <span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">_SUBTITLE_OPT_KEYS</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="o">*</span><span class="n">fetch</span><span class="p">({</span><span class="o">**</span><span class="n">opts</span><span class="p">,</span> <span class="o">**</span><span class="n">off</span><span class="p">},</span> <span class="p">{</span><span class="o">**</span><span class="p">(</span><span class="n">extra_opts</span> <span class="ow">or</span> <span class="p">{}),</span> <span class="o">**</span><span class="n">off</span><span class="p">}),</span> <span class="n">subtitles_error</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_subtitle_failure</span><span class="p">(</span><span class="n">exc</span><span class="p">:</span> <span class="ne">BaseException</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""yt-dlp's message when ``exc`` is a failed subtitle fetch, else ``None``.</span>
+
+<span class="sd">    A :class:`~yb.download.RateLimitedError` wraps the yt-dlp error, so the</span>
+<span class="sd">    original (its ``__cause__``) is what is read and returned.</span>
+<span class="sd">    """</span>
+    <span class="n">original</span> <span class="o">=</span> <span class="n">exc</span><span class="o">.</span><span class="n">__cause__</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">exc</span><span class="p">,</span> <span class="n">RateLimitedError</span><span class="p">)</span> <span class="k">else</span> <span class="n">exc</span>
+    <span class="n">message</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">original</span> <span class="ow">or</span> <span class="n">exc</span><span class="p">)</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">SUBTITLE_FAILURE_MARKER</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">message</span><span class="p">[</span><span class="n">start</span><span class="p">:]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">if</span> <span class="n">start</span> <span class="o">&gt;=</span> <span class="mi">0</span> <span class="k">else</span> <span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_check_choice</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">choices</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">value</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">choices</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> must be one of </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">choices</span><span class="p">)</span><span class="si">}</span><span class="s2">, got </span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="download_youtube_subtitles">
+<a class="viewcode-back" href="../../../_autosummary/yb.download.youtube.html#yb.download_youtube_subtitles">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">download_youtube_subtitles</span><span class="p">(</span>
+    <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">download_dir</span><span class="p">:</span> <span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">subtitle_langs</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"en"</span><span class="p">,),</span>
+    <span class="n">auto_subtitles</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">filename_template</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DEFAULT_OUTTMPL</span><span class="p">,</span>
+    <span class="n">quiet</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">extra_opts</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">cookies_file</span><span class="p">:</span> <span class="n">CookiesFile</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">pace</span><span class="p">:</span> <span class="n">Pace</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Download only a video's subtitles (no media); returns the files written.</span>
+
+<span class="sd">    The companion of ``on_subtitle_error="warn"``: when a video came down</span>
+<span class="sd">    without its subtitles (``result.subtitles_error``), fetch them later into</span>
+<span class="sd">    the same folder, named like the video so they sit beside it:</span>
+
+<span class="sd">        &gt;&gt;&gt; r = download_youtube_video(url, write_subtitles=True)  # doctest: +SKIP</span>
+<span class="sd">        &gt;&gt;&gt; if r.subtitles_error:  # doctest: +SKIP</span>
+<span class="sd">        ...     download_youtube_subtitles(url, download_dir=r.path.parent)</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        url: The video URL (or id).</span>
+<span class="sd">        download_dir: Destination directory (default :func:`default_download_dir`).</span>
+<span class="sd">        subtitle_langs: Languages to fetch.</span>
+<span class="sd">        auto_subtitles: Also fetch auto-generated subtitles (default ``True``).</span>
+<span class="sd">        filename_template: As in :func:`download_youtube_video` (the subtitle</span>
+<span class="sd">            extension is added to it).</span>
+<span class="sd">        quiet: Suppress yt-dlp console output.</span>
+<span class="sd">        extra_opts: Additional raw yt-dlp options (merged last).</span>
+<span class="sd">        cookies_file: See :func:`download_youtube_video`.</span>
+<span class="sd">        pace: As in :func:`download_youtube_video`; ``"polite"`` is the usual</span>
+<span class="sd">            choice right after the captions endpoint answered 429.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        The subtitle files beside the video's name (any language, ``.vtt`` or</span>
+<span class="sd">        ``.srt``), including ones an earlier run left there.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        RateLimitedError: On HTTP 429 or a "confirm you're not a bot" wall.</span>
+<span class="sd">    """</span>
+    <span class="n">out_dir</span> <span class="o">=</span> <span class="n">_output_dir</span><span class="p">(</span><span class="n">download_dir</span><span class="p">)</span>
+    <span class="n">opts</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">"quiet"</span><span class="p">:</span> <span class="n">quiet</span><span class="p">,</span>
+        <span class="s2">"skip_download"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="s2">"noplaylist"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="s2">"writesubtitles"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="s2">"writeautomaticsub"</span><span class="p">:</span> <span class="n">auto_subtitles</span><span class="p">,</span>
+        <span class="s2">"subtitleslangs"</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">subtitle_langs</span><span class="p">),</span>
+        <span class="s2">"outtmpl"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">out_dir</span> <span class="o">/</span> <span class="n">filename_template</span><span class="p">),</span>
+        <span class="o">**</span><span class="n">pace_opts</span><span class="p">(</span><span class="n">pace</span><span class="p">),</span>
+    <span class="p">}</span>
+    <span class="k">with</span> <span class="p">(</span>
+        <span class="n">explain_rate_limit</span><span class="p">(),</span>
+        <span class="n">youtube_dl</span><span class="p">(</span><span class="n">opts</span><span class="p">,</span> <span class="n">extra_opts</span><span class="o">=</span><span class="n">extra_opts</span><span class="p">,</span> <span class="n">cookies_file</span><span class="o">=</span><span class="n">cookies_file</span><span class="p">)</span> <span class="k">as</span> <span class="n">ydl</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="n">info</span> <span class="o">=</span> <span class="n">ydl</span><span class="o">.</span><span class="n">extract_info</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="c1"># Not requested_subtitles' `filepath`: that is the temp name under `paths`.</span>
+    <span class="n">named_like</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">ydl</span><span class="o">.</span><span class="n">prepare_filename</span><span class="p">(</span><span class="n">info</span> <span class="ow">or</span> <span class="p">{}))</span>
+    <span class="n">found</span> <span class="o">=</span> <span class="n">_collect_sidecars</span><span class="p">(</span>
+        <span class="n">info</span><span class="p">,</span>
+        <span class="n">named_like</span><span class="p">,</span>
+        <span class="n">info_json</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">thumbnail</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">subtitles</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">found</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"subtitles"</span><span class="p">,</span> <span class="p">[])</span></div>
 
 
 
@@ -783,6 +954,7 @@
     <span class="n">precise_cuts</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">cookies_file</span><span class="p">:</span> <span class="n">CookiesFile</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">pace</span><span class="p">:</span> <span class="n">Pace</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">on_subtitle_error</span><span class="p">:</span> <span class="n">OnSubtitleError</span> <span class="o">=</span> <span class="s2">"warn"</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DownloadResult</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Download only a video's audio (no video stream).</span>
 
@@ -823,7 +995,7 @@
 <span class="sd">        subtitle_langs: Subtitle languages to fetch when subtitles are enabled.</span>
 <span class="sd">        quiet: Suppress yt-dlp console output.</span>
 <span class="sd">        extra_opts: Any additional raw yt-dlp options (merged last, so they win).</span>
-<span class="sd">        pace: As in :func:`download_youtube_video`.</span>
+<span class="sd">        pace, on_subtitle_error: As in :func:`download_youtube_video`.</span>
 <span class="sd">        start, end, precise_cuts: Download only a span, as in</span>
 <span class="sd">            :func:`download_youtube_video`:</span>
 
@@ -837,11 +1009,7 @@
 <span class="sd">        ValueError: If ``on_error`` is not ``"raise"`` or ``"warn"``.</span>
 <span class="sd">        AudioConversionError: If conversion fails and ``on_error="raise"``.</span>
 <span class="sd">    """</span>
-    <span class="k">if</span> <span class="n">on_error</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_ON_CONVERT_ERROR_CHOICES</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">"on_error must be one of </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">_ON_CONVERT_ERROR_CHOICES</span><span class="p">)</span><span class="si">}</span><span class="s2">, "</span>
-            <span class="sa">f</span><span class="s2">"got </span><span class="si">{</span><span class="n">on_error</span><span class="si">!r}</span><span class="s2">"</span>
-        <span class="p">)</span>
+    <span class="n">_check_choice</span><span class="p">(</span><span class="s2">"on_error"</span><span class="p">,</span> <span class="n">on_error</span><span class="p">,</span> <span class="n">_ON_CONVERT_ERROR_CHOICES</span><span class="p">)</span>
 
     <span class="n">result</span> <span class="o">=</span> <span class="n">download_youtube_video</span><span class="p">(</span>
         <span class="n">url</span><span class="p">,</span>
@@ -862,6 +1030,7 @@
         <span class="n">precise_cuts</span><span class="o">=</span><span class="n">precise_cuts</span><span class="p">,</span>
         <span class="n">cookies_file</span><span class="o">=</span><span class="n">cookies_file</span><span class="p">,</span>
         <span class="n">pace</span><span class="o">=</span><span class="n">pace</span><span class="p">,</span>
+        <span class="n">on_subtitle_error</span><span class="o">=</span><span class="n">on_subtitle_error</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="k">if</span> <span class="n">audio_format</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">result</span>
@@ -1128,8 +1297,7 @@
 <span class="sd">        in playlist order. Entries skipped by selection/filter or that failed</span>
 <span class="sd">        (under ``ignoreerrors``) are omitted.</span>
 <span class="sd">    """</span>
-    <span class="n">out_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">download_dir</span><span class="p">)</span> <span class="k">if</span> <span class="n">download_dir</span> <span class="k">else</span> <span class="n">default_download_dir</span><span class="p">()</span>
-    <span class="n">out_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">out_dir</span> <span class="o">=</span> <span class="n">_output_dir</span><span class="p">(</span><span class="n">download_dir</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">playlist_items</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">skip_first</span><span class="p">:</span>
         <span class="n">playlist_items</span> <span class="o">=</span> <span class="s2">"2:"</span>
@@ -1325,7 +1493,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=e5b6b217"></script>
+</div><script src="../../../_static/documentation_options.js?v=ee813736"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

@@ -195,7 +195,7 @@ Config file location (`$XDG_CONFIG_HOME` or `~/.config`).
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
-### yb.download_youtube_audio(url, , download_dir=None, audio_format=None, bitrate=None, keep_original=False, on_error='raise', fmt='bestaudio/best', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None, pace=None)
+### yb.download_youtube_audio(url, , download_dir=None, audio_format=None, bitrate=None, keep_original=False, on_error='raise', fmt='bestaudio/best', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None, pace=None, on_subtitle_error='warn')
 
 Download only a video’s audio (no video stream).
 
@@ -239,6 +239,7 @@ Pass `audio_format` to get a specific format instead:
   * **quiet** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Suppress yt-dlp console output.
   * **extra_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Any additional raw yt-dlp options (merged last, so they win).
   * **pace** ([`Pace`](yb.download.pacing.html.md#yb.download.pacing.Pace) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – As in [`download_youtube_video()`](#yb.download_youtube_video).
+  * **on_subtitle_error** ([`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`'raise'`, `'warn'`]) – As in [`download_youtube_video()`](#yb.download_youtube_video).
   * **start** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`float`](https://docs.python.org/3/builtins/functions.html#float) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – 
 
     Download only a span, as in
@@ -269,7 +270,7 @@ Pass `audio_format` to get a specific format instead:
   * [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `on_error` is not `"raise"` or `"warn"`.
   * [**AudioConversionError**](yb.audio_convert.html.md#yb.audio_convert.AudioConversionError) – If conversion fails and `on_error="raise"`.
 
-### yb.download_youtube_video(url, , download_dir=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None, pace=None)
+### yb.download_youtube_video(url, , download_dir=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=False, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), quiet=True, extra_opts=None, start=None, end=None, precise_cuts=False, cookies_file=None, pace=None, on_subtitle_error='warn')
 
 Download a YouTube video to `download_dir` (default `~/Downloads`).
 
@@ -328,14 +329,23 @@ named `Title (video_id).mp4` in `~/Downloads`.
     preset name (`"polite"`: sleep 20-60 s between items, 1 s between
     requests, 4 MB/s cap). Default `None` adds nothing. Raw yt-dlp
     options in `extra_opts` win over it.
+  * **on_subtitle_error** ([`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`'raise'`, `'warn'`]) – When subtitles were asked for and only their fetch
+    fails (YouTube rate-limits its captions endpoint before the video
+    one): `"warn"` (default) warns, retries once without subtitles
+    (even if `extra_opts` asks for them), and records the reason in
+    `result.subtitles_error`; `"raise"` propagates the error (a
+    [`RateLimitedError`](yb.download.html.md#yb.download.RateLimitedError) for a 429, saying only the
+    subtitles were refused). Playlist downloads are not covered.
 * **Return type:**
   [`DownloadResult`](yb.download.youtube.html.md#yb.download.youtube.DownloadResult)
 * **Returns:**
   A `DownloadResult` with the media path, trimmed `info`, and any
   `sidecars` written.
 * **Raises:**
-  [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `start`/`end` is not a timestamp, or `end` is not
-      after `start`. Raised before anything is fetched or written.
+  * [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `start`/`end` is not a timestamp, `end` is not
+        after `start`, or `on_subtitle_error` is unknown. Raised before
+        anything is fetched or written.
+  * [**RateLimitedError**](yb.download.html.md#yb.download.RateLimitedError) – On HTTP 429 or a “confirm you’re not a bot” wall.
 
 ### yb.format_chapter_lines(chapters)
 
