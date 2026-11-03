@@ -155,7 +155,15 @@ def test_a_video_failure_is_not_retried(ydl, tmp_path):
     assert len(ydl.calls) == 1
 
 
-def test_a_second_failure_propagates(ydl, tmp_path):
+def test_a_second_failure_propagates_and_restores_the_params(ydl, tmp_path):
+    from yb.download.youtube import install_subtitle_fallback
+
+    fake = _FakeYDL({"writesubtitles": True})
+    install_subtitle_fallback(fake, on_subtitle_error="warn")
+    ydl.errors = [Exception(SUBS_429), Exception("ERROR: HTTP Error 429")]
+    with pytest.warns(UserWarning), pytest.raises(Exception, match="HTTP Error 429"):
+        fake.process_info({"id": "v"})
+    assert fake.params["writesubtitles"] is True
     ydl.errors = [Exception(SUBS_429), Exception("ERROR: HTTP Error 429")]
     with pytest.warns(UserWarning), pytest.raises(RateLimitedError):
         get(tmp_path)

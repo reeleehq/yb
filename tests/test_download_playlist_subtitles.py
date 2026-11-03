@@ -79,7 +79,8 @@ def get(page, tmp_path, *, extra_opts=None, **kw):
 def test_an_item_whose_subtitles_fail_is_downloaded_again_without_them(page, tmp_path):
     with pytest.warns(UserWarning, match="without subtitles") as w:
         results = get(page, tmp_path)
-    assert w[0].filename == __file__
+    (ours,) = [x for x in w if "without subtitles" in str(x.message)]
+    assert ours.filename == __file__  # not yt-dlp's frame
     assert [r.video_id for r in results] == ["page-1", "page-2"]  # playlist order
     first, second = results
     assert first.path.exists() and "HTTP Error 429" in first.subtitles_error
@@ -139,3 +140,29 @@ def test_no_failure_no_subtitles_error(page, tmp_path, monkeypatch):
 def test_unknown_policy_fails_before_any_request(tmp_path):
     with pytest.raises(ValueError, match="on_subtitle_error"):
         download_youtube_playlist("u", download_dir=tmp_path, on_subtitle_error="x")
+
+
+def test_autonumber_is_not_skipped_by_a_retry(page, tmp_path):
+    with pytest.warns(UserWarning):
+        results = get(page, tmp_path, filename_template="%(autonumber)s.%(ext)s")
+    assert sorted(r.path.name for r in results) == ["00001.mp4", "00002.mp4"]
+
+
+def test_yt_dlp_still_has_the_hook_point():
+    """The fallback wraps YoutubeDL.process_info; a rename must fail loudly here."""
+    import yt_dlp
+
+    assert callable(getattr(yt_dlp.YoutubeDL, "process_info", None))
+
+
+def test_warnings_as_errors_do_not_drop_the_item(page, tmp_path):
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", UserWarning)
+        warnings.filterwarnings("ignore", category=DeprecationWarning)
+        from yb.download.requirements import DownloadRequirementWarning
+
+        warnings.filterwarnings("ignore", category=DownloadRequirementWarning)
+        results = get(page, tmp_path)
+    assert [r.video_id for r in results] == ["page-1", "page-2"]

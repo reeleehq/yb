@@ -13,6 +13,7 @@ from __future__ import annotations
 import math
 import os
 import shutil
+import sys
 import tempfile
 import urllib.parse
 import warnings
@@ -37,7 +38,7 @@ from yb.download.pacing import (
     pace_opts,
 )
 from yb.download.requirements import YT_DLP_INSTALL_HINT, with_runtime_opts
-from yb.download.warn import warn_at_caller
+from yb.download.warn import PLUMBING_FILES, warn_at_caller
 
 PathLike = str | Path
 
@@ -530,13 +531,8 @@ def download_youtube_video(
 
 
 def _subtitle_failure(exc: BaseException) -> str | None:
-    """yt-dlp's message when ``exc`` is a failed subtitle fetch, else ``None``.
-
-    A :class:`~yb.download.RateLimitedError` wraps the yt-dlp error, so the
-    original (its ``__cause__``) is what is read and returned.
-    """
-    original = exc.__cause__ if isinstance(exc, RateLimitedError) else exc
-    message = str(original or exc)
+    """yt-dlp's message when ``exc`` is a failed subtitle fetch, else ``None``."""
+    message = str(exc)
     start = message.find(SUBTITLE_FAILURE_MARKER)
     return message[start:].strip() if start >= 0 else None
 
@@ -1169,6 +1165,17 @@ def _describe_failures(failures: list[SubtitleFailure]) -> str:
     return "; ".join(f"{f.video_id}: {f.error}" for f in failures)
 
 
+def _plumbing_with_ytdlp() -> tuple[str, ...]:
+    """:data:`~yb.download.warn.PLUMBING_FILES` plus yt-dlp's package, when imported.
+
+    A warning raised from inside a yt-dlp callback must still name the caller.
+    """
+    ytdlp_file = getattr(sys.modules.get("yt_dlp"), "__file__", None)
+    if not ytdlp_file:
+        return PLUMBING_FILES
+    return (*PLUMBING_FILES, str(Path(ytdlp_file).parent))
+
+
 def install_subtitle_fallback(
     ydl: Any, *, on_subtitle_error: OnSubtitleError
 ) -> list[SubtitleFailure]:
@@ -1176,7 +1183,10 @@ def install_subtitle_fallback(
 
     Wraps ``ydl.process_info`` (called once per video, with the formats already
     chosen), so the retry happens in place: same item, same filename and order,
-    no second extraction. On a failure of the subtitle fetch only:
+    no second extraction. Failures are keyed by video id (a video listed twice
+    in a playlist marks both rows). With several ``subtitle_langs``, the ones
+    written before the failure stay beside the video. On a failure of the
+    subtitle fetch only:
 
     - ``"warn"``: warn, then process the item again with subtitles off;
     - ``"raise"``: re-raise (a 429 as :class:`~yb.download.RateLimitedError`
@@ -1203,8 +1213,16 @@ def install_subtitle_fallback(
                         "on_subtitle_error='warn' downloads the video without them."
                     ) from exc
                 raise
-        warn_at_caller(f"Downloading without subtitles: {error}")
+        try:  # a warning filter set to "error" must not drop the video
+            warn_at_caller(
+                f"Downloading without subtitles: {error}",
+                plumbing=_plumbing_with_ytdlp(),
+            )
+        except UserWarning:
+            pass
         saved = {key: ydl.params.get(key) for key in _SUBTITLE_OPT_KEYS}
+        if isinstance(getattr(ydl, "_num_downloads", None), int):
+            ydl._num_downloads -= 1  # the retry is the same download (autonumber)
         ydl.params.update(dict.fromkeys(_SUBTITLE_OPT_KEYS, False))
         try:
             return process_info(info_dict)
