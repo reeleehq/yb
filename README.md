@@ -81,12 +81,15 @@ download_youtube_video(
     subtitle_langs=("en", "fr"),
 )
 
+download_youtube_subtitles(url, download_dir="~/clips")  # subtitles only, no media
 download_youtube_audio(url)  # audio only, source format -> "Title (id).webm"
 download_youtube_audio(url, audio_format="mp3")  # ...converted (needs ffmpeg)
 download_youtube_audio(url, audio_format="mp3", bitrate="320k")
 ```
 
 **Links from untrusted users.** `download_audio_bounded` is the one to call from a service: `validate_target` (your SSRF policy; the default only requires http(s)) is applied to every URL yt-dlp requests, including the media a page points at and where a redirect chain ends (the hops in between are requested blind, their content never returned); the byte cap and the `timeout_s` wall-clock budget hold even when the size is unknown; formats needing an external downloader are never selected; no cookies are sent unless you pass `cookies_file=`. It raises `ValueError` subclasses for every refusal (`AudioTargetError`, `AudioLimitError`, `AudioSourceError`), `RateLimitedError` when the source pushes back, and `ImportError` (with the install command) when yt-dlp is missing.
+
+**Subtitles are best-effort** (`download_youtube_video` / `download_youtube_audio`; not yet playlists). YouTube rate-limits its captions endpoint before the video one, so when only the subtitle fetch fails the video is downloaded without them: `result.subtitles_error` says why, a warning is issued, and `download_youtube_subtitles` fetches them later. Pass `on_subtitle_error="raise"` when the subtitles are not optional.
 
 The destination defaults to `$YB_DOWNLOAD_DIR` (else `~/Downloads`). Every knob
 — format, filename template, which sidecar metadata to also save — is
