@@ -116,13 +116,11 @@ def test_creative_commons_searches_the_filtered_results_page(fake_ydl):
     from urllib.parse import parse_qs, urlparse
 
     fake_ydl["result"] = _hits(60)
-    search_youtube("house dance & footwork", limit=20, creative_commons=True)
+    search_youtube("C# & F+ é 日本 #tag", limit=20, creative_commons=True)
     url = urlparse(fake_ydl["query"])
     assert f"{url.scheme}://{url.netloc}{url.path}" == ytdl.SEARCH_RESULTS_URL
-    # YouTube's own links carry the filter double-encoded: sp=EgIwAQ%253D%253D
-    assert "sp=EgIwAQ%253D%253D" in url.query
     assert parse_qs(url.query) == {
-        "search_query": ["house dance & footwork"],
+        "search_query": ["C# & F+ é 日本 #tag"],
         "sp": [ytdl.CREATIVE_COMMONS_SP],
     }
     assert fake_ydl["opts"]["playlistend"] == 20
@@ -160,4 +158,28 @@ def test_view_count_is_carried(fake_ydl):
 def test_inverted_bounds_fail_before_any_request(fake_ydl):
     with pytest.raises(ValueError, match="min_s"):
         search_youtube("x", min_s=10, max_s=5)
+    assert "query" not in fake_ydl
+
+
+def test_channel_and_playlist_rows_are_not_hits(fake_ydl):
+    fake_ydl["result"] = {
+        "entries": [
+            {
+                "ie_key": "YoutubeTab",
+                "id": "UC8butISFwT",
+                "url": "https://y/channel/UC8",
+            },
+            {"ie_key": "YoutubeTab", "id": "PLx", "url": "https://y/playlist?list=PLx"},
+            {"ie_key": "Youtube", "id": "v1", "title": "T", "duration": 60},
+        ]
+    }
+    assert [h.id for h in search_youtube("x", creative_commons=True)] == ["v1"]
+
+
+@pytest.mark.parametrize("bound", [float("nan"), float("inf"), -1, "45", True])
+def test_bad_bounds_fail_before_any_request(fake_ydl, bound):
+    with pytest.raises(ValueError, match="non-negative number"):
+        search_youtube("x", min_s=bound)
+    with pytest.raises(ValueError, match="non-negative number"):
+        search_youtube("x", max_s=bound)
     assert "query" not in fake_ydl

@@ -10,6 +10,7 @@ The destination defaults to ``$YB_DOWNLOAD_DIR`` when set, else ``~/Downloads``.
 
 from __future__ import annotations
 
+import math
 import os
 import shutil
 import tempfile
@@ -780,9 +781,13 @@ MAX_SEARCH_LIMIT = 50
 SEARCH_RESULTS_URL = "https://www.youtube.com/results"
 
 #: YouTube's ``sp`` search parameter restricting hits to the Creative Commons
-#: licence. Undocumented; verified empirically (every hit's full info carried
+#: licence (the decoded value; YouTube's own links show it encoded twice).
+#: Undocumented; verified empirically (every hit's full info carried
 #: ``license = "Creative Commons Attribution license (reuse allowed)"``).
-CREATIVE_COMMONS_SP = "EgIwAQ%3D%3D"
+CREATIVE_COMMONS_SP = "EgIwAQ=="
+
+#: yt-dlp's ``ie_key`` of a video row (channel and playlist rows have others).
+_VIDEO_IE_KEY = "Youtube"
 
 
 def search_youtube(
@@ -811,7 +816,9 @@ def search_youtube(
 
     Uses flat extraction (one request, no per-video fetch), sharing the cookie
     and JS-runtime handling of the downloads: yt-dlp's ``ytsearchN:``, or the
-    search results page when a YouTube search filter is asked for.
+    search results page when a YouTube search filter is asked for. Only video
+    rows are returned (YouTube's channel rows are dropped, so fewer than
+    ``limit`` may come back); a Short's ``url`` is its ``/shorts/`` link.
 
     Args:
         query: What to search for (any script).
@@ -821,7 +828,7 @@ def search_youtube(
             declaration; check a hit's full info (``license``) before relying
             on it.
         min_s, max_s: Keep only hits whose duration is within these bounds
-            (seconds, inclusive). Applied to the ``limit`` results, so fewer may
+            (non-negative seconds, inclusive). Applied to the ``limit`` results, so fewer may
             come back; a hit with no reported duration is dropped when either
             bound is set.
         extra_opts: Additional raw yt-dlp options (merged last).
@@ -835,6 +842,9 @@ def search_youtube(
         raise ValueError("query must not be blank")
     if not 1 <= limit <= MAX_SEARCH_LIMIT:
         raise ValueError(f"limit must be in 1..{MAX_SEARCH_LIMIT}, got {limit}")
+    for name, bound in (("min_s", min_s), ("max_s", max_s)):
+        if bound is not None and not _is_seconds(bound):
+            raise ValueError(f"{name} must be a non-negative number, got {bound!r}")
     if min_s is not None and max_s is not None and min_s > max_s:
         raise ValueError(f"min_s ({min_s}) is above max_s ({max_s})")
 
@@ -846,8 +856,29 @@ def search_youtube(
         target = f"ytsearch{limit}:{query}"
     info = _extract_info(target, opts, extra_opts=extra_opts, cookies_file=cookies_file)
     entries = (info or {}).get("entries") or []
-    hits = [_search_hit(e) for e in entries if e and (e.get("id") or e.get("url"))]
+    hits = [_search_hit(e) for e in entries if _is_video_entry(e)]
     return [h for h in hits[:limit] if _within(h.duration, min_s, max_s)]
+
+
+def _is_video_entry(entry: dict | None) -> bool:
+    """A search row for a video: not empty, and not a channel or playlist row.
+
+    YouTube mixes channel rows into results (``ie_key`` ``"YoutubeTab"``); a
+    caller downloading ``hits[0].url`` must not get a whole channel.
+    """
+    if not entry or not (entry.get("id") or entry.get("url")):
+        return False
+    return entry.get("ie_key") in (None, _VIDEO_IE_KEY)
+
+
+def _is_seconds(value: Any) -> bool:
+    """A finite, non-negative real number (``bool`` is not one)."""
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(value)
+        and value >= 0
+    )
 
 
 def _search_results_url(query: str, *, sp: str) -> str:
