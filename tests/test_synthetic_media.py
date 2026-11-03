@@ -141,7 +141,8 @@ def test_metadata_cleanup_is_idempotent():
 
 
 def test_music_publish_forwards_the_flag(monkeypatch, tmp_path):
-    music = pytest.importorskip("yb.music.publish")
+    pytest.importorskip("muvid")  # yb.music raises its own ImportError without it
+    from yb.music import publish as music
     got = []
     monkeypatch.setattr(P, "publish_content", lambda c, **kw: got.append(kw) or {})
     video = type("MV", (), {"content": _content(tmp_path / "s.mp4")})()
