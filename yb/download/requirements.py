@@ -37,6 +37,8 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
+from yb.download.warn import warn_at_caller
+
 #: The JavaScript runtime yt-dlp enables by default, and the one that works.
 DENO = "deno"
 
@@ -48,6 +50,12 @@ DENO_INSTALL_ENV = "DENO_INSTALL"
 
 #: yt-dlp's import name.
 YT_DLP_MODULE = "yt_dlp"
+
+#: What to tell someone whose environment has no yt-dlp.
+YT_DLP_INSTALL_HINT = (
+    "yt-dlp is not installed. Install it with its default extras: "
+    "pip install 'yb[download]' (or pip install 'yt-dlp[default]')."
+)
 
 #: Module that carries yt-dlp's challenge-solver scripts (from ``yt-dlp[default]``).
 EJS_MODULE = "yt_dlp_ejs"
@@ -227,10 +235,7 @@ def check_requirements(
     """
     problems = []
     if not has_module(YT_DLP_MODULE, find_spec=find_spec):
-        problems.append(
-            "yt-dlp is not installed. Install it with its default extras: "
-            "pip install 'yb[download]' (or pip install 'yt-dlp[default]')."
-        )
+        problems.append(YT_DLP_INSTALL_HINT)
     elif not has_ejs_scripts(find_spec=find_spec):
         problems.append(
             "yt-dlp's JavaScript challenge-solver scripts (yt-dlp-ejs) are not "
@@ -299,7 +304,7 @@ def _preflight_opts() -> tuple[tuple[str, object], ...]:
     """
     for problem in check_requirements(warn=False, check_deno_version=False):
         try:
-            warnings.warn(problem, DownloadRequirementWarning, stacklevel=4)
+            warn_at_caller(problem, DownloadRequirementWarning)
         except DownloadRequirementWarning:
             pass
     return tuple(yt_dlp_runtime_opts(find_js_runtime()).items())

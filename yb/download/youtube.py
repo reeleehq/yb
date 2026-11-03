@@ -17,6 +17,7 @@ import warnings
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
+from collections.abc import Callable
 from typing import Any, Literal
 
 from yb.download.ranges import (
@@ -27,7 +28,8 @@ from yb.download.ranges import (
     ranged_filename_template,
 )
 from yb.download.pacing import Pace, explain_rate_limit, pace_opts
-from yb.download.requirements import with_runtime_opts
+from yb.download.requirements import YT_DLP_INSTALL_HINT, with_runtime_opts
+from yb.download.warn import warn_at_caller
 
 PathLike = str | Path
 
@@ -134,10 +136,9 @@ def default_cookies_file() -> Path | None:
         path = Path(named).expanduser()
         if path.is_file():
             return path
-        warnings.warn(
+        warn_at_caller(
             f"${COOKIES_FILE_ENV} points to a file that does not exist; "
-            "downloading without cookies.",
-            stacklevel=4,
+            "downloading without cookies."
         )
         return None
     path = Path(DEFAULT_COOKIES_FILE).expanduser()
@@ -177,7 +178,7 @@ def _usable_cookies_file(path: Path, *, explicit: bool) -> str | None:
     )
     if explicit:
         raise ValueError(msg)
-    warnings.warn(msg + " Downloading without cookies.", stacklevel=4)
+    warn_at_caller(msg + " Downloading without cookies.")
     return None
 
 
@@ -251,6 +252,51 @@ def _final_opts(
         Path(copy).unlink(missing_ok=True)
 
 
+def _youtube_dl_cls():
+    """``yt_dlp.YoutubeDL``, or an ``ImportError`` that says how to install it."""
+    try:
+        from yt_dlp import YoutubeDL
+    except ImportError as exc:
+        raise ImportError(YT_DLP_INSTALL_HINT) from exc
+    return YoutubeDL
+
+
+@contextmanager
+def youtube_dl(
+    base_opts: dict[str, Any],
+    *,
+    extra_opts: dict | None = None,
+    cookies_file: CookiesFile = None,
+    cookies_from_browser: str | tuple | None = None,
+    ydl_cls: Callable[[dict], Any] | None = None,
+):
+    """Yield a ``YoutubeDL`` built the way every yb download builds one.
+
+    Options merge as ``base_opts``, then cookies (see :func:`_cookie_opts`), then
+    ``extra_opts``, then the JS-runtime options; a cookie file yt-dlp must not
+    rewrite is handed over as a private copy (see :func:`_final_opts`).
+
+    Args:
+        base_opts: The caller's yt-dlp options.
+        extra_opts: Raw yt-dlp options merged after everything but the runtime.
+        cookies_file: As in :func:`download_youtube_video`.
+        cookies_from_browser: A browser cookie source the caller already put in
+            ``base_opts`` (suppresses the default cookies file).
+        ydl_cls: What to build instead of ``yt_dlp.YoutubeDL`` (a subclass that
+            guards requests, a fake in tests).
+
+    Raises:
+        ImportError: yt-dlp is not installed (with the install command).
+    """
+    cls = ydl_cls or _youtube_dl_cls()
+    cookie_opts = _cookie_opts(
+        cookies_file, cookies_from_browser=cookies_from_browser, extra_opts=extra_opts
+    )
+    with _final_opts(base_opts, cookie_opts, extra_opts) as opts:
+        with cls(with_runtime_opts(opts)) as ydl:
+            yield ydl
+
+
 def _extract_info(
     target: str,
     base_opts: dict[str, Any],
@@ -258,13 +304,9 @@ def _extract_info(
     extra_opts: dict | None,
     cookies_file: CookiesFile,
 ) -> dict | None:
-    """Metadata-only yt-dlp extraction: cookies, then ``extra_opts``, then the JS runtime."""
-    from yt_dlp import YoutubeDL
-
-    cookie_opts = _cookie_opts(cookies_file, extra_opts=extra_opts)
-    with _final_opts(base_opts, cookie_opts, extra_opts) as opts:
-        with YoutubeDL(with_runtime_opts(opts)) as ydl:
-            return ydl.extract_info(target, download=False)
+    """Metadata-only yt-dlp extraction through :func:`youtube_dl`."""
+    with youtube_dl(base_opts, extra_opts=extra_opts, cookies_file=cookies_file) as ydl:
+        return ydl.extract_info(target, download=False)
 
 
 def youtube_video_info(
@@ -372,8 +414,6 @@ def download_youtube_video(
     if time_range is None and precise_cuts:
         raise ValueError("precise_cuts needs a start and/or end to cut at")
 
-    from yt_dlp import YoutubeDL
-
     out_dir = Path(download_dir) if download_dir else default_download_dir()
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -402,10 +442,11 @@ def download_youtube_video(
             )
     opts.update(pace_opts(pace))
 
-    cookie_opts = _cookie_opts(cookies_file, extra_opts=extra_opts)
-    with _final_opts(opts, cookie_opts, extra_opts) as final:
-        with explain_rate_limit(), YoutubeDL(with_runtime_opts(final)) as ydl:
-            info = ydl.extract_info(url, download=True)
+    with (
+        explain_rate_limit(),
+        youtube_dl(opts, extra_opts=extra_opts, cookies_file=cookies_file) as ydl,
+    ):
+        info = ydl.extract_info(url, download=True)
 
     path = _resolve_output_path(info, ydl, out_dir, merge_to)
     sidecars = _collect_sidecars(
@@ -778,8 +819,6 @@ def download_youtube_playlist(
         in playlist order. Entries skipped by selection/filter or that failed
         (under ``ignoreerrors``) are omitted.
     """
-    from yt_dlp import YoutubeDL
-
     out_dir = Path(download_dir) if download_dir else default_download_dir()
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -825,12 +864,16 @@ def download_youtube_playlist(
             {"key": "FFmpegMetadata", "add_metadata": True},
         ]
 
-    cookie_opts = _cookie_opts(
-        cookies_file, cookies_from_browser=cookies_from_browser, extra_opts=extra_opts
-    )
-    with _final_opts(opts, cookie_opts, extra_opts) as final:
-        with explain_rate_limit(), YoutubeDL(with_runtime_opts(final)) as ydl:
-            info = ydl.extract_info(url, download=True)
+    with (
+        explain_rate_limit(),
+        youtube_dl(
+            opts,
+            extra_opts=extra_opts,
+            cookies_file=cookies_file,
+            cookies_from_browser=cookies_from_browser,
+        ) as ydl,
+    ):
+        info = ydl.extract_info(url, download=True)
 
     results: list[DownloadResult] = []
     for entry in (info.get("entries") if info else None) or []:
