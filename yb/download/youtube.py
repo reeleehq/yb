@@ -29,7 +29,13 @@ from yb.download.ranges import (
     range_opts,
     ranged_filename_template,
 )
-from yb.download.pacing import Pace, RateLimitedError, explain_rate_limit, pace_opts
+from yb.download.pacing import (
+    BLOCK_PATTERNS,
+    Pace,
+    RateLimitedError,
+    explain_rate_limit,
+    pace_opts,
+)
 from yb.download.requirements import YT_DLP_INSTALL_HINT, with_runtime_opts
 from yb.download.warn import warn_at_caller
 
@@ -450,11 +456,12 @@ def download_youtube_video(
             options in ``extra_opts`` win over it.
         on_subtitle_error: When subtitles were asked for and only their fetch
             fails (YouTube rate-limits its captions endpoint before the video
-            one): ``"warn"`` (default) warns, retries once without subtitles
-            (even if ``extra_opts`` asks for them), and records the reason in
+            one): ``"warn"`` (default) warns, processes the video again without
+            subtitles (even if ``extra_opts`` asks for them; the formats chosen
+            are kept, nothing is extracted twice), and records the reason in
             ``result.subtitles_error``; ``"raise"`` propagates the error (a
             :class:`~yb.download.RateLimitedError` for a 429, saying only the
-            subtitles were refused). Playlist downloads are not covered.
+            subtitles were refused). See :func:`install_subtitle_fallback`.
 
     Returns:
         A :class:`DownloadResult` with the media path, trimmed ``info``, and any
@@ -498,13 +505,13 @@ def download_youtube_video(
             )
     opts.update(pace_opts(pace))
 
-    ydl, info, subtitles_error = _download_with_subtitle_fallback(
-        url,
-        opts,
-        extra_opts=extra_opts,
-        cookies_file=cookies_file,
-        on_subtitle_error=on_subtitle_error,
-    )
+    with (
+        explain_rate_limit(),
+        youtube_dl(opts, extra_opts=extra_opts, cookies_file=cookies_file) as ydl,
+    ):
+        failures = install_subtitle_fallback(ydl, on_subtitle_error=on_subtitle_error)
+        info = ydl.extract_info(url, download=True)
+    subtitles_error = failures[0].error if failures else None
     path = resolve_output_path(info, ydl, out_dir, merge_to)
     sidecars = _collect_sidecars(
         info,
@@ -520,45 +527,6 @@ def download_youtube_video(
     return DownloadResult(
         path=path, info=trimmed, sidecars=sidecars, subtitles_error=subtitles_error
     )
-
-
-def _download_with_subtitle_fallback(
-    url: str,
-    opts: dict[str, Any],
-    *,
-    extra_opts: dict | None,
-    cookies_file: CookiesFile,
-    on_subtitle_error: OnSubtitleError,
-) -> tuple[Any, dict, str | None]:
-    """``(ydl, info, subtitles_error)``: download, retrying once without subtitles.
-
-    The retry applies only when the failure was the subtitle fetch, and turns
-    subtitles off in ``extra_opts`` too (merged last, it would turn them back on).
-    """
-
-    def fetch(base: dict[str, Any], extra: dict | None):
-        with (
-            explain_rate_limit(),
-            youtube_dl(base, extra_opts=extra, cookies_file=cookies_file) as ydl,
-        ):
-            return ydl, ydl.extract_info(url, download=True)
-
-    try:
-        return (*fetch(opts, extra_opts), None)
-    except Exception as exc:
-        subtitles_error = _subtitle_failure(exc)
-        if subtitles_error is None:
-            raise
-        if on_subtitle_error == "raise":
-            if isinstance(exc, RateLimitedError):
-                raise RateLimitedError(
-                    f"Only the subtitles were refused ({subtitles_error}); "
-                    "on_subtitle_error='warn' downloads the video without them."
-                ) from exc
-            raise
-        warn_at_caller(f"Downloading without subtitles: {subtitles_error}")
-    off = dict.fromkeys(_SUBTITLE_OPT_KEYS, False)
-    return (*fetch({**opts, **off}, {**(extra_opts or {}), **off}), subtitles_error)
 
 
 def _subtitle_failure(exc: BaseException) -> str | None:
@@ -1071,9 +1039,9 @@ def download_youtube_playlist(
             ``--embed-metadata``; needs ffmpeg).
         on_subtitle_error: When only an item's subtitle fetch fails (yt-dlp
             would otherwise drop the item): ``"warn"`` (default) warns and
-            downloads those items again without subtitles, in a second pass
-            (their results carry ``subtitles_error``); ``"raise"`` raises
-            :class:`PlaylistSubtitleError` after the pass, carrying the items
+            downloads that item without subtitles, in place (its result carries
+            ``subtitles_error``); ``"raise"`` skips it and raises
+            :class:`PlaylistSubtitleError` after the run, carrying the items
             that did download.
 
     Audio only: pass ``fmt="bestaudio/best", merge_to=None`` (keeps the source
@@ -1135,63 +1103,48 @@ def download_youtube_playlist(
             {"key": "FFmpegMetadata", "add_metadata": True},
         ]
 
-    def run(base: dict[str, Any], extra: dict | None):
-        """One pass: ``[(playlist_index, DownloadResult)]`` and the subtitle failures."""
-        with (
-            explain_rate_limit(),
-            youtube_dl(
-                base,
-                extra_opts=extra,
-                cookies_file=cookies_file,
-                cookies_from_browser=cookies_from_browser,
-            ) as ydl,
-        ):
-            failures = _record_subtitle_failures(ydl)
-            info = ydl.extract_info(url, download=True)
-        rows = []
-        for entry in (info.get("entries") if info else None) or []:
-            if not entry:
-                continue  # selection/filter skipped it, or it failed under ignoreerrors
-            path = resolve_output_path(entry, ydl, out_dir, merge_to)
-            sidecars = _collect_sidecars(
-                entry,
-                path,
-                info_json=write_info_json,
-                thumbnail=write_thumbnail,
-                description=write_description,
-                subtitles=write_subtitles or write_auto_subtitles,
-            )
-            result = DownloadResult(path=path, info=trim_info(entry), sidecars=sidecars)
-            rows.append((entry.get("playlist_index"), result))
-        return rows, failures
+    with (
+        explain_rate_limit(),
+        youtube_dl(
+            opts,
+            extra_opts=extra_opts,
+            cookies_file=cookies_file,
+            cookies_from_browser=cookies_from_browser,
+        ) as ydl,
+    ):
+        failures = install_subtitle_fallback(ydl, on_subtitle_error=on_subtitle_error)
+        info = ydl.extract_info(url, download=True)
 
-    rows, failures = run(opts, extra_opts)
-    if failures and on_subtitle_error == "raise":
-        raise PlaylistSubtitleError([r for _, r in rows], failures)
-    if failures:
-        warn_at_caller(
-            f"Downloading {len(failures)} item(s) again without subtitles: "
-            + _describe_failures(failures)
+    errors = {f.video_id: f.error for f in failures}
+    results: list[DownloadResult] = []
+    for entry in (info.get("entries") if info else None) or []:
+        if not entry:
+            continue  # selection/filter skipped it, or it failed under ignoreerrors
+        path = resolve_output_path(entry, ydl, out_dir, merge_to)
+        sidecars = _collect_sidecars(
+            entry,
+            path,
+            info_json=write_info_json,
+            thumbnail=write_thumbnail,
+            description=write_description,
+            subtitles=write_subtitles or write_auto_subtitles,
         )
-        off = dict.fromkeys(_SUBTITLE_OPT_KEYS, False)
-        retry = {
-            **opts,
-            **off,
-            "playlist_items": ",".join(str(f.index) for f in failures),
-        }
-        errors = {f.index: f.error for f in failures}
-        again, _ = run(retry, {**(extra_opts or {}), **off})
-        for index, result in again:
-            result.subtitles_error = errors.get(index)
-        rows = sorted([*rows, *again], key=lambda row: row[0] or 0)
-    return [result for _, result in rows]
+        result = DownloadResult(
+            path=path,
+            info=trim_info(entry),
+            sidecars=sidecars,
+            subtitles_error=errors.get(entry.get("id")),
+        )
+        results.append(result)
+    if failures and on_subtitle_error == "raise":
+        raise PlaylistSubtitleError(results, failures)
+    return results
 
 
 @dataclass(frozen=True)
 class SubtitleFailure:
-    """A playlist item whose subtitle fetch failed (so yt-dlp skipped the item)."""
+    """An item whose subtitle fetch failed (see :func:`install_subtitle_fallback`)."""
 
-    index: int
     video_id: str
     error: str
 
@@ -1216,29 +1169,49 @@ def _describe_failures(failures: list[SubtitleFailure]) -> str:
     return "; ".join(f"{f.video_id}: {f.error}" for f in failures)
 
 
-def _record_subtitle_failures(ydl: Any) -> list[SubtitleFailure]:
-    """A list that fills with the items whose subtitle fetch fails in ``ydl``.
+def install_subtitle_fallback(
+    ydl: Any, *, on_subtitle_error: OnSubtitleError
+) -> list[SubtitleFailure]:
+    """Make ``ydl`` survive a failed subtitle fetch; returns the failures as they happen.
 
-    Under ``ignoreerrors`` yt-dlp reports the error without the item's id and
-    returns no entry, so the item is identified here, where it is processed;
-    the error is re-raised unchanged so yt-dlp behaves as before.
+    Wraps ``ydl.process_info`` (called once per video, with the formats already
+    chosen), so the retry happens in place: same item, same filename and order,
+    no second extraction. On a failure of the subtitle fetch only:
+
+    - ``"warn"``: warn, then process the item again with subtitles off;
+    - ``"raise"``: re-raise (a 429 as :class:`~yb.download.RateLimitedError`
+      saying only the subtitles were refused). Under ``ignoreerrors`` yt-dlp
+      then skips the item, which the recorded failure still names.
     """
     failures: list[SubtitleFailure] = []
     process_info = getattr(ydl, "process_info", None)
-    if process_info is None:  # not a YoutubeDL (a fake), or yt-dlp renamed it
+    if process_info is None:  # a test fake without one
         return failures
 
-    def recording(info_dict):
+    def with_fallback(info_dict):
         try:
             return process_info(info_dict)
         except Exception as exc:
             error = _subtitle_failure(exc)
-            index = info_dict.get("playlist_index")
-            if error and isinstance(index, int):
-                failures.append(SubtitleFailure(index, info_dict.get("id", ""), error))
-            raise
+            if error is None:
+                raise
+            failures.append(SubtitleFailure(info_dict.get("id") or "", error))
+            if on_subtitle_error == "raise":
+                if BLOCK_PATTERNS.search(error):
+                    raise RateLimitedError(
+                        f"Only the subtitles were refused ({error}); "
+                        "on_subtitle_error='warn' downloads the video without them."
+                    ) from exc
+                raise
+        warn_at_caller(f"Downloading without subtitles: {error}")
+        saved = {key: ydl.params.get(key) for key in _SUBTITLE_OPT_KEYS}
+        ydl.params.update(dict.fromkeys(_SUBTITLE_OPT_KEYS, False))
+        try:
+            return process_info(info_dict)
+        finally:
+            ydl.params.update(saved)
 
-    ydl.process_info = recording
+    ydl.process_info = with_fallback
     return failures
 
 

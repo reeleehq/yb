@@ -27,6 +27,7 @@ PAGE = b"""<html><head><title>P</title></head><body>
 class _Captions429(http.server.BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
     refused = "/a.vtt"
+    page_hits = 0
 
     def log_message(self, *args):
         pass
@@ -40,6 +41,7 @@ class _Captions429(http.server.BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == "/page.html":
+            type(self).page_hits += 1
             self._send(200, PAGE, "text/html")
         elif self.path.endswith(".mp4"):
             self._send(200, b"\0" * 1000, "video/mp4")
@@ -52,14 +54,15 @@ class _Captions429(http.server.BaseHTTPRequestHandler):
 
 
 @pytest.fixture
-def page():
+def page(monkeypatch):
+    monkeypatch.setattr(_Captions429, "page_hits", 0)
     server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), _Captions429)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     yield f"http://127.0.0.1:{server.server_port}/page.html"
     server.shutdown()
 
 
-def get(page, tmp_path, **kw):
+def get(page, tmp_path, *, extra_opts=None, **kw):
     return download_youtube_playlist(
         page,
         download_dir=tmp_path,
@@ -68,13 +71,13 @@ def get(page, tmp_path, **kw):
         write_info_json=False,
         write_subtitles=True,
         cookies_file=False,
-        extra_opts={"noprogress": True},
+        extra_opts={"noprogress": True, **(extra_opts or {})},
         **kw,
     )
 
 
 def test_an_item_whose_subtitles_fail_is_downloaded_again_without_them(page, tmp_path):
-    with pytest.warns(UserWarning, match="again without subtitles") as w:
+    with pytest.warns(UserWarning, match="without subtitles") as w:
         results = get(page, tmp_path)
     assert w[0].filename == __file__
     assert [r.video_id for r in results] == ["page-1", "page-2"]  # playlist order
@@ -82,6 +85,38 @@ def test_an_item_whose_subtitles_fail_is_downloaded_again_without_them(page, tmp
     assert first.path.exists() and "HTTP Error 429" in first.subtitles_error
     assert not first.sidecars.get("subtitles")
     assert second.subtitles_error is None and second.sidecars["subtitles"]
+    assert _Captions429.page_hits == 1  # retried in place, not re-extracted
+
+
+@pytest.mark.parametrize(
+    "kw,expected",
+    [
+        ({"skip_first": True}, [("page-2", True)]),
+        ({"extra_opts": {"playlist_items": "2"}}, [("page-2", True)]),
+        (
+            {"filename_template": "%(playlist_autonumber)s.%(ext)s"},
+            [("page-1", False), ("page-2", True)],
+        ),
+        ({"item_folders": True}, [("page-1", False), ("page-2", True)]),
+    ],
+)
+def test_the_retry_keeps_the_selection_and_the_names(
+    page, tmp_path, monkeypatch, kw, expected
+):
+    monkeypatch.setattr(_Captions429, "refused", "/b.vtt")
+    with pytest.warns(UserWarning, match="without subtitles"):
+        results = get(page, tmp_path, **kw)
+    assert [(r.video_id, bool(r.subtitles_error)) for r in results] == expected
+    assert len({r.path for r in results}) == len(results)
+    assert all(r.path.exists() for r in results)
+
+
+def test_order_is_kept_with_a_retry(page, tmp_path):
+    with pytest.warns(UserWarning):
+        results = get(
+            page, tmp_path, extra_opts={"noprogress": True, "playlistreverse": True}
+        )
+    assert [r.video_id for r in results] == ["page-2", "page-1"]
 
 
 def test_raise_reports_the_failed_items_and_keeps_the_rest(page, tmp_path):
@@ -90,14 +125,15 @@ def test_raise_reports_the_failed_items_and_keeps_the_rest(page, tmp_path):
     assert [r.video_id for r in got.value.results] == ["page-2"]
     (failure,) = got.value.failures
     assert isinstance(failure, SubtitleFailure)
-    assert (failure.index, failure.video_id) == (1, "page-1")
+    assert failure.video_id == "page-1" and "HTTP Error 429" in failure.error
     assert not (tmp_path / "P (1) (page-1).mp4").exists()
 
 
-def test_no_failure_no_second_pass(page, tmp_path, monkeypatch):
+def test_no_failure_no_subtitles_error(page, tmp_path, monkeypatch):
     monkeypatch.setattr(_Captions429, "refused", "/none")
     results = get(page, tmp_path)
     assert [r.subtitles_error for r in results] == [None, None]
+    assert _Captions429.page_hits == 1
 
 
 def test_unknown_policy_fails_before_any_request(tmp_path):
