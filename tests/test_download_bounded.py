@@ -1,6 +1,7 @@
 """``download_audio_bounded``: the policy, with yt-dlp calls faked (no network)."""
 
 import functools
+import itertools
 import http.server
 import threading
 import types
@@ -13,6 +14,7 @@ pytest.importorskip("yt_dlp")  # the pinned match_filter is built by yt-dlp
 from yb.download import (  # noqa: E402
     AudioLimitError,
     AudioSourceError,
+    AudioTargetError,
     COPYRIGHT_NOTICE,
     RateLimitedError,
     download_audio_bounded,
@@ -80,7 +82,7 @@ def fakes(monkeypatch, tmp_path):
                 "requested_downloads": [{"filepath": str(work / "Song (id).webm")}],
             }
 
-    monkeypatch.setattr(bounded, "_youtube_dl_cls", lambda: FakeYDL)
+    monkeypatch.setattr(bounded, "youtube_dl_cls", lambda: FakeYDL)
     monkeypatch.setattr(ytdl, "with_runtime_opts", lambda opts: opts)
     return seen
 
@@ -152,7 +154,7 @@ def test_unknown_size_stream_is_cut_at_max_bytes(fakes, tmp_path):
 
 
 def test_wall_clock_deadline_aborts(fakes, tmp_path, monkeypatch):
-    ticks = iter([0.0, 0.0, 5.0, 11.0, 11.0])  # start, page, media, chunk...
+    ticks = itertools.chain([0.0, 0.0, 5.0], itertools.repeat(11.0))
     monkeypatch.setattr(
         bounded, "time", types.SimpleNamespace(monotonic=lambda: next(ticks))
     )
@@ -179,6 +181,35 @@ def test_ytdlp_errors_are_typed(fakes, tmp_path, message, expected):
 
 def test_source_errors_are_value_errors():
     assert issubclass(AudioSourceError, ValueError)
+
+
+def test_a_refusal_is_an_audio_target_error(fakes, tmp_path):
+    def refuse(url):
+        raise ValueError("no")
+
+    with pytest.raises(AudioTargetError, match="no"):
+        run(tmp_path, validate_target=refuse)
+
+
+def test_an_extractor_value_error_is_a_source_error_not_unwrapped(fakes, tmp_path):
+    """yt-dlp records the cause of e.g. a malformed page's JSON; it is not ours."""
+    import json
+
+    from yt_dlp.utils import DownloadError
+
+    try:
+        json.loads("{")
+    except ValueError as exc:
+        cause = exc
+    fakes["raise"] = DownloadError("bad page", exc_info=(type(cause), cause, None))
+    with pytest.raises(AudioSourceError, match="bad page"):
+        run(tmp_path)
+
+
+def test_a_logger_is_a_deployment_option(fakes, tmp_path):
+    log = object()
+    run(tmp_path, extra_opts={"logger": log})
+    assert fakes["opts"]["logger"] is log
 
 
 def test_a_refusal_wrapped_by_ytdlp_is_unwrapped(fakes, tmp_path):
@@ -273,17 +304,10 @@ def test_pinned_opts_are_single_bounded_nonlive_mp3(fakes, tmp_path):
     assert opts["playlist_items"] == "1" and opts["keepvideo"] is False
     assert opts["postprocessors"][0]["preferredcodec"] == "mp3"
     assert opts["http_headers"] == {"X": "1"}  # deployment options pass through
-    assert callable(opts["match_filter"])
-
-
-def test_match_filter_rejects_long_and_live_but_not_unknown_duration(fakes, tmp_path):
-    run(tmp_path, max_duration_s=100)
-    flt = fakes["opts"]["match_filter"]
-    ok = {"id": "a", "title": "t", "duration": 99}
-    assert flt(ok, incomplete=False) is None
-    assert flt({**ok, "duration": 101}, incomplete=False) is not None
-    assert flt({**ok, "is_live": True}, incomplete=False) is not None
-    assert flt({"id": "a", "title": "t"}, incomplete=False) is None
+    assert "match_filter" not in opts  # _check_preview is the one duration check
+    assert opts["no_warnings"] and "m3u8'" not in opts["format"].replace(
+        "m3u8_native", ""
+    )
 
 
 @pytest.mark.parametrize(
@@ -439,7 +463,64 @@ def test_ffmpeg_fallback_may_only_read_local_files():
     from yt_dlp import YoutubeDL
     from yt_dlp.downloader.external import FFmpegFD
 
-    opts = bounded._pinned_opts(Path("w"), max_bytes=1, max_duration_s=1, deadline=0.0)
+    opts = bounded._pinned_opts(Path("w"), max_bytes=1, deadline=0.0)
     ydl = YoutubeDL({"external_downloader_args": opts["external_downloader_args"]})
     fd = FFmpegFD(ydl, ydl.params)
     assert fd._configuration_args(("_i1", "_i")) == ["-protocol_whitelist", "file"]
+
+
+def test_real_ytdlp_bounds_a_fragmented_hls_source(tmp_path):
+    """HLS (native, fragment by fragment): every fragment URL is checked, the byte
+    cap holds across fragments, and a source under the caps comes out as mp3."""
+    import shutil
+    import subprocess
+
+    if not shutil.which("ffmpeg"):
+        pytest.skip("ffmpeg is not installed")
+    served = tmp_path / "srv"
+    served.mkdir()
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=duration=6",
+            "-c:a",
+            "aac",
+            "-f",
+            "hls",
+            "-hls_time",
+            "1",
+            "-hls_list_size",
+            "0",
+            "-hls_segment_filename",
+            str(served / "seg%03d.ts"),
+            str(served / "a.m3u8"),
+        ],
+        capture_output=True,
+        check=True,
+    )
+    segments = sorted(served.glob("seg*.ts"))
+    total = sum(p.stat().st_size for p in segments)
+    handler = functools.partial(
+        http.server.SimpleHTTPRequestHandler, directory=str(served)
+    )
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    url = f"http://127.0.0.1:{server.server_port}/a.m3u8"
+    seen = []
+    try:
+        with pytest.raises(AudioLimitError, match="byte limit"):
+            download_audio_bounded(
+                url, download_dir=tmp_path / "capped", max_bytes=total // 3
+            )
+        assert leftovers(tmp_path / "capped") == []
+        got = download_audio_bounded(
+            url, download_dir=tmp_path / "ok", validate_target=seen.append
+        )
+    finally:
+        server.shutdown()
+    assert got.path.suffix == ".mp3" and got.path.stat().st_size > 0
+    assert {p.name for p in segments} <= {u.rsplit("/", 1)[-1] for u in seen}

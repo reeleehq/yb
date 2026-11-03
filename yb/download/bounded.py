@@ -33,9 +33,9 @@ from yb.download.pacing import explain_rate_limit
 from yb.download.youtube import (
     CookiesFile,
     PathLike,
-    _resolve_output_path,
-    _trim_info,
-    _youtube_dl_cls,
+    resolve_output_path,
+    trim_info,
+    youtube_dl_cls,
     youtube_dl,
 )
 
@@ -51,9 +51,9 @@ DEFAULT_MAX_DURATION_S = 45 * 60
 DEFAULT_TIMEOUT_S = 10 * 60
 
 #: Media protocols whose bytes yt-dlp fetches itself (through the request guard).
-#: Others (rtmp, rtsp, ...) are handed to an external program that the guard
-#: cannot see, so their formats are never selected.
-GUARDED_PROTOCOLS = ("https", "http", "m3u8_native", "m3u8", "http_dash_segments")
+#: Others (rtmp, rtsp, ffmpeg-only ``m3u8``, ...) are handed to an external
+#: program that the guard cannot see, so their formats are never selected.
+GUARDED_PROTOCOLS = ("https", "http", "m3u8_native", "http_dash_segments")
 
 #: Output codec and quality handed to yt-dlp's audio extractor.
 AUDIO_CODEC = "mp3"
@@ -79,6 +79,7 @@ DEPLOYMENT_OPT_KEYS = frozenset(
         "source_address",
         "js_runtimes",
         "remote_components",
+        "logger",
     }
 )
 
@@ -97,6 +98,20 @@ class AudioLimitError(ValueError):
 
 class AudioSourceError(ValueError):
     """yt-dlp could not get audio from the link (unsupported, unavailable, ...)."""
+
+
+class AudioTargetError(ValueError):
+    """``validate_target`` refused a URL: the link, or one yt-dlp was about to fetch."""
+
+
+def _validated(validate: TargetValidator, url: str) -> None:
+    """Run ``validate`` on ``url``; its ``ValueError`` becomes an :class:`AudioTargetError`."""
+    try:
+        validate(url)
+    except AudioTargetError:
+        raise
+    except ValueError as exc:
+        raise AudioTargetError(str(exc)) from exc
 
 
 def require_http_url(url: str) -> None:
@@ -147,14 +162,11 @@ def _format_selector(protocols: tuple[str, ...]) -> str:
     return f"bestaudio{only}/best{only}"
 
 
-def _pinned_opts(
-    work: Path, *, max_bytes: int, max_duration_s: float, deadline: float
-) -> dict[str, Any]:
+def _pinned_opts(work: Path, *, max_bytes: int, deadline: float) -> dict[str, Any]:
     """Everything that makes this one bounded, single, non-live mp3 download."""
-    from yt_dlp.utils import match_filter_func
-
     return {
         "quiet": True,
+        "no_warnings": True,  # untrusted links must not fill a service's stderr
         "noprogress": True,
         "format": _format_selector(GUARDED_PROTOCOLS),
         "outtmpl": str(work / "%(title)s (%(id)s).%(ext)s"),
@@ -166,11 +178,6 @@ def _pinned_opts(
         "noplaylist": True,
         "playlist_items": "1",
         "keepvideo": False,
-        # `<=?` lets a source with no reported duration through; `!is_live` and
-        # the byte cap bound it.
-        "match_filter": match_filter_func(
-            f"duration <=? {max_duration_s} & !is_live & !is_upcoming"
-        ),
         "postprocessors": [
             {
                 "key": "FFmpegExtractAudio",
@@ -207,18 +214,20 @@ def _guard_requests(ydl: Any, validate: TargetValidator, deadline: float) -> Non
     Extractors and yt-dlp's own downloaders all go through ``ydl.urlopen``, so
     wrapping it covers every hop, not only the link the caller passed. The URL a
     response ends at (after redirects, which the HTTP layer follows itself) is
-    checked too, so a redirect into a refused host never yields its content.
+    checked too, so a redirect into a refused host never yields its content
+    (the HTTP layer follows redirects itself, so the hops before the last are
+    requested unchecked: a blind request, never a returned body).
     """
     urlopen = ydl.urlopen
 
     def guarded(req):
         _check_deadline(deadline)
-        validate(req if isinstance(req, str) else req.url)
+        _validated(validate, req if isinstance(req, str) else req.url)
         response = urlopen(req)
         final = getattr(response, "url", None)
         if final:
             try:
-                validate(final)
+                _validated(validate, final)
             except BaseException:
                 response.close()
                 raise
@@ -258,8 +267,9 @@ def _typed_errors() -> Iterator[None]:
     """Our own refusals pass through; any other yt-dlp error is an :class:`AudioSourceError`.
 
     yt-dlp sometimes wraps an exception raised in a hook or the request guard in
-    its own ``DownloadError``; the original is unwrapped so the caller sees the
-    refusal (``ValueError`` from ``validate_target``, :class:`AudioLimitError`).
+    its own ``DownloadError``; only *our* refusals (:class:`AudioTargetError`,
+    :class:`AudioLimitError`) are unwrapped. Any other cause, such as an
+    extractor's own ``ValueError`` on a malformed page, is a source error.
     """
     from yt_dlp.utils import YoutubeDLError
 
@@ -267,7 +277,7 @@ def _typed_errors() -> Iterator[None]:
         yield
     except YoutubeDLError as exc:
         cause = (getattr(exc, "exc_info", None) or (None, None))[1]
-        if isinstance(cause, ValueError):
+        if isinstance(cause, (AudioTargetError, AudioLimitError)):
             raise cause from exc
         raise AudioSourceError(str(exc)) from exc
 
@@ -309,9 +319,10 @@ def download_audio_bounded(
             socket timeout).
         validate_target: Raises ``ValueError`` to refuse a URL; see
             :func:`require_http_url`. Applied to every URL yt-dlp requests. Not
-            an egress sandbox: a redirect is followed by the HTTP layer before
-            its target can be checked (its content is then refused), and the
-            check sees a URL, not the address its host resolves to.
+            an egress sandbox: redirects are followed by the HTTP layer, so only
+            where a chain ends is checked (its content is then refused; the hops
+            in between are requested blind), and the check sees a URL, not the
+            address its host resolves to.
         extra_opts: Deployment yt-dlp options, restricted to
             :data:`DEPLOYMENT_OPT_KEYS` (credentials, cookies, proxy); anything
             else raises, so no option can widen a cap or redirect the output.
@@ -324,27 +335,26 @@ def download_audio_bounded(
     Raises:
         ImportError: yt-dlp is not installed (with the install command), raised
             before any network.
-        ValueError: ``validate_target`` refused a URL, a cap is not positive, or
-            ``extra_opts`` has a key outside :data:`DEPLOYMENT_OPT_KEYS`.
+        AudioTargetError: ``validate_target`` refused a URL (a ``ValueError``).
+        ValueError: A cap is not positive, or ``extra_opts`` has a key outside
+            :data:`DEPLOYMENT_OPT_KEYS`.
         AudioLimitError: Playlist, live stream, too long, too large, or too slow.
         AudioSourceError: yt-dlp could not get audio from the link.
         RateLimitedError: The source is rate-limiting or bot-checking this
             client (a ``RuntimeError``: retry later, the link may be fine).
     """
-    ydl_cls = _youtube_dl_cls()  # ImportError with the install hint, up front
+    ydl_cls = youtube_dl_cls()  # ImportError with the install hint, up front
     if max_bytes <= 0 or max_duration_s <= 0 or timeout_s <= 0:
         raise ValueError("max_bytes, max_duration_s and timeout_s must be positive")
     deployment_opts = _check_deployment_opts(extra_opts or {})
-    validate_target(url)
+    _validated(validate_target, url)
     deadline = time.monotonic() + timeout_s
 
     out_dir = Path(download_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     work = Path(tempfile.mkdtemp(prefix=".yb-audio-", dir=out_dir))
     try:
-        opts = _pinned_opts(
-            work, max_bytes=max_bytes, max_duration_s=max_duration_s, deadline=deadline
-        )
+        opts = _pinned_opts(work, max_bytes=max_bytes, deadline=deadline)
         with (
             youtube_dl(
                 opts,
@@ -359,7 +369,7 @@ def download_audio_bounded(
             preview = ydl.extract_info(url, download=False)
             _check_preview(preview, max_duration_s=max_duration_s)
             info = ydl.process_ie_result(preview, download=True)
-            path = _mp3_path(_resolve_output_path(info, ydl, work, None))
+            path = _mp3_path(resolve_output_path(info, ydl, work, None))
         if path.suffix.lower() != f".{AUDIO_CODEC}" or not path.is_file():
             raise AudioLimitError(
                 "source was rejected by the limits (no audio produced)"
@@ -370,7 +380,7 @@ def download_audio_bounded(
     except BaseException:
         shutil.rmtree(work, ignore_errors=True)
         raise
-    trimmed = _trim_info(info)
+    trimmed = trim_info(info)
     return AudioDownload(
         path=path,
         title=trimmed.get("title") or path.stem,

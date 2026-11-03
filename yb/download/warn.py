@@ -30,7 +30,12 @@ def warn_at_caller(
     *,
     plumbing: tuple[str, ...] = PLUMBING_FILES,
 ) -> None:
-    """``warnings.warn`` at the first frame whose file does not start with ``plumbing``."""
+    """``warnings.warn`` at the first frame whose file does not start with ``plumbing``.
+
+    Not Python 3.12's ``skip_file_prefixes``: the floor is 3.10, and on 3.12 it
+    still attributed a warning raised under a ``contextlib`` frame to
+    ``contextlib.py`` (``tests/test_download_cookies.py`` pins the behaviour).
+    """
     frame, level = sys._getframe(1), 2
     while frame is not None and frame.f_code.co_filename.startswith(plumbing):
         frame, level = frame.f_back, level + 1

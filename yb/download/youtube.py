@@ -252,7 +252,7 @@ def _final_opts(
         Path(copy).unlink(missing_ok=True)
 
 
-def _youtube_dl_cls():
+def youtube_dl_cls():
     """``yt_dlp.YoutubeDL``, or an ``ImportError`` that says how to install it."""
     try:
         from yt_dlp import YoutubeDL
@@ -282,13 +282,13 @@ def youtube_dl(
         cookies_file: As in :func:`download_youtube_video`.
         cookies_from_browser: A browser cookie source the caller already put in
             ``base_opts`` (suppresses the default cookies file).
-        ydl_cls: What to build instead of ``yt_dlp.YoutubeDL`` (a subclass that
-            guards requests, a fake in tests).
+        ydl_cls: What to build instead of ``yt_dlp.YoutubeDL`` (a subclass, a
+            fake in tests); default :func:`youtube_dl_cls`.
 
     Raises:
         ImportError: yt-dlp is not installed (with the install command).
     """
-    cls = ydl_cls or _youtube_dl_cls()
+    cls = ydl_cls or youtube_dl_cls()
     cookie_opts = _cookie_opts(
         cookies_file, cookies_from_browser=cookies_from_browser, extra_opts=extra_opts
     )
@@ -328,7 +328,7 @@ def youtube_video_info(
         extra_opts=extra_opts,
         cookies_file=cookies_file,
     )
-    return _trim_info(info)
+    return trim_info(info)
 
 
 def download_youtube_video(
@@ -448,7 +448,7 @@ def download_youtube_video(
     ):
         info = ydl.extract_info(url, download=True)
 
-    path = _resolve_output_path(info, ydl, out_dir, merge_to)
+    path = resolve_output_path(info, ydl, out_dir, merge_to)
     sidecars = _collect_sidecars(
         info,
         path,
@@ -457,7 +457,7 @@ def download_youtube_video(
         description=write_description,
         subtitles=write_subtitles or write_auto_subtitles,
     )
-    trimmed = _trim_info(info)
+    trimmed = trim_info(info)
     if time_range and "download_ranges" not in (extra_opts or {}):
         trimmed[INFO_RANGE_KEY] = time_range.as_info()
     return DownloadResult(path=path, info=trimmed, sidecars=sidecars)
@@ -719,7 +719,7 @@ def youtube_playlist_info(
     if flat:
         entries = [_flat_playlist_entry(e) for e in raw_entries if e]
     else:
-        entries = [_trim_info(e) for e in raw_entries if e]
+        entries = [trim_info(e) for e in raw_entries if e]
     return {
         "playlist_id": (info or {}).get("id"),
         "playlist_title": (info or {}).get("title"),
@@ -879,7 +879,7 @@ def download_youtube_playlist(
     for entry in (info.get("entries") if info else None) or []:
         if not entry:
             continue  # selection/filter skipped it, or it failed under ignoreerrors
-        path = _resolve_output_path(entry, ydl, out_dir, merge_to)
+        path = resolve_output_path(entry, ydl, out_dir, merge_to)
         sidecars = _collect_sidecars(
             entry,
             path,
@@ -889,7 +889,7 @@ def download_youtube_playlist(
             subtitles=write_subtitles or write_auto_subtitles,
         )
         results.append(
-            DownloadResult(path=path, info=_trim_info(entry), sidecars=sidecars)
+            DownloadResult(path=path, info=trim_info(entry), sidecars=sidecars)
         )
     return results
 
@@ -914,7 +914,7 @@ def _reject_title_filter(substring: str):
     return _filter
 
 
-def _resolve_output_path(info, ydl, out_dir: Path, merge_to: str | None) -> Path:
+def resolve_output_path(info, ydl, out_dir: Path, merge_to: str | None) -> Path:
     """Best-effort resolution of the final media path yt-dlp produced."""
     downloads = info.get("requested_downloads")
     if downloads and downloads[0].get("filepath"):
@@ -977,7 +977,7 @@ def glob_escape(name: str) -> str:
     )
 
 
-def _trim_info(info: dict | None) -> dict[str, Any]:
+def trim_info(info: dict | None) -> dict[str, Any]:
     if not info:
         return {}
     return {k: info.get(k) for k in _INFO_FIELDS if info.get(k) is not None}

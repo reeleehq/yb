@@ -86,7 +86,7 @@ download_youtube_audio(url, audio_format="mp3")  # ...converted (needs ffmpeg)
 download_youtube_audio(url, audio_format="mp3", bitrate="320k")
 ```
 
-**Links from untrusted users.** `download_audio_bounded` is the one to call from a service: `validate_target` (your SSRF policy; the default only requires http(s)) is applied to every URL yt-dlp requests, including the media a page points at and where a redirect lands; the byte cap and the `timeout_s` wall-clock budget hold even when the size is unknown; formats needing an external downloader are never selected; no cookies are sent unless you pass `cookies_file=`. It raises `ValueError` subclasses for every refusal (`AudioLimitError`, `AudioSourceError`), `RateLimitedError` when the source pushes back, and `ImportError` (with the install command) when yt-dlp is missing.
+**Links from untrusted users.** `download_audio_bounded` is the one to call from a service: `validate_target` (your SSRF policy; the default only requires http(s)) is applied to every URL yt-dlp requests, including the media a page points at and where a redirect chain ends (the hops in between are requested blind, their content never returned); the byte cap and the `timeout_s` wall-clock budget hold even when the size is unknown; formats needing an external downloader are never selected; no cookies are sent unless you pass `cookies_file=`. It raises `ValueError` subclasses for every refusal (`AudioTargetError`, `AudioLimitError`, `AudioSourceError`), `RateLimitedError` when the source pushes back, and `ImportError` (with the install command) when yt-dlp is missing.
 
 The destination defaults to `$YB_DOWNLOAD_DIR` (else `~/Downloads`). Every knob
 — format, filename template, which sidecar metadata to also save — is
