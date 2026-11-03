@@ -101,3 +101,85 @@ def test_playlist_flat_rows_share_the_url_rule_but_never_invent_one(fake_ydl):
         # no URL of its own: stays None (no made-up YouTube link)
         {"id": "c3", "title": None, "webpage_url": None, "duration": None},
     ]  # `{}` and `None` entries are skipped
+
+
+def _hits(*durations):
+    return {
+        "entries": [
+            {"id": f"v{i}", "title": f"T{i}", "duration": d, "view_count": i * 10}
+            for i, d in enumerate(durations)
+        ]
+    }
+
+
+def test_creative_commons_searches_the_filtered_results_page(fake_ydl):
+    from urllib.parse import parse_qs, urlparse
+
+    fake_ydl["result"] = _hits(60)
+    search_youtube("C# & F+ é 日本 #tag", limit=20, creative_commons=True)
+    url = urlparse(fake_ydl["query"])
+    assert f"{url.scheme}://{url.netloc}{url.path}" == ytdl.SEARCH_RESULTS_URL
+    assert parse_qs(url.query) == {
+        "search_query": ["C# & F+ é 日本 #tag"],
+        "sp": [ytdl.CREATIVE_COMMONS_SP],
+    }
+    assert fake_ydl["opts"]["playlistend"] == 20
+    assert fake_ydl["opts"]["extract_flat"] is True
+
+
+def test_results_page_never_returns_more_than_limit(fake_ydl):
+    fake_ydl["result"] = _hits(*[60] * 30)
+    assert len(search_youtube("x", limit=3, creative_commons=True)) == 3
+
+
+def test_duration_bounds_are_inclusive_and_drop_unknown(fake_ydl):
+    fake_ydl["result"] = _hits(44, 45, 900, 901, None)
+    hits = search_youtube("x", limit=5, min_s=45, max_s=900)
+    assert [h.duration for h in hits] == [45, 900]
+    assert fake_ydl["query"] == "ytsearch5:x"  # no YouTube filter: plain search
+
+
+def test_one_bound_alone(fake_ydl):
+    fake_ydl["result"] = _hits(10, 100, None)
+    assert [h.duration for h in search_youtube("x", min_s=50)] == [100]
+    assert [h.duration for h in search_youtube("x", max_s=50)] == [10]
+
+
+def test_no_bound_keeps_unknown_durations(fake_ydl):
+    fake_ydl["result"] = _hits(None)
+    assert [h.duration for h in search_youtube("x")] == [None]
+
+
+def test_view_count_is_carried(fake_ydl):
+    fake_ydl["result"] = _hits(5, 6)
+    assert [h.view_count for h in search_youtube("x")] == [0, 10]
+
+
+def test_inverted_bounds_fail_before_any_request(fake_ydl):
+    with pytest.raises(ValueError, match="min_s"):
+        search_youtube("x", min_s=10, max_s=5)
+    assert "query" not in fake_ydl
+
+
+def test_channel_and_playlist_rows_are_not_hits(fake_ydl):
+    fake_ydl["result"] = {
+        "entries": [
+            {
+                "ie_key": "YoutubeTab",
+                "id": "UC8butISFwT",
+                "url": "https://y/channel/UC8",
+            },
+            {"ie_key": "YoutubeTab", "id": "PLx", "url": "https://y/playlist?list=PLx"},
+            {"ie_key": "Youtube", "id": "v1", "title": "T", "duration": 60},
+        ]
+    }
+    assert [h.id for h in search_youtube("x", creative_commons=True)] == ["v1"]
+
+
+@pytest.mark.parametrize("bound", [float("nan"), float("inf"), -1, "45", True])
+def test_bad_bounds_fail_before_any_request(fake_ydl, bound):
+    with pytest.raises(ValueError, match="non-negative number"):
+        search_youtube("x", min_s=bound)
+    with pytest.raises(ValueError, match="non-negative number"):
+        search_youtube("x", max_s=bound)
+    assert "query" not in fake_ydl

@@ -68,7 +68,10 @@ from yb.download import (
 youtube_video_info(url)  # metadata only, no download
 search_youtube(
     "song name", limit=5
-)  # -> [SearchHit(id, title, duration, channel, url)]
+)  # -> [SearchHit(id, title, duration, channel, url, view_count)]
+search_youtube(
+    "house dance footwork", limit=20, creative_commons=True, min_s=45, max_s=900
+)  # YouTube's Creative Commons filter + a duration window
 download_audio_bounded(
     url, download_dir=tmp, max_bytes=..., max_duration_s=..., validate_target=...
 )  # mp3 + caps + copyright notice, for services (see below)
