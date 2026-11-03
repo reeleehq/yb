@@ -53,8 +53,9 @@ class VideoMetadata:
     contains_synthetic_media: bool | None = None
 
     def __post_init__(self):
-        self.title = self.title.strip()[:_TITLE_MAX]
-        self.description = self.description.strip()[:_DESC_MAX]
+        # rstrip after the cut, so cleaning twice (``dataclasses.replace``) is a no-op
+        self.title = self.title.strip()[:_TITLE_MAX].rstrip()
+        self.description = self.description.strip()[:_DESC_MAX].rstrip()
         self.tags = _cap_tags(self.tags, _TAGS_TOTAL_MAX)
 
     @classmethod
@@ -64,11 +65,13 @@ class VideoMetadata:
         *,
         category_id: str = CATEGORY_SCIENCE_TECH,
         with_chapters: bool = True,
+        contains_synthetic_media: bool | None = None,
     ) -> "VideoMetadata":
         """Build YouTube metadata from a platform-neutral content bundle.
 
         Embeds the chapters block into the description (when present and
         ``with_chapters``), so YouTube renders interactive chapters.
+        ``contains_synthetic_media``: see the class attribute.
         """
         description = content.description
         if with_chapters and content.chapters:
@@ -84,6 +87,7 @@ class VideoMetadata:
             category_id=category_id,
             default_language=content.language,
             default_audio_language=content.audio_language,
+            contains_synthetic_media=contains_synthetic_media,
         )
 
     def insert_body(self, *, privacy_status: str = "unlisted") -> dict:

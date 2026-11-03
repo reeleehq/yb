@@ -12,6 +12,7 @@ Two entry points:
 from __future__ import annotations
 
 from collections import Counter
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
@@ -172,6 +173,20 @@ def _maybe_add_to_playlist(
     )
 
 
+def _resolve_config(config: YbConfig | None, profile: str | None, **call) -> YbConfig:
+    """The profile's config (or ``config``), with every non-``None`` call value on top.
+
+    The precedence rule the publish paths use for these settings: the call, then
+    the config, then the built-in default (``playlist`` keeps its own sentinel,
+    since its ``None`` means "no playlist"). ``load_config(**overrides)`` applies
+    the same rule for callers that build a config themselves. (Before this, ``privacy_status`` passed alongside
+    ``config=`` was ignored, so a call asking for ``"private"`` could upload
+    with the config's ``"public"``.)
+    """
+    base = config or load_config(profile=profile)
+    return replace(base, **{k: v for k, v in call.items() if v is not None})
+
+
 def publish_content(
     content: PublicationContent,
     *,
@@ -179,6 +194,7 @@ def publish_content(
     playlist=_USE_CONFIG,
     category_id: str = CATEGORY_SCIENCE_TECH,
     with_chapters: bool = True,
+    contains_synthetic_media: bool | None = None,
     attach_caption: bool = True,
     set_thumb: bool = True,
     config: YbConfig | None = None,
@@ -203,6 +219,11 @@ def publish_content(
     ``playlist=None`` to skip the playlist for one call, or ``playlist="Name"``
     to override the target.
 
+    ``contains_synthetic_media`` sets YouTube's altered-or-synthetic content
+    disclosure (see :class:`~yb.youtube.metadata.VideoMetadata`); ``None``
+    uses the config's ``contains_synthetic_media``, else leaves it unset. The
+    Data API accepts the flag but never returns it (only Studio shows it).
+
     ``profile`` publishes as a named account/channel (own token and config
     section; see :mod:`yb.config`); ``None`` uses ``$YB_PROFILE`` or the default.
 
@@ -221,7 +242,12 @@ def publish_content(
             ``err.result`` holds the video id and what was done. Pass
             ``resume=err.result`` to finish without uploading again (yb#21).
     """
-    cfg = config or load_config(profile=profile, privacy_status=privacy_status)
+    cfg = _resolve_config(
+        config,
+        profile,
+        privacy_status=privacy_status,
+        contains_synthetic_media=contains_synthetic_media,
+    )
     privacy_status = cfg.privacy_status
     service = service or get_service(
         client_secrets_file=client_secrets_file,
@@ -232,7 +258,10 @@ def publish_content(
     if cfg.channel_id:  # refuse to upload to the wrong account's channel
         check_channel(service, cfg.channel_id)
     meta = VideoMetadata.from_content(
-        content, category_id=category_id, with_chapters=with_chapters
+        content,
+        category_id=category_id,
+        with_chapters=with_chapters,
+        contains_synthetic_media=cfg.contains_synthetic_media,
     )
     body = meta.insert_body(privacy_status=privacy_status)
 
@@ -300,6 +329,7 @@ def prepare_and_publish(
     privacy_status: str | None = None,
     playlist=_USE_CONFIG,
     category_id: str = CATEGORY_SCIENCE_TECH,
+    contains_synthetic_media: bool | None = None,
     config: YbConfig | None = None,
     client_secrets_file: PathLike | None = None,
     token_file: PathLike | None = None,
@@ -312,8 +342,8 @@ def prepare_and_publish(
     Transcribes (persisting the SRT next to the media) if needed, writes
     LLM metadata, detects chapters, renders a thumbnail, then uploads with
     captions + thumbnail + chapters and adds the video to the configured
-    playlist. ``privacy_status`` and ``playlist`` default to your ``yb`` config
-    (see :func:`publish_content`).
+    playlist. ``privacy_status``, ``playlist`` and ``contains_synthetic_media``
+    default to your ``yb`` config (see :func:`publish_content`).
 
     ``profile`` publishes as a named account/channel (own token and config
     section; see :mod:`yb.config`); ``None`` uses ``$YB_PROFILE`` or the default.
@@ -337,6 +367,7 @@ def prepare_and_publish(
         playlist=playlist,
         category_id=category_id,
         with_chapters=with_chapters,
+        contains_synthetic_media=contains_synthetic_media,
         config=config,
         client_secrets_file=client_secrets_file,
         token_file=token_file,
@@ -366,7 +397,8 @@ def publish_video(
     """Lower-level upload: explicit :class:`VideoMetadata` + caption tracks.
 
     ``privacy_status`` and ``playlist`` default to your ``yb`` config (see
-    :func:`publish_content`).
+    :func:`publish_content`), as does ``metadata.contains_synthetic_media`` when
+    it is ``None``.
 
     If a step after the upload fails, :class:`PartialPublish` is raised with
     the new video's id and what was done so far (``err.result``). Pass
@@ -378,7 +410,7 @@ def publish_video(
     ``cred_kwargs`` reach :func:`~yb.youtube.auth.get_credentials` (e.g.
     ``open_browser=False, port=8080`` for headless consent).
     """
-    cfg = config or load_config(profile=profile, privacy_status=privacy_status)
+    cfg = _resolve_config(config, profile, privacy_status=privacy_status)
     privacy_status = cfg.privacy_status
     service = service or get_service(
         client_secrets_file=client_secrets_file,
@@ -388,6 +420,13 @@ def publish_video(
     )
     if cfg.channel_id:  # refuse to upload to the wrong account's channel
         check_channel(service, cfg.channel_id)
+    if (
+        metadata.contains_synthetic_media is None
+        and cfg.contains_synthetic_media is not None
+    ):
+        metadata = replace(
+            metadata, contains_synthetic_media=cfg.contains_synthetic_media
+        )
     body = metadata.insert_body(privacy_status=privacy_status)
 
     def upload():

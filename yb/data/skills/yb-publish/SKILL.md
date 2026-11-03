@@ -75,6 +75,13 @@ result = prepare_and_publish(
 print(result["url"], result["privacy_status"])
 ```
 
+**Realistic AI-made video?** Pass `contains_synthetic_media=True` (on
+`prepare_and_publish`, `publish_content`, or `VideoMetadata` for `publish_video`),
+or set `"contains_synthetic_media": true` in the profile's config. YouTube's rule
+turns on *realism* (a viewer could mistake it for a real person, place or event),
+not on whether AI was used. The Data API accepts the flag but never returns it
+(`videos.list(part="status")` omits it), so it can only be checked in Studio.
+
 This transcribes (persisting the SRT), writes title/description/keywords (LLM),
 detects chapters, renders a thumbnail, uploads, attaches the SRT caption track,
 and sets the thumbnail. **Always set the audio language** — the caption track is

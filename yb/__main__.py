@@ -83,7 +83,7 @@ def _whoami(args: argparse.Namespace) -> int:
         cfg = load_config(profile=profile)
         service = get_service(profile=profile, interactive=False)
         channel = check_channel(service, cfg.channel_id)
-    except (ConsentRequired, WrongChannel, KeyError) as error:
+    except (ConsentRequired, WrongChannel, KeyError, ValueError, TypeError) as error:
         print(error, file=sys.stderr)
         return 1
     expected = "matches config" if cfg.channel_id else "no channel_id in config"

@@ -61,6 +61,10 @@ DEFAULT_PRIVACY_STATUS = "unlisted"
 #: only you see it — ideal for a personal "find my uploads" playlist.
 DEFAULT_PLAYLIST_PRIVACY_STATUS = "private"
 
+#: The privacy values YouTube accepts, least visible first (``supersede``'s
+#: visibility check ranks by this order).
+PRIVACY_STATUSES = ("private", "unlisted", "public")
+
 
 #: Environment variable naming the profile to use when none is passed.
 PROFILE_ENV = "YB_PROFILE"
@@ -105,6 +109,9 @@ class YbConfig:
         channel_id: Channel the token must belong to (``None`` = don't check).
         login_hint: Email of the Google account to consent with; the consent
             page preselects it (``None`` = whatever the browser is signed in as).
+        contains_synthetic_media: Default for YouTube's altered-or-synthetic
+            content disclosure on uploads (``None`` = leave it unset). A
+            channel that publishes realistic AI-made videos can set ``true``.
     """
 
     privacy_status: str = DEFAULT_PRIVACY_STATUS
@@ -113,13 +120,28 @@ class YbConfig:
     playlist_privacy_status: str = DEFAULT_PLAYLIST_PRIVACY_STATUS
     channel_id: str | None = None
     login_hint: str | None = None
+    contains_synthetic_media: bool | None = None
+
+    def __post_init__(self):
+        for name in ("privacy_status", "playlist_privacy_status"):
+            if getattr(self, name) not in PRIVACY_STATUSES:
+                raise ValueError(
+                    f"{name} must be one of {PRIVACY_STATUSES}, "
+                    f"not {getattr(self, name)!r}"
+                )
+        flag = self.contains_synthetic_media
+        if flag is not None and not isinstance(flag, bool):
+            raise TypeError(
+                "contains_synthetic_media must be true, false or null, not "
+                f"{self.contains_synthetic_media!r}"
+            )
 
     @classmethod
     def from_mapping(cls, mapping: dict | None) -> "YbConfig":
-        """Build a config from a mapping, ignoring unknown keys."""
+        """Build a config from a mapping, ignoring unknown keys; ``null`` = the default."""
         mapping = mapping or {}
         known = {f.name for f in fields(cls)}
-        return cls(**{k: v for k, v in mapping.items() if k in known})
+        return cls(**{k: v for k, v in mapping.items() if k in known and v is not None})
 
 
 def load_config(

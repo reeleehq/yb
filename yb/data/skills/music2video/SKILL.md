@@ -149,8 +149,9 @@ These are defaults, not decoration. Change them only with a reason.
 - **Upload quota is ~100 videos/day.** Since December 2025 `videos.insert` costs
   1 unit and draws on its **own** bucket (default 100 calls/day), not the shared
   10,000-unit pool. Older advice ("1600 units, ~6 uploads/day") is out of date.
-- **AI disclosure** is `status.containsSyntheticMedia` (set it via
-  `VideoMetadata(contains_synthetic_media=True)`). The trigger is *realism*, not
+- **AI disclosure** is `status.containsSyntheticMedia` (set it with
+  `contains_synthetic_media=True` on `publish_music` / `publish_folder`, or per
+  profile in the config; `False` overrides a profile default). The trigger is *realism*, not
   "was AI involved": it applies to content a viewer could mistake for a real
   person/place/event. Stylised AI artwork or a visualizer does **not** require it.
 - Until your Google Cloud project passes YouTube's API audit, uploads may be
