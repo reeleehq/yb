@@ -39,11 +39,12 @@ OnConvertError = Literal["raise", "warn"]
 _ON_CONVERT_ERROR_CHOICES = frozenset({"raise", "warn"})
 
 #: What :func:`download_youtube_video` does when only the subtitles fail:
-#: ``"skip"`` downloads the video without them (``result.subtitles_error`` says
-#: why), ``"raise"`` propagates the error.
-OnSubtitleError = Literal["skip", "raise"]
+#: ``"warn"`` warns and downloads the video without them
+#: (``result.subtitles_error`` says why), ``"raise"`` propagates the error. The
+#: same vocabulary as :data:`OnConvertError`.
+OnSubtitleError = Literal["raise", "warn"]
 
-_ON_SUBTITLE_ERROR_CHOICES = frozenset({"skip", "raise"})
+_ON_SUBTITLE_ERROR_CHOICES = frozenset({"raise", "warn"})
 
 #: How yt-dlp's error starts when a subtitle fetch (not the video) failed.
 SUBTITLE_FAILURE_MARKER = "Unable to download video subtitles"
@@ -108,6 +109,15 @@ _INFO_FIELDS = (
 )
 
 
+def _output_dir(download_dir: PathLike | None) -> Path:
+    """``download_dir`` (default :func:`default_download_dir`), created."""
+    out_dir = (
+        Path(download_dir).expanduser() if download_dir else default_download_dir()
+    )
+    out_dir.mkdir(parents=True, exist_ok=True)
+    return out_dir
+
+
 def default_download_dir() -> Path:
     """Resolve the default download directory (``$YB_DOWNLOAD_DIR`` or ``~/Downloads``)."""
     override = os.environ.get(DOWNLOAD_DIR_ENV)
@@ -125,9 +135,10 @@ class DownloadResult:
         info: A trimmed metadata dict (see :data:`_INFO_FIELDS`).
         sidecars: Map of extra artifacts written (``info_json``, ``thumbnail``,
             ``description``, ``subtitles`` → path(s)).
-        subtitles_error: Why the requested subtitles are missing, when the video
-            was downloaded without them (``on_subtitle_error="skip"``); fetch
-            them later with :func:`download_youtube_subtitles`.
+        subtitles_error: Why some or all of the requested subtitles are missing,
+            when the video was downloaded without them
+            (``on_subtitle_error="warn"``); fetch them later with
+            :func:`download_youtube_subtitles`.
     """
 
     path: Path
@@ -368,7 +379,7 @@ def download_youtube_video(
     precise_cuts: bool = False,
     cookies_file: CookiesFile = None,
     pace: Pace | str | None = None,
-    on_subtitle_error: OnSubtitleError = "skip",
+    on_subtitle_error: OnSubtitleError = "warn",
 ) -> DownloadResult:
     """Download a YouTube video to ``download_dir`` (default ``~/Downloads``).
 
@@ -421,10 +432,11 @@ def download_youtube_video(
             options in ``extra_opts`` win over it.
         on_subtitle_error: When subtitles were asked for and only their fetch
             fails (YouTube rate-limits its captions endpoint before the video
-            one): ``"skip"`` (default) retries once without subtitles, warns,
-            and records the reason in ``result.subtitles_error``; ``"raise"``
-            propagates the error (a :class:`~yb.download.RateLimitedError` for
-            a 429).
+            one): ``"warn"`` (default) warns, retries once without subtitles
+            (even if ``extra_opts`` asks for them), and records the reason in
+            ``result.subtitles_error``; ``"raise"`` propagates the error (a
+            :class:`~yb.download.RateLimitedError` for a 429, saying only the
+            subtitles were refused). Playlist downloads are not covered.
 
     Returns:
         A :class:`DownloadResult` with the media path, trimmed ``info``, and any
@@ -441,8 +453,7 @@ def download_youtube_video(
         raise ValueError("precise_cuts needs a start and/or end to cut at")
     _check_choice("on_subtitle_error", on_subtitle_error, _ON_SUBTITLE_ERROR_CHOICES)
 
-    out_dir = Path(download_dir) if download_dir else default_download_dir()
-    out_dir.mkdir(parents=True, exist_ok=True)
+    out_dir = _output_dir(download_dir)
 
     opts: dict[str, Any] = {
         "format": fmt,
@@ -469,25 +480,13 @@ def download_youtube_video(
             )
     opts.update(pace_opts(pace))
 
-    def fetch(final_opts: dict[str, Any]):
-        with (
-            explain_rate_limit(),
-            youtube_dl(
-                final_opts, extra_opts=extra_opts, cookies_file=cookies_file
-            ) as ydl,
-        ):
-            return ydl, ydl.extract_info(url, download=True)
-
-    subtitles_error = None
-    try:
-        ydl, info = fetch(opts)
-    except Exception as exc:
-        subtitles_error = _subtitle_failure(exc)
-        if on_subtitle_error == "raise" or subtitles_error is None:
-            raise
-        warn_at_caller(f"Downloading without subtitles: {subtitles_error}")
-        ydl, info = fetch({**opts, **dict.fromkeys(_SUBTITLE_OPT_KEYS, False)})
-
+    ydl, info, subtitles_error = _download_with_subtitle_fallback(
+        url,
+        opts,
+        extra_opts=extra_opts,
+        cookies_file=cookies_file,
+        on_subtitle_error=on_subtitle_error,
+    )
     path = resolve_output_path(info, ydl, out_dir, merge_to)
     sidecars = _collect_sidecars(
         info,
@@ -503,6 +502,45 @@ def download_youtube_video(
     return DownloadResult(
         path=path, info=trimmed, sidecars=sidecars, subtitles_error=subtitles_error
     )
+
+
+def _download_with_subtitle_fallback(
+    url: str,
+    opts: dict[str, Any],
+    *,
+    extra_opts: dict | None,
+    cookies_file: CookiesFile,
+    on_subtitle_error: OnSubtitleError,
+) -> tuple[Any, dict, str | None]:
+    """``(ydl, info, subtitles_error)``: download, retrying once without subtitles.
+
+    The retry applies only when the failure was the subtitle fetch, and turns
+    subtitles off in ``extra_opts`` too (merged last, it would turn them back on).
+    """
+
+    def fetch(base: dict[str, Any], extra: dict | None):
+        with (
+            explain_rate_limit(),
+            youtube_dl(base, extra_opts=extra, cookies_file=cookies_file) as ydl,
+        ):
+            return ydl, ydl.extract_info(url, download=True)
+
+    try:
+        return (*fetch(opts, extra_opts), None)
+    except Exception as exc:
+        subtitles_error = _subtitle_failure(exc)
+        if subtitles_error is None:
+            raise
+        if on_subtitle_error == "raise":
+            if isinstance(exc, RateLimitedError):
+                raise RateLimitedError(
+                    f"Only the subtitles were refused ({subtitles_error}); "
+                    "on_subtitle_error='warn' downloads the video without them."
+                ) from exc
+            raise
+        warn_at_caller(f"Downloading without subtitles: {subtitles_error}")
+    off = dict.fromkeys(_SUBTITLE_OPT_KEYS, False)
+    return (*fetch({**opts, **off}, {**(extra_opts or {}), **off}), subtitles_error)
 
 
 def _subtitle_failure(exc: BaseException) -> str | None:
@@ -529,12 +567,14 @@ def download_youtube_subtitles(
     subtitle_langs: tuple[str, ...] = ("en",),
     auto_subtitles: bool = True,
     filename_template: str = DEFAULT_OUTTMPL,
+    quiet: bool = True,
     extra_opts: dict | None = None,
     cookies_file: CookiesFile = None,
+    pace: Pace | str | None = None,
 ) -> list[Path]:
     """Download only a video's subtitles (no media); returns the files written.
 
-    The companion of ``on_subtitle_error="skip"``: when a video came down
+    The companion of ``on_subtitle_error="warn"``: when a video came down
     without its subtitles (``result.subtitles_error``), fetch them later into
     the same folder, named like the video so they sit beside it:
 
@@ -549,30 +589,46 @@ def download_youtube_subtitles(
         auto_subtitles: Also fetch auto-generated subtitles (default ``True``).
         filename_template: As in :func:`download_youtube_video` (the subtitle
             extension is added to it).
+        quiet: Suppress yt-dlp console output.
         extra_opts: Additional raw yt-dlp options (merged last).
         cookies_file: See :func:`download_youtube_video`.
+        pace: As in :func:`download_youtube_video`; ``"polite"`` is the usual
+            choice right after the captions endpoint answered 429.
+
+    Returns:
+        The subtitle files beside the video's name (any language, ``.vtt`` or
+        ``.srt``), including ones an earlier run left there.
 
     Raises:
         RateLimitedError: On HTTP 429 or a "confirm you're not a bot" wall.
     """
-    out_dir = Path(download_dir) if download_dir else default_download_dir()
-    out_dir.mkdir(parents=True, exist_ok=True)
+    out_dir = _output_dir(download_dir)
     opts = {
-        "quiet": True,
+        "quiet": quiet,
         "skip_download": True,
         "noplaylist": True,
         "writesubtitles": True,
         "writeautomaticsub": auto_subtitles,
         "subtitleslangs": list(subtitle_langs),
         "outtmpl": str(out_dir / filename_template),
+        **pace_opts(pace),
     }
     with (
         explain_rate_limit(),
         youtube_dl(opts, extra_opts=extra_opts, cookies_file=cookies_file) as ydl,
     ):
         info = ydl.extract_info(url, download=True)
-    written = ((info or {}).get("requested_subtitles") or {}).values()
-    return [Path(sub["filepath"]) for sub in written if sub.get("filepath")]
+    # Not requested_subtitles' `filepath`: that is the temp name under `paths`.
+    named_like = Path(ydl.prepare_filename(info or {}))
+    found = _collect_sidecars(
+        info,
+        named_like,
+        info_json=False,
+        thumbnail=False,
+        description=False,
+        subtitles=True,
+    )
+    return found.get("subtitles", [])
 
 
 def download_youtube_audio(
@@ -598,7 +654,7 @@ def download_youtube_audio(
     precise_cuts: bool = False,
     cookies_file: CookiesFile = None,
     pace: Pace | str | None = None,
-    on_subtitle_error: OnSubtitleError = "skip",
+    on_subtitle_error: OnSubtitleError = "warn",
 ) -> DownloadResult:
     """Download only a video's audio (no video stream).
 
@@ -929,8 +985,7 @@ def download_youtube_playlist(
         in playlist order. Entries skipped by selection/filter or that failed
         (under ``ignoreerrors``) are omitted.
     """
-    out_dir = Path(download_dir) if download_dir else default_download_dir()
-    out_dir.mkdir(parents=True, exist_ok=True)
+    out_dir = _output_dir(download_dir)
 
     if playlist_items is None and skip_first:
         playlist_items = "2:"

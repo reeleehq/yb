@@ -2,6 +2,7 @@
 
 import sys
 import types
+from pathlib import Path
 
 import pytest
 
@@ -36,14 +37,12 @@ class _FakeYDL:
             raise error
         info = {"id": "abc", "title": "T"}
         if self.opts.get("skip_download"):
-            info["requested_subtitles"] = {
-                "en": {"filepath": "/dl/T (abc).en.vtt"},
-                "fr": {"ext": "vtt"},  # not written
-            }
+            # yt-dlp writes subtitles beside the name the video would have
+            Path(self.prepare_filename(info)).with_suffix(".en.vtt").write_text("x")
         return info
 
     def prepare_filename(self, info):
-        return "/dl/T (abc).mp4"
+        return str(Path(self.opts["outtmpl"]).parent / "T (abc).mp4")
 
 
 @pytest.fixture
@@ -85,6 +84,22 @@ def test_a_429_on_the_captions_retries_once_without_subtitles(ydl, tmp_path):
     assert r.video_id == "abc"
 
 
+def test_the_retry_turns_subtitles_off_in_extra_opts_too(ydl, tmp_path):
+    ydl.errors = [Exception(SUBS_429)]
+    with pytest.warns(UserWarning):
+        r = get(tmp_path, extra_opts={"writesubtitles": True, "proxy": "p"})
+    assert ydl.seen[1]["writesubtitles"] is False and ydl.seen[1]["proxy"] == "p"
+    assert r.subtitles_error
+
+
+def test_another_download_error_passes_through_untouched(ydl, tmp_path):
+    error = Exception("ERROR: [youtube] abc: Video unavailable")
+    ydl.errors = [error]
+    with pytest.raises(Exception) as got:
+        get(tmp_path)
+    assert got.value is error and len(ydl.seen) == 1
+
+
 def test_any_subtitle_failure_is_skipped_not_only_a_rate_limit(ydl, tmp_path):
     ydl.errors = [
         Exception("ERROR: Unable to download video subtitles for 'en': HTTP Error 403")
@@ -93,11 +108,21 @@ def test_any_subtitle_failure_is_skipped_not_only_a_rate_limit(ydl, tmp_path):
         assert "403" in get(tmp_path).subtitles_error
 
 
-def test_required_subtitles_raise(ydl, tmp_path):
+def test_required_subtitles_raise_saying_only_the_subtitles_were_refused(ydl, tmp_path):
     ydl.errors = [Exception(SUBS_429)]
-    with pytest.raises(RateLimitedError):
+    with pytest.raises(RateLimitedError, match="Only the subtitles were refused"):
         get(tmp_path, on_subtitle_error="raise")
     assert len(ydl.seen) == 1
+
+
+def test_required_subtitles_reraise_other_subtitle_errors_as_is(ydl, tmp_path):
+    error = Exception(
+        "ERROR: Unable to download video subtitles for 'en': HTTP Error 403"
+    )
+    ydl.errors = [error]
+    with pytest.raises(Exception) as got:
+        get(tmp_path, on_subtitle_error="raise")
+    assert got.value is error
 
 
 def test_a_video_failure_is_not_retried(ydl, tmp_path):
@@ -133,7 +158,7 @@ def test_audio_passes_the_policy_through(ydl, tmp_path):
 
 def test_download_subtitles_fetches_only_subtitles(ydl, tmp_path):
     got = download_youtube_subtitles(
-        "u", download_dir=tmp_path, subtitle_langs=("en", "fr")
+        "u", download_dir=tmp_path, subtitle_langs=("en", "fr"), pace="polite"
     )
     opts = ydl.seen[0]
     assert (
@@ -141,7 +166,8 @@ def test_download_subtitles_fetches_only_subtitles(ydl, tmp_path):
     )
     assert opts["subtitleslangs"] == ["en", "fr"]
     assert opts["outtmpl"].startswith(str(tmp_path))
-    assert [p.name for p in got] == ["T (abc).en.vtt"]
+    assert opts["sleep_interval"] == 20 and opts["quiet"] is True
+    assert got == [tmp_path / "T (abc).en.vtt"]
 
 
 def test_download_subtitles_can_skip_auto(ydl, tmp_path):
