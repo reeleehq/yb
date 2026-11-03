@@ -1017,6 +1017,7 @@ def download_youtube_playlist(
     pace: Pace | str | None = None,
     item_folders: bool = False,
     embed_metadata: bool = False,
+    on_subtitle_error: OnSubtitleError = "warn",
 ) -> list[DownloadResult]:
     """Download all (or a selected subset of) a YouTube playlist's videos.
 
@@ -1068,6 +1069,12 @@ def download_youtube_playlist(
             Incompatible with a custom ``filename_template``.
         embed_metadata: Write title/artist/etc. into the media file (yt-dlp
             ``--embed-metadata``; needs ffmpeg).
+        on_subtitle_error: When only an item's subtitle fetch fails (yt-dlp
+            would otherwise drop the item): ``"warn"`` (default) warns and
+            downloads those items again without subtitles, in a second pass
+            (their results carry ``subtitles_error``); ``"raise"`` raises
+            :class:`PlaylistSubtitleError` after the pass, carrying the items
+            that did download.
 
     Audio only: pass ``fmt="bestaudio/best", merge_to=None`` (keeps the source
     stream, e.g. ``.m4a``, without re-encoding).
@@ -1075,6 +1082,8 @@ def download_youtube_playlist(
     Raises:
         RateLimitedError: On HTTP 429 or a "confirm you're not a bot" wall, with
             a backoff hint. (Per-item failures under ``ignoreerrors`` are skipped.)
+        PlaylistSubtitleError: Some items' subtitles failed and
+            ``on_subtitle_error="raise"``.
 
     Returns:
         A list of :class:`DownloadResult`, one per successfully-downloaded entry,
@@ -1083,6 +1092,7 @@ def download_youtube_playlist(
     """
     out_dir = _output_dir(download_dir)
 
+    _check_choice("on_subtitle_error", on_subtitle_error, _ON_SUBTITLE_ERROR_CHOICES)
     if playlist_items is None and skip_first:
         playlist_items = "2:"
     if item_folders:
@@ -1125,34 +1135,111 @@ def download_youtube_playlist(
             {"key": "FFmpegMetadata", "add_metadata": True},
         ]
 
-    with (
-        explain_rate_limit(),
-        youtube_dl(
-            opts,
-            extra_opts=extra_opts,
-            cookies_file=cookies_file,
-            cookies_from_browser=cookies_from_browser,
-        ) as ydl,
-    ):
-        info = ydl.extract_info(url, download=True)
+    def run(base: dict[str, Any], extra: dict | None):
+        """One pass: ``[(playlist_index, DownloadResult)]`` and the subtitle failures."""
+        with (
+            explain_rate_limit(),
+            youtube_dl(
+                base,
+                extra_opts=extra,
+                cookies_file=cookies_file,
+                cookies_from_browser=cookies_from_browser,
+            ) as ydl,
+        ):
+            failures = _record_subtitle_failures(ydl)
+            info = ydl.extract_info(url, download=True)
+        rows = []
+        for entry in (info.get("entries") if info else None) or []:
+            if not entry:
+                continue  # selection/filter skipped it, or it failed under ignoreerrors
+            path = resolve_output_path(entry, ydl, out_dir, merge_to)
+            sidecars = _collect_sidecars(
+                entry,
+                path,
+                info_json=write_info_json,
+                thumbnail=write_thumbnail,
+                description=write_description,
+                subtitles=write_subtitles or write_auto_subtitles,
+            )
+            result = DownloadResult(path=path, info=trim_info(entry), sidecars=sidecars)
+            rows.append((entry.get("playlist_index"), result))
+        return rows, failures
 
-    results: list[DownloadResult] = []
-    for entry in (info.get("entries") if info else None) or []:
-        if not entry:
-            continue  # selection/filter skipped it, or it failed under ignoreerrors
-        path = resolve_output_path(entry, ydl, out_dir, merge_to)
-        sidecars = _collect_sidecars(
-            entry,
-            path,
-            info_json=write_info_json,
-            thumbnail=write_thumbnail,
-            description=write_description,
-            subtitles=write_subtitles or write_auto_subtitles,
+    rows, failures = run(opts, extra_opts)
+    if failures and on_subtitle_error == "raise":
+        raise PlaylistSubtitleError([r for _, r in rows], failures)
+    if failures:
+        warn_at_caller(
+            f"Downloading {len(failures)} item(s) again without subtitles: "
+            + _describe_failures(failures)
         )
-        results.append(
-            DownloadResult(path=path, info=trim_info(entry), sidecars=sidecars)
+        off = dict.fromkeys(_SUBTITLE_OPT_KEYS, False)
+        retry = {
+            **opts,
+            **off,
+            "playlist_items": ",".join(str(f.index) for f in failures),
+        }
+        errors = {f.index: f.error for f in failures}
+        again, _ = run(retry, {**(extra_opts or {}), **off})
+        for index, result in again:
+            result.subtitles_error = errors.get(index)
+        rows = sorted([*rows, *again], key=lambda row: row[0] or 0)
+    return [result for _, result in rows]
+
+
+@dataclass(frozen=True)
+class SubtitleFailure:
+    """A playlist item whose subtitle fetch failed (so yt-dlp skipped the item)."""
+
+    index: int
+    video_id: str
+    error: str
+
+
+class PlaylistSubtitleError(RuntimeError):
+    """Some playlist items' subtitles failed (``on_subtitle_error="raise"``).
+
+    Attributes:
+        results: The items that did download.
+        failures: The :class:`SubtitleFailure` of each item that did not.
+    """
+
+    def __init__(self, results: list[DownloadResult], failures: list[SubtitleFailure]):
+        self.results, self.failures = results, failures
+        super().__init__(
+            f"subtitles failed for {len(failures)} item(s): "
+            + _describe_failures(failures)
         )
-    return results
+
+
+def _describe_failures(failures: list[SubtitleFailure]) -> str:
+    return "; ".join(f"{f.video_id}: {f.error}" for f in failures)
+
+
+def _record_subtitle_failures(ydl: Any) -> list[SubtitleFailure]:
+    """A list that fills with the items whose subtitle fetch fails in ``ydl``.
+
+    Under ``ignoreerrors`` yt-dlp reports the error without the item's id and
+    returns no entry, so the item is identified here, where it is processed;
+    the error is re-raised unchanged so yt-dlp behaves as before.
+    """
+    failures: list[SubtitleFailure] = []
+    process_info = getattr(ydl, "process_info", None)
+    if process_info is None:  # not a YoutubeDL (a fake), or yt-dlp renamed it
+        return failures
+
+    def recording(info_dict):
+        try:
+            return process_info(info_dict)
+        except Exception as exc:
+            error = _subtitle_failure(exc)
+            index = info_dict.get("playlist_index")
+            if error and isinstance(index, int):
+                failures.append(SubtitleFailure(index, info_dict.get("id", ""), error))
+            raise
+
+    ydl.process_info = recording
+    return failures
 
 
 def _coerce_cookies_from_browser(value: str | tuple) -> tuple:
