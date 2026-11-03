@@ -143,6 +143,7 @@ def test_metadata_cleanup_is_idempotent():
 def test_music_publish_forwards_the_flag(monkeypatch, tmp_path):
     pytest.importorskip("muvid")  # yb.music raises its own ImportError without it
     from yb.music import publish as music
+
     got = []
     monkeypatch.setattr(P, "publish_content", lambda c, **kw: got.append(kw) or {})
     video = type("MV", (), {"content": _content(tmp_path / "s.mp4")})()
@@ -157,3 +158,41 @@ def test_null_in_the_config_file_means_the_default(tmp_path):
     path.write_text('{"privacy_status": null, "contains_synthetic_media": null}')
     cfg = load_config(path)
     assert (cfg.privacy_status, cfg.contains_synthetic_media) == ("unlisted", None)
+
+
+def test_publish_folder_forwards_the_flag_and_lets_the_config_pick_privacy(
+    monkeypatch, tmp_path
+):
+    pytest.importorskip("muvid")  # yb.music raises its own ImportError without it
+    from yb.music import publish as music
+    from yb.youtube import auth
+
+    got = []
+    monkeypatch.setattr(auth, "get_service", lambda **kw: object())
+    monkeypatch.setattr(P, "publish_content", lambda c, **kw: got.append(kw) or {})
+    render = type("R", (), {"visual": "waves"})()
+    video = type(
+        "MV", (), {"content": _content(tmp_path / "s.mp4"), "render": render}
+    )()
+    music.publish_folder(
+        tmp_path, prepared=[video], contains_synthetic_media=False, progress=False
+    )
+    assert got[0]["contains_synthetic_media"] is False
+    assert got[0]["privacy_status"] is None  # the profile's config decides
+
+
+@pytest.mark.parametrize("publish", ["content", "video"])
+def test_an_invalid_privacy_fails_before_any_api_call(bodies, monkeypatch, publish):
+    seen, media = bodies
+    calls = []
+    monkeypatch.setattr(P, "get_service", lambda **kw: calls.append("service"))
+    first = (
+        (_content(media),)
+        if publish == "content"
+        else (media, VideoMetadata(title="t", description="d"))
+    )
+    with pytest.raises(ValueError, match="privacy_status"):
+        getattr(P, f"publish_{publish}")(
+            *first, privacy_status="Public", config=YbConfig(), progress=False
+        )
+    assert calls == [] and seen == []
