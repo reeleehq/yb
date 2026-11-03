@@ -64,11 +64,12 @@ def env(tmp_path, monkeypatch):
 def exchange():
     """Replace the one network call; yield the recorder of how it was driven."""
     creds = mock.Mock(to_json=lambda: '{"fake": "token"}')
-    with mock.patch.object(
-        InstalledAppFlow, "fetch_token", autospec=True
-    ) as fetch, mock.patch.object(
-        InstalledAppFlow, "credentials", new_callable=mock.PropertyMock
-    ) as creds_prop:
+    with (
+        mock.patch.object(InstalledAppFlow, "fetch_token", autospec=True) as fetch,
+        mock.patch.object(
+            InstalledAppFlow, "credentials", new_callable=mock.PropertyMock
+        ) as creds_prop,
+    ):
         creds_prop.return_value = creds
         fetch.creds = creds
         yield fetch
@@ -153,9 +154,7 @@ class TestFinish:
             pytest.param("  <{redirect}?state={state}&code=4%2FABC>\n", id="messy"),
         ],
     )
-    def test_every_way_of_pasting_ends_in_the_same_exchange(
-        self, env, exchange, paste
-    ):
+    def test_every_way_of_pasting_ends_in_the_same_exchange(self, env, exchange, paste):
         url = _start(env)
         saved = json.loads(env["pending"].read_text())
         pasted = paste.format(redirect=REDIRECT, state=saved["state"])
@@ -247,12 +246,10 @@ class TestGetCredentialsPasteMode:
     @pytest.fixture(autouse=True)
     def _pending_in_tmp(self, env, monkeypatch):
         monkeypatch.setattr(
-            paste_consent, "pending_consent_file", lambda: env["pending"]
+            paste_consent, "pending_consent_file", lambda profile=None: env["pending"]
         )
 
-    def test_first_call_raises_pending_with_the_url_and_waits_for_nothing(
-        self, env
-    ):
+    def test_first_call_raises_pending_with_the_url_and_waits_for_nothing(self, env):
         with mock.patch.object(InstalledAppFlow, "run_local_server") as local:
             with pytest.raises(ConsentPending) as excinfo:
                 get_credentials(**self._kw(env))
@@ -296,7 +293,7 @@ class TestCli:
     @pytest.fixture(autouse=True)
     def _pending_in_tmp(self, env, monkeypatch):
         monkeypatch.setattr(
-            paste_consent, "pending_consent_file", lambda: env["pending"]
+            paste_consent, "pending_consent_file", lambda profile=None: env["pending"]
         )
 
     def test_auth_prints_the_url_and_succeeds(self, env, capsys):
@@ -309,8 +306,9 @@ class TestCli:
         self, env, exchange, capsys, monkeypatch, tmp_path, how
     ):
         main(self._argv(env))
-        pasted = f"{REDIRECT}?code=4%2FABC&state=" + (
-            json.loads(env["pending"].read_text())["state"]
+        pasted = (
+            f"{REDIRECT}?code=4%2FABC&state="
+            + (json.loads(env["pending"].read_text())["state"])
         )
         if how == "stdin":
             monkeypatch.setattr(sys, "stdin", mock.Mock(read=lambda: pasted))
@@ -345,3 +343,95 @@ class TestCli:
         assert main(self._argv(env, "--check")) == 1
         assert "consent is required" in capsys.readouterr().err
         assert not env["pending"].exists()
+
+
+class TestProfiles:
+    """#67: the paste names the profile that started it; login_hint picks the account."""
+
+    @staticmethod
+    def _kw(env, **kw):
+        return dict(client_secrets_file=env["secrets"], consent="paste", **kw)
+
+    @staticmethod
+    def _redirect(pending_url):
+        state = parse_qs(urlparse(pending_url).query)["state"][0]
+        return f"{REDIRECT}?code=4%2FABC&state={state}"
+
+    def test_pending_names_the_profile_in_the_finish_command(self, env):
+        with pytest.raises(ConsentPending) as got:
+            get_credentials(**self._kw(env, profile="reelee"))
+        assert "yb auth --profile reelee --paste" in str(got.value)
+        assert "profile='reelee'" in str(got.value)
+        assert paste_consent.pending_consent_file("reelee").exists()
+        clone = pickle.loads(pickle.dumps(got.value))
+        assert (clone.profile, str(clone)) == ("reelee", str(got.value))
+
+    def test_paste_without_the_profile_says_which_profile_started_it(self, env):
+        with pytest.raises(ConsentPending) as got:
+            get_credentials(**self._kw(env, profile="reelee"))
+        with pytest.raises(ConsentRequired, match="--profile reelee") as wrong:
+            get_credentials(
+                **self._kw(env), authorization_response=self._redirect(got.value.url)
+            )
+        assert "started for profile 'reelee'" in str(wrong.value)
+
+    def test_a_state_mismatch_names_the_other_profile(self, env):
+        with pytest.raises(ConsentPending):
+            get_credentials(**self._kw(env))  # the default profile's own request
+        with pytest.raises(ConsentPending) as reelee:
+            get_credentials(**self._kw(env, profile="reelee"))
+        with pytest.raises(ConsentRequired, match="different consent request") as got:
+            get_credentials(
+                **self._kw(env), authorization_response=self._redirect(reelee.value.url)
+            )
+        assert "--profile reelee" in str(got.value)
+
+    def test_the_default_profile_is_named_default(self, env):
+        with pytest.raises(ConsentPending) as default:
+            get_credentials(**self._kw(env))
+        with pytest.raises(ConsentRequired, match="--profile default"):
+            get_credentials(
+                **self._kw(env, profile="reelee"),
+                authorization_response=self._redirect(default.value.url),
+            )
+
+    def test_an_unknown_state_keeps_the_generic_advice(self, env):
+        with pytest.raises(ConsentRequired, match="Start one first"):
+            get_credentials(
+                **self._kw(env), authorization_response=f"{REDIRECT}?code=x&state=nope"
+            )
+
+    def test_login_hint_preselects_the_account(self, env):
+        url = _start(env, login_hint="channel@example.com")
+        assert parse_qs(urlparse(url).query)["login_hint"] == ["channel@example.com"]
+        assert _start(env, login_hint="channel@example.com") == url  # reused
+        other = _start(env, login_hint="other@example.com")
+        assert other != url  # a different account is a different request
+        assert "login_hint" not in parse_qs(urlparse(_start(env)).query)
+
+    def test_the_profile_config_supplies_the_login_hint(self, env, tmp_path):
+        config = tmp_path / "xdg" / "yb" / "config.json"
+        config.parent.mkdir(parents=True, exist_ok=True)
+        config.write_text(
+            json.dumps({"profiles": {"reelee": {"login_hint": "reelee@example.com"}}})
+        )
+        with pytest.raises(ConsentPending) as got:
+            get_credentials(**self._kw(env, profile="reelee"))
+        assert "Sign in as reelee@example.com" in str(got.value)
+        query = parse_qs(urlparse(got.value.url).query)
+        assert query["login_hint"] == ["reelee@example.com"]
+        with pytest.raises(ConsentPending) as explicit:
+            get_credentials(
+                **self._kw(env, profile="reelee", login_hint="x@example.com")
+            )
+        assert "Sign in as x@example.com" in str(explicit.value)
+
+    def test_the_local_flow_gets_the_login_hint(self, env):
+        with mock.patch.object(InstalledAppFlow, "run_local_server") as local:
+            local.return_value = mock.Mock(to_json=lambda: "{}")
+            get_credentials(
+                client_secrets_file=env["secrets"],
+                token_file=env["token"],
+                login_hint="a@example.com",
+            )
+        assert local.call_args.kwargs["login_hint"] == "a@example.com"

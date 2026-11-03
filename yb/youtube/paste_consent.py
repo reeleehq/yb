@@ -31,7 +31,7 @@ import time
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Sequence
-from urllib.parse import urlencode
+from urllib.parse import parse_qs, urlencode, urlparse
 
 from yb.youtube.auth import (
     DEFAULT_SCOPES,
@@ -63,29 +63,91 @@ class ConsentPending(ConsentRequired):
     """
 
     def __reduce__(self):  # keyword-only __init__: default pickling would fail
-        return (_rebuild_pending, (self.url, self.redirect_uri))
+        return (
+            _rebuild_pending,
+            (self.url, self.redirect_uri, self.profile, self.login_hint),
+        )
 
-    def __init__(self, url: str, *, redirect_uri: str):
+    def __init__(
+        self,
+        url: str,
+        *,
+        redirect_uri: str,
+        profile: str | None = None,
+        login_hint: str | None = None,
+    ):
         self.url = url
         self.redirect_uri = redirect_uri
+        self.profile, self.login_hint = profile, login_hint
+        flag = f" --profile {profile}" if profile else ""
+        kw = f"profile={profile!r}, " if profile else ""
+        sign_in = f" Sign in as {login_hint}." if login_hint else ""
         super().__init__(
             "YouTube consent is waiting for you.\n"
-            f"1. Open this URL in any browser and approve:\n   {url}\n"
+            f"1. Open this URL in any browser and approve:{sign_in}\n   {url}\n"
             f"2. The browser then tries to load {redirect_uri}... and fails to "
             "connect. That is expected. Copy the full URL from the address bar "
             "(or just the code value).\n"
-            "3. Finish with: yb auth --paste '<that URL>'   or   "
-            "get_credentials(consent='paste', authorization_response='<that URL>')"
+            f"3. Finish with: yb auth{flag} --paste '<that URL>'   or   "
+            f"get_credentials({kw}consent='paste', authorization_response='<that URL>')"
         )
 
 
-def _rebuild_pending(url: str, redirect_uri: str) -> ConsentPending:
-    return ConsentPending(url, redirect_uri=redirect_uri)
+def _rebuild_pending(
+    url: str, redirect_uri: str, profile=None, login_hint=None
+) -> ConsentPending:
+    return ConsentPending(
+        url, redirect_uri=redirect_uri, profile=profile, login_hint=login_hint
+    )
 
 
-def pending_consent_file() -> Path:
-    """Where the in-progress consent is kept (next to the token, mode 0600)."""
-    return _config_dir() / "youtube_consent_pending.json"
+#: Pending-consent file names: ``<stem>.json`` for the default profile,
+#: ``<stem>.<profile>.json`` for a named one.
+PENDING_STEM = "youtube_consent_pending"
+
+#: How a profile is named back to the user when it is the default one
+#: (``--profile default`` selects it, see :func:`yb.config.resolve_profile`).
+DEFAULT_PROFILE_NAME = "default"
+
+
+def pending_consent_file(profile: str | None = None) -> Path:
+    """Where the in-progress consent of ``profile`` is kept (next to the token, 0600).
+
+    A named profile keeps its own file, so two consents in flight (one per
+    account) cannot overwrite each other.
+    """
+    suffix = f".{profile}" if profile else ""
+    return _config_dir() / f"{PENDING_STEM}{suffix}.json"
+
+
+def _pending_profiles() -> dict[str, Path]:
+    """Every profile with a pending-consent file, by name (``"default"`` included)."""
+    found = {}
+    for path in _config_dir().glob(f"{PENDING_STEM}*.json"):
+        middle = path.name[len(PENDING_STEM) : -len(".json")]
+        found[middle.lstrip(".") or DEFAULT_PROFILE_NAME] = path
+    return found
+
+
+def _pasted_state(text: str) -> str | None:
+    """The ``state`` in a pasted redirect or query, ``None`` for a bare code."""
+    query = urlparse(text.strip().strip("<>\"'")).query or text.lstrip("?")
+    return (parse_qs(query).get("state") or [None])[0]
+
+
+def _started_elsewhere(text: str, pending: Path) -> str:
+    """`` This consent was started for profile 'X'...`` when another profile's
+    pending request holds the pasted ``state``, else ``""``."""
+    state = _pasted_state(text)
+    if not state:
+        return ""
+    for name, path in _pending_profiles().items():
+        if path != pending and (_load_pending(path) or {}).get("state") == state:
+            return (
+                f" This consent was started for profile {name!r}: rerun with "
+                f"yb auth --profile {name} --paste '<that URL>'."
+            )
+    return ""
 
 
 def _redirect_uri(port: int) -> str:
@@ -137,12 +199,16 @@ def start_paste_consent(
     port: int = DEFAULT_PASTE_PORT,
     pending_file: PathLike | None = None,
     reuse_pending: bool = True,
+    login_hint: str | None = None,
 ) -> str:
     """Begin paste-back consent and return the URL to open.
 
-    A consent already pending for the same client, ``scopes`` and ``port`` is reused
-    (``reuse_pending=True``): re-printing the URL must not invalidate the one the
-    user already has open on their phone.
+    A consent already pending for the same client, ``scopes``, ``port`` and
+    ``login_hint`` is reused (``reuse_pending=True``): re-printing the URL must
+    not invalidate the one the user already has open on their phone.
+
+    ``login_hint`` (an email) makes Google preselect that account, so consent is
+    not given by whichever account the browser happens to be signed in as.
     """
     scopes = list(scopes)
     port = port or DEFAULT_PASTE_PORT
@@ -155,14 +221,16 @@ def start_paste_consent(
     client_id = flow.client_config["client_id"]
 
     saved = _load_pending(pending) if reuse_pending else None
-    if saved and (saved["scopes"], saved["redirect_uri"], saved["client_id"]) == (
-        scopes,
-        redirect_uri,
-        client_id,
-    ):
+    if saved and (
+        saved["scopes"],
+        saved["redirect_uri"],
+        saved["client_id"],
+        saved.get("login_hint"),
+    ) == (scopes, redirect_uri, client_id, login_hint):
         return saved["url"]
 
-    url, state = flow.authorization_url(prompt="consent")
+    hint = {"login_hint": login_hint} if login_hint else {}
+    url, state = flow.authorization_url(prompt="consent", **hint)
     _save_pending(
         pending,
         dict(
@@ -172,6 +240,7 @@ def start_paste_consent(
             scopes=scopes,
             redirect_uri=redirect_uri,
             client_id=client_id,
+            login_hint=login_hint,
             created_at=time.time(),
         ),
     )
@@ -238,8 +307,11 @@ def finish_paste_consent(
     if saved is None:
         raise ConsentRequired(
             "No consent is pending (or it is older than "
-            f"{PENDING_TTL_S / 3600:g}h). Start one first: `yb auth`, or "
-            "get_credentials(consent='paste')."
+            f"{PENDING_TTL_S / 3600:g}h) here."
+            + (
+                _started_elsewhere(authorization_response, pending)
+                or " Start one first: `yb auth`, or get_credentials(consent='paste')."
+            )
         )
     flow = _flow(
         _resolve_client_secrets(client_secrets_file),
@@ -255,8 +327,12 @@ def finish_paste_consent(
     except MismatchingStateError as error:
         raise ConsentRequired(
             "The pasted redirect belongs to a different consent request (its "
-            "state does not match). Paste the URL from the browser tab opened "
-            "from the *latest* consent URL."
+            "state does not match)."
+            + (
+                _started_elsewhere(authorization_response, pending)
+                or " Paste the URL from the browser tab opened from the *latest* "
+                "consent URL."
+            )
         ) from error
     except Warning as error:  # oauthlib: the user granted fewer scopes than asked
         raise ConsentRequired(

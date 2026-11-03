@@ -59,10 +59,10 @@ DEFAULT_CONSENT_TIMEOUT_S = 300.0
 
 
 def _config_dir() -> Path:
-    """``yb`` config directory (``$XDG_CONFIG_HOME`` or ``~/.config``)/``yb``."""
-    base = os.environ.get("XDG_CONFIG_HOME")
-    root = Path(base).expanduser() if base else Path.home() / ".config"
-    return root / "yb"
+    """``yb`` config directory (see :func:`yb.config.config_dir`)."""
+    from yb.config import config_dir
+
+    return config_dir()
 
 
 def default_token_file(profile: str | None = None) -> Path:
@@ -172,7 +172,13 @@ def _consent_required_message(refresh_error, token_path: Path, profile=None) -> 
 
 
 def _paste_consent(
-    authorization_response, *, client_secrets_file, scopes, port, profile=None
+    authorization_response,
+    *,
+    client_secrets_file,
+    scopes,
+    port,
+    profile=None,
+    login_hint=None,
 ):
     """Paste-back consent: finish if given the redirect, else start and raise."""
     from yb.youtube.paste_consent import (
@@ -180,24 +186,40 @@ def _paste_consent(
         ConsentPending,
         _redirect_uri,
         finish_paste_consent,
+        pending_consent_file,
         start_paste_consent,
     )
 
-    # A named profile keeps its own pending request, so two consents in flight
-    # (one per account) cannot overwrite each other.
-    extra = {}
-    if profile is not None:
-        extra["pending_file"] = (
-            _config_dir() / f"youtube_consent_pending.{profile}.json"
-        )
+    pending = pending_consent_file(profile)
     if authorization_response:
         return finish_paste_consent(
-            authorization_response, client_secrets_file=client_secrets_file, **extra
+            authorization_response,
+            client_secrets_file=client_secrets_file,
+            pending_file=pending,
         )
     url = start_paste_consent(
-        client_secrets_file=client_secrets_file, scopes=scopes, port=port, **extra
+        client_secrets_file=client_secrets_file,
+        scopes=scopes,
+        port=port,
+        pending_file=pending,
+        login_hint=login_hint,
     )
-    raise ConsentPending(url, redirect_uri=_redirect_uri(port or DEFAULT_PASTE_PORT))
+    raise ConsentPending(
+        url,
+        redirect_uri=_redirect_uri(port or DEFAULT_PASTE_PORT),
+        profile=profile,
+        login_hint=login_hint,
+    )
+
+
+def _profile_login_hint(profile: str | None) -> str | None:
+    """The ``login_hint`` configured for ``profile``, if any (never raises)."""
+    from yb.config import load_config
+
+    try:
+        return load_config(profile=profile).login_hint
+    except (KeyError, OSError, ValueError):  # no such profile, unreadable config
+        return None
 
 
 def get_credentials(
@@ -212,6 +234,7 @@ def get_credentials(
     interactive: bool = True,
     consent: str = "local",
     authorization_response: str | None = None,
+    login_hint: str | None = None,
 ):
     """Return OAuth user credentials, running the consent flow if needed.
 
@@ -262,6 +285,11 @@ def get_credentials(
     two calls may be separate turns or separate processes; ``yb auth`` is the
     command-line form. ``port`` only names the (unreachable) redirect.
 
+    ``login_hint`` (the account's email) makes Google preselect that account on
+    the consent page, so a token is not minted for whichever account the
+    browser is signed in as. Default: the profile's ``login_hint`` in the
+    config file (see :mod:`yb.config`), else none.
+
     These keywords ride ``**cred_kwargs`` through :func:`get_service` and the
     publishing helpers. The few entry points that take none (notably
     :func:`yb.music.publish.publish_folder`) still work headlessly: call this
@@ -309,6 +337,9 @@ def get_credentials(
             raise ConsentRequired(
                 _consent_required_message(refresh_error, token_path, profile)
             )
+        if login_hint is None:
+            login_hint = _profile_login_hint(profile)
+        hint = {"login_hint": login_hint} if login_hint else {}
         if consent == "paste":
             creds = _paste_consent(
                 authorization_response,
@@ -316,6 +347,7 @@ def get_credentials(
                 scopes=scopes,
                 port=port,
                 profile=profile,
+                login_hint=login_hint,
             )
         else:
             secrets = _resolve_client_secrets(client_secrets_file)
@@ -325,6 +357,7 @@ def get_credentials(
                     port=port,
                     open_browser=open_browser,
                     timeout_seconds=timeout_seconds,
+                    **hint,  # passed on to the authorization URL
                 )
             except _WSGITimeoutError as timed_out:
                 # Nobody answered. Whatever the caller thought it was doing, the

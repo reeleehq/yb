@@ -32,12 +32,15 @@ apply, exactly as before::
         "privacy_status": "unlisted",
         "playlist": "TW Uploads",
         "profiles": {
-            "reelee": {"privacy_status": "unlisted", "channel_id": "UC..."}
+            "reelee": {"privacy_status": "unlisted", "channel_id": "UC...",
+                       "login_hint": "account@example.com"}
         }
     }
 
 ``channel_id`` (optional) is checked against the token's channel before any
 upload, so a token minted for the wrong Google account fails loudly.
+``login_hint`` (optional, the account's email) makes the consent page preselect
+that account, so the wrong one is not picked in the first place.
 """
 
 from __future__ import annotations
@@ -73,11 +76,19 @@ def resolve_profile(profile: str | None = None) -> str | None:
     return None if name in (None, "", "default") else name
 
 
-def default_config_file() -> Path:
-    """Config file location (``$XDG_CONFIG_HOME`` or ``~/.config``)."""
+def config_dir() -> Path:
+    """``yb``'s config directory: ``$XDG_CONFIG_HOME/yb``, else ``~/.config/yb``.
+
+    The config file, tokens and pending consents all live here.
+    """
     base = os.environ.get("XDG_CONFIG_HOME")
     root = Path(base).expanduser() if base else Path.home() / ".config"
-    return root / "yb" / "config.json"
+    return root / "yb"
+
+
+def default_config_file() -> Path:
+    """Config file location (in :func:`config_dir`)."""
+    return config_dir() / "config.json"
 
 
 @dataclass(frozen=True)
@@ -92,6 +103,8 @@ class YbConfig:
             title exists yet, rather than erroring.
         playlist_privacy_status: Privacy for an auto-created playlist.
         channel_id: Channel the token must belong to (``None`` = don't check).
+        login_hint: Email of the Google account to consent with; the consent
+            page preselects it (``None`` = whatever the browser is signed in as).
     """
 
     privacy_status: str = DEFAULT_PRIVACY_STATUS
@@ -99,6 +112,7 @@ class YbConfig:
     create_playlist_if_missing: bool = True
     playlist_privacy_status: str = DEFAULT_PLAYLIST_PRIVACY_STATUS
     channel_id: str | None = None
+    login_hint: str | None = None
 
     @classmethod
     def from_mapping(cls, mapping: dict | None) -> "YbConfig":
