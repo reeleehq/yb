@@ -1,32 +1,32 @@
 {
   "schema_version": 1,
-  "built_at": "2026-11-03T15:54:43Z",
+  "built_at": "2026-11-03T16:27:38Z",
   "package": {
     "name": "yb",
-    "version": "0.1.32",
+    "version": "0.1.33",
     "display_name": "yb",
     "source": "pyproject.toml"
   },
   "git": {
     "available": true,
-    "commit": "5a6724d7f2803067fa0fd1a549c8ebd4d34eb224",
-    "short_commit": "5a6724d",
+    "commit": "d3fb838d11b61039585036fab738f34e9f242865",
+    "short_commit": "d3fb838",
     "branch": "main",
     "tags": [],
     "dirty": false,
     "remote_url": "https://github.com/reeleehq/yb",
-    "commit_url": "https://github.com/reeleehq/yb/commit/5a6724d7f2803067fa0fd1a549c8ebd4d34eb224",
+    "commit_url": "https://github.com/reeleehq/yb/commit/d3fb838d11b61039585036fab738f34e9f242865",
     "error": null
   },
   "ci": {
     "provider": "github",
     "repository": "reeleehq/yb",
-    "sha": "a225877d5f33d00c70cb0ad0a55eb5de0df90907",
+    "sha": "d3fb838d11b61039585036fab738f34e9f242865",
     "sha_in_history": true,
     "ref": "refs/heads/main",
     "ref_name": "main",
-    "run_id": "41663732350",
-    "run_url": "https://github.com/reeleehq/yb/actions/runs/41663732350",
+    "run_id": "41671057676",
+    "run_url": "https://github.com/reeleehq/yb/actions/runs/41671057676",
     "server_url": "https://github.com"
   },
   "tools": {
@@ -56,15 +56,15 @@
   },
   "site": {
     "modules_documented": 28,
-    "objects_documented": 419
+    "objects_documented": 421
   },
   "pypi": {
     "checked": true,
-    "latest": "0.1.32",
+    "latest": "0.1.33",
     "relation": "same",
     "error": null
   },
-  "reproduce": "git clone https://github.com/reeleehq/yb && cd yb\ngit checkout 5a6724d7f2803067fa0fd1a549c8ebd4d34eb224\npip install \"epythet==0.2.22\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
+  "reproduce": "git clone https://github.com/reeleehq/yb && cd yb\ngit checkout d3fb838d11b61039585036fab738f34e9f242865\npip install \"epythet==0.2.22\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
   "warnings": [],
   "alignment": {
     "aligned": true,

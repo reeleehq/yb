@@ -1,4 +1,4 @@
-> built 2026-11-03 15:54 UTC from 5a6724d (main) · yb 0.1.32. Details: build_info.json
+> built 2026-11-03 16:27 UTC from d3fb838 (main) · yb 0.1.33. Details: build_info.json
 
 # index.html.md
 
@@ -544,10 +544,11 @@ that account, so the wrong one is not picked in the first place.
 
 ### Module Attributes
 
-| [`DEFAULT_PRIVACY_STATUS`](_autosummary/yb.config.html.md#yb.config.DEFAULT_PRIVACY_STATUS)          | Default privacy for a freshly uploaded video when neither the call nor the config file specifies one.   |
-|----------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------|
-| [`DEFAULT_PLAYLIST_PRIVACY_STATUS`](_autosummary/yb.config.html.md#yb.config.DEFAULT_PLAYLIST_PRIVACY_STATUS) | Default privacy for a playlist that `yb` auto-creates.                                                  |
-| [`PROFILE_ENV`](_autosummary/yb.config.html.md#yb.config.PROFILE_ENV)                     | Environment variable naming the profile to use when none is passed.                                     |
+| [`DEFAULT_PRIVACY_STATUS`](_autosummary/yb.config.html.md#yb.config.DEFAULT_PRIVACY_STATUS)          | Default privacy for a freshly uploaded video when neither the call nor the config file specifies one.         |
+|----------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------|
+| [`DEFAULT_PLAYLIST_PRIVACY_STATUS`](_autosummary/yb.config.html.md#yb.config.DEFAULT_PLAYLIST_PRIVACY_STATUS) | Default privacy for a playlist that `yb` auto-creates.                                                        |
+| [`PRIVACY_STATUSES`](_autosummary/yb.config.html.md#yb.config.PRIVACY_STATUSES)                | The privacy values YouTube accepts, least visible first (`supersede`'s visibility check ranks by this order). |
+| [`PROFILE_ENV`](_autosummary/yb.config.html.md#yb.config.PROFILE_ENV)                     | Environment variable naming the profile to use when none is passed.                                           |
 
 ### Functions
 
@@ -573,11 +574,16 @@ Default privacy for a freshly uploaded video when neither the call nor the
 config file specifies one. `"unlisted"` keeps videos off your public feed
 but shareable by link until you deliberately make one `"public"`.
 
+### yb.config.PRIVACY_STATUSES *= ('private', 'unlisted', 'public')*
+
+The privacy values YouTube accepts, least visible first (`supersede`’s
+visibility check ranks by this order).
+
 ### yb.config.PROFILE_ENV *= 'YB_PROFILE'*
 
 Environment variable naming the profile to use when none is passed.
 
-### *class* yb.config.YbConfig(privacy_status='unlisted', playlist=None, create_playlist_if_missing=True, playlist_privacy_status='private', channel_id=None, login_hint=None)
+### *class* yb.config.YbConfig(privacy_status='unlisted', playlist=None, create_playlist_if_missing=True, playlist_privacy_status='private', channel_id=None, login_hint=None, contains_synthetic_media=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -628,9 +634,18 @@ page preselects it (`None` = whatever the browser is signed in as).
 * **Type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
+#### contains_synthetic_media
+
+Default for YouTube’s altered-or-synthetic
+content disclosure on uploads (`None` = leave it unset). A
+channel that publishes realistic AI-made videos can set `true`.
+
+* **Type:**
+  [`bool`](https://docs.python.org/3/builtins/functions.html#bool) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
 #### *classmethod* from_mapping(mapping)
 
-Build a config from a mapping, ignoring unknown keys.
+Build a config from a mapping, ignoring unknown keys; `null` = the default.
 
 * **Return type:**
   [`YbConfig`](_autosummary/yb.config.html.md#yb.config.YbConfig)
@@ -3445,7 +3460,7 @@ Description with a chapters block appended (if any chapters).
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
-### *class* yb.YbConfig(privacy_status='unlisted', playlist=None, create_playlist_if_missing=True, playlist_privacy_status='private', channel_id=None, login_hint=None)
+### *class* yb.YbConfig(privacy_status='unlisted', playlist=None, create_playlist_if_missing=True, playlist_privacy_status='private', channel_id=None, login_hint=None, contains_synthetic_media=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -3496,9 +3511,18 @@ page preselects it (`None` = whatever the browser is signed in as).
 * **Type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
+#### contains_synthetic_media
+
+Default for YouTube’s altered-or-synthetic
+content disclosure on uploads (`None` = leave it unset). A
+channel that publishes realistic AI-made videos can set `true`.
+
+* **Type:**
+  [`bool`](https://docs.python.org/3/builtins/functions.html#bool) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
 #### *classmethod* from_mapping(mapping)
 
-Build a config from a mapping, ignoring unknown keys.
+Build a config from a mapping, ignoring unknown keys; `null` = the default.
 
 * **Return type:**
   [`YbConfig`](_autosummary/yb.config.html.md#yb.config.YbConfig)
@@ -3715,15 +3739,15 @@ to read instead of the top-level keys; an unknown profile is an error.
 * **Return type:**
   [`YbConfig`](_autosummary/yb.config.html.md#yb.config.YbConfig)
 
-### yb.prepare_and_publish(media, \*, language='English', language_code=None, audio_language_code=None, brand=None, extra_context=None, with_chapters=True, with_thumbnail=True, privacy_status=None, playlist=<object object>, category_id='28', config=None, client_secrets_file=None, token_file=None, profile=None, progress=True, \*\*cred_kwargs)
+### yb.prepare_and_publish(media, \*, language='English', language_code=None, audio_language_code=None, brand=None, extra_context=None, with_chapters=True, with_thumbnail=True, privacy_status=None, playlist=<object object>, category_id='28', contains_synthetic_media=None, config=None, client_secrets_file=None, token_file=None, profile=None, progress=True, \*\*cred_kwargs)
 
 One call: prepare publication content from `media` and upload it.
 
 Transcribes (persisting the SRT next to the media) if needed, writes
 LLM metadata, detects chapters, renders a thumbnail, then uploads with
 captions + thumbnail + chapters and adds the video to the configured
-playlist. `privacy_status` and `playlist` default to your `yb` config
-(see [`publish_content()`](_autosummary/yb.html.md#yb.publish_content)).
+playlist. `privacy_status`, `playlist` and `contains_synthetic_media`
+default to your `yb` config (see [`publish_content()`](_autosummary/yb.html.md#yb.publish_content)).
 
 `profile` publishes as a named account/channel (own token and config
 section; see [`yb.config`](_autosummary/yb.config.html.md#module-yb.config)); `None` uses `$YB_PROFILE` or the default.
@@ -3785,7 +3809,7 @@ Build a podcast episode bundle from `media` into `output_dir`.
 * **Returns:**
   A `PodcastEpisode` with the asset paths.
 
-### yb.publish_content(content, \*, privacy_status=None, playlist=<object object>, category_id='28', with_chapters=True, attach_caption=True, set_thumb=True, config=None, client_secrets_file=None, token_file=None, profile=None, progress=True, service=None, resume=None, \*\*cred_kwargs)
+### yb.publish_content(content, \*, privacy_status=None, playlist=<object object>, category_id='28', with_chapters=True, contains_synthetic_media=None, attach_caption=True, set_thumb=True, config=None, client_secrets_file=None, token_file=None, profile=None, progress=True, service=None, resume=None, \*\*cred_kwargs)
 
 Upload a prepared [`PublicationContent`](_autosummary/yb.html.md#yb.PublicationContent) to YouTube.
 
@@ -3799,6 +3823,11 @@ thumbnail when available, and adds the video to the configured playlist.
 to `unlisted` and the video joins your configured playlist. Pass
 `playlist=None` to skip the playlist for one call, or `playlist="Name"`
 to override the target.
+
+`contains_synthetic_media` sets YouTube’s altered-or-synthetic content
+disclosure (see [`VideoMetadata`](_autosummary/yb.youtube.metadata.html.md#yb.youtube.metadata.VideoMetadata)); `None`
+uses the config’s `contains_synthetic_media`, else leaves it unset. The
+Data API accepts the flag but never returns it (only Studio shows it).
 
 `profile` publishes as a named account/channel (own token and config
 section; see [`yb.config`](_autosummary/yb.config.html.md#module-yb.config)); `None` uses `$YB_PROFILE` or the default.
@@ -4271,11 +4300,6 @@ These wrap the YouTube Data API v3 `videos`/`thumbnails` resources for both
 creating videos and *editing already-published ones* (titles, descriptions,
 tags, languages, and chapter blocks in the description).
 
-### Module Attributes
-
-| [`PRIVACY_STATUSES`](_autosummary/yb.youtube.api.html.md#yb.youtube.api.PRIVACY_STATUSES)   | Privacy values `videos.update(part="status")` accepts, least visible first.   |
-|---------------------------------------------------------------------|-------------------------------------------------------------------------------|
-
 ### Functions
 
 | [`get_video`](_autosummary/yb.youtube.api.html.md#yb.youtube.api.get_video)(video_id, \*[, part, service])           | Fetch a video resource (raises `KeyError` if not found/visible).      |
@@ -4292,10 +4316,6 @@ tags, languages, and chapter blocks in the description).
 
 | [`VisibilityDropWarning`](_autosummary/yb.youtube.api.html.md#yb.youtube.api.VisibilityDropWarning)   | [`supersede()`](_autosummary/yb.youtube.api.html.md#yb.youtube.api.supersede) leaves the re-cut less visible than the original was.   |
 |--------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------|
-
-### yb.youtube.api.PRIVACY_STATUSES *= ('private', 'unlisted', 'public')*
-
-Privacy values `videos.update(part="status")` accepts, least visible first.
 
 ### *exception* yb.youtube.api.VisibilityDropWarning
 
@@ -4401,7 +4421,7 @@ that time, and a past `publishAt` read back is refused by the API. Pass
 `keep_schedule=True` to keep it (only meaningful with `"private"`).
 
 * **Raises:**
-  [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – `privacy_status` is not one of [`PRIVACY_STATUSES`](_autosummary/yb.youtube.api.html.md#yb.youtube.api.PRIVACY_STATUSES).
+  [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – `privacy_status` is not one of `PRIVACY_STATUSES`.
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
 
@@ -4951,12 +4971,13 @@ not to stylised artwork or a visualizer. Left unset when `None`.
 * **Type:**
   [`bool`](https://docs.python.org/3/builtins/functions.html#bool) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
-#### *classmethod* from_content(content, , category_id='28', with_chapters=True)
+#### *classmethod* from_content(content, , category_id='28', with_chapters=True, contains_synthetic_media=None)
 
 Build YouTube metadata from a platform-neutral content bundle.
 
 Embeds the chapters block into the description (when present and
 `with_chapters`), so YouTube renders interactive chapters.
+`contains_synthetic_media`: see the class attribute.
 
 * **Return type:**
   [`VideoMetadata`](_autosummary/yb.youtube.metadata.html.md#yb.youtube.metadata.VideoMetadata)
@@ -5259,15 +5280,15 @@ plus the `playlists.list` pages: on a large channel, budget for it.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
 
-### yb.youtube.prepare_and_publish(media, \*, language='English', language_code=None, audio_language_code=None, brand=None, extra_context=None, with_chapters=True, with_thumbnail=True, privacy_status=None, playlist=<object object>, category_id='28', config=None, client_secrets_file=None, token_file=None, profile=None, progress=True, \*\*cred_kwargs)
+### yb.youtube.prepare_and_publish(media, \*, language='English', language_code=None, audio_language_code=None, brand=None, extra_context=None, with_chapters=True, with_thumbnail=True, privacy_status=None, playlist=<object object>, category_id='28', contains_synthetic_media=None, config=None, client_secrets_file=None, token_file=None, profile=None, progress=True, \*\*cred_kwargs)
 
 One call: prepare publication content from `media` and upload it.
 
 Transcribes (persisting the SRT next to the media) if needed, writes
 LLM metadata, detects chapters, renders a thumbnail, then uploads with
 captions + thumbnail + chapters and adds the video to the configured
-playlist. `privacy_status` and `playlist` default to your `yb` config
-(see [`publish_content()`](_autosummary/yb.youtube.html.md#yb.youtube.publish_content)).
+playlist. `privacy_status`, `playlist` and `contains_synthetic_media`
+default to your `yb` config (see [`publish_content()`](_autosummary/yb.youtube.html.md#yb.youtube.publish_content)).
 
 `profile` publishes as a named account/channel (own token and config
 section; see [`yb.config`](_autosummary/yb.config.html.md#module-yb.config)); `None` uses `$YB_PROFILE` or the default.
@@ -5278,7 +5299,7 @@ section; see [`yb.config`](_autosummary/yb.config.html.md#module-yb.config)); `N
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
 
-### yb.youtube.publish_content(content, \*, privacy_status=None, playlist=<object object>, category_id='28', with_chapters=True, attach_caption=True, set_thumb=True, config=None, client_secrets_file=None, token_file=None, profile=None, progress=True, service=None, resume=None, \*\*cred_kwargs)
+### yb.youtube.publish_content(content, \*, privacy_status=None, playlist=<object object>, category_id='28', with_chapters=True, contains_synthetic_media=None, attach_caption=True, set_thumb=True, config=None, client_secrets_file=None, token_file=None, profile=None, progress=True, service=None, resume=None, \*\*cred_kwargs)
 
 Upload a prepared `PublicationContent` to YouTube.
 
@@ -5292,6 +5313,11 @@ thumbnail when available, and adds the video to the configured playlist.
 to `unlisted` and the video joins your configured playlist. Pass
 `playlist=None` to skip the playlist for one call, or `playlist="Name"`
 to override the target.
+
+`contains_synthetic_media` sets YouTube’s altered-or-synthetic content
+disclosure (see [`VideoMetadata`](_autosummary/yb.youtube.metadata.html.md#yb.youtube.metadata.VideoMetadata)); `None`
+uses the config’s `contains_synthetic_media`, else leaves it unset. The
+Data API accepts the flag but never returns it (only Studio shows it).
 
 `profile` publishes as a named account/channel (own token and config
 section; see [`yb.config`](_autosummary/yb.config.html.md#module-yb.config)); `None` uses `$YB_PROFILE` or the default.
@@ -5317,7 +5343,8 @@ section; see [`yb.config`](_autosummary/yb.config.html.md#module-yb.config)); `N
 Lower-level upload: explicit [`VideoMetadata`](_autosummary/yb.youtube.html.md#yb.youtube.VideoMetadata) + caption tracks.
 
 `privacy_status` and `playlist` default to your `yb` config (see
-[`publish_content()`](_autosummary/yb.youtube.html.md#yb.youtube.publish_content)).
+[`publish_content()`](_autosummary/yb.youtube.html.md#yb.youtube.publish_content)), as does `metadata.contains_synthetic_media` when
+it is `None`.
 
 If a step after the upload fails, [`PartialPublish`](_autosummary/yb.youtube.html.md#yb.youtube.PartialPublish) is raised with
 the new video’s id and what was done so far (`err.result`). Pass
@@ -5654,12 +5681,13 @@ not to stylised artwork or a visualizer. Left unset when `None`.
 * **Type:**
   [`bool`](https://docs.python.org/3/builtins/functions.html#bool) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
-#### *classmethod* from_content(content, , category_id='28', with_chapters=True)
+#### *classmethod* from_content(content, , category_id='28', with_chapters=True, contains_synthetic_media=None)
 
 Build YouTube metadata from a platform-neutral content bundle.
 
 Embeds the chapters block into the description (when present and
 `with_chapters`), so YouTube renders interactive chapters.
+`contains_synthetic_media`: see the class attribute.
 
 * **Return type:**
   [`VideoMetadata`](_autosummary/yb.youtube.metadata.html.md#yb.youtube.metadata.VideoMetadata)
@@ -5982,15 +6010,15 @@ remaining steps target the saved `video_id`.
 `result` is plain JSON-able data, and the exception pickles (so a worker
 process can hand it back); `__cause__` does not survive pickling.
 
-### yb.youtube.publish.prepare_and_publish(media, \*, language='English', language_code=None, audio_language_code=None, brand=None, extra_context=None, with_chapters=True, with_thumbnail=True, privacy_status=None, playlist=<object object>, category_id='28', config=None, client_secrets_file=None, token_file=None, profile=None, progress=True, \*\*cred_kwargs)
+### yb.youtube.publish.prepare_and_publish(media, \*, language='English', language_code=None, audio_language_code=None, brand=None, extra_context=None, with_chapters=True, with_thumbnail=True, privacy_status=None, playlist=<object object>, category_id='28', contains_synthetic_media=None, config=None, client_secrets_file=None, token_file=None, profile=None, progress=True, \*\*cred_kwargs)
 
 One call: prepare publication content from `media` and upload it.
 
 Transcribes (persisting the SRT next to the media) if needed, writes
 LLM metadata, detects chapters, renders a thumbnail, then uploads with
 captions + thumbnail + chapters and adds the video to the configured
-playlist. `privacy_status` and `playlist` default to your `yb` config
-(see [`publish_content()`](_autosummary/yb.youtube.publish.html.md#yb.youtube.publish.publish_content)).
+playlist. `privacy_status`, `playlist` and `contains_synthetic_media`
+default to your `yb` config (see [`publish_content()`](_autosummary/yb.youtube.publish.html.md#yb.youtube.publish.publish_content)).
 
 `profile` publishes as a named account/channel (own token and config
 section; see [`yb.config`](_autosummary/yb.config.html.md#module-yb.config)); `None` uses `$YB_PROFILE` or the default.
@@ -6001,7 +6029,7 @@ section; see [`yb.config`](_autosummary/yb.config.html.md#module-yb.config)); `N
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
 
-### yb.youtube.publish.publish_content(content, \*, privacy_status=None, playlist=<object object>, category_id='28', with_chapters=True, attach_caption=True, set_thumb=True, config=None, client_secrets_file=None, token_file=None, profile=None, progress=True, service=None, resume=None, \*\*cred_kwargs)
+### yb.youtube.publish.publish_content(content, \*, privacy_status=None, playlist=<object object>, category_id='28', with_chapters=True, contains_synthetic_media=None, attach_caption=True, set_thumb=True, config=None, client_secrets_file=None, token_file=None, profile=None, progress=True, service=None, resume=None, \*\*cred_kwargs)
 
 Upload a prepared `PublicationContent` to YouTube.
 
@@ -6015,6 +6043,11 @@ thumbnail when available, and adds the video to the configured playlist.
 to `unlisted` and the video joins your configured playlist. Pass
 `playlist=None` to skip the playlist for one call, or `playlist="Name"`
 to override the target.
+
+`contains_synthetic_media` sets YouTube’s altered-or-synthetic content
+disclosure (see [`VideoMetadata`](_autosummary/yb.youtube.metadata.html.md#yb.youtube.metadata.VideoMetadata)); `None`
+uses the config’s `contains_synthetic_media`, else leaves it unset. The
+Data API accepts the flag but never returns it (only Studio shows it).
 
 `profile` publishes as a named account/channel (own token and config
 section; see [`yb.config`](_autosummary/yb.config.html.md#module-yb.config)); `None` uses `$YB_PROFILE` or the default.
@@ -6040,7 +6073,8 @@ section; see [`yb.config`](_autosummary/yb.config.html.md#module-yb.config)); `N
 Lower-level upload: explicit `VideoMetadata` + caption tracks.
 
 `privacy_status` and `playlist` default to your `yb` config (see
-[`publish_content()`](_autosummary/yb.youtube.publish.html.md#yb.youtube.publish.publish_content)).
+[`publish_content()`](_autosummary/yb.youtube.publish.html.md#yb.youtube.publish.publish_content)), as does `metadata.contains_synthetic_media` when
+it is `None`.
 
 If a step after the upload fails, [`PartialPublish`](_autosummary/yb.youtube.publish.html.md#yb.youtube.publish.PartialPublish) is raised with
 the new video’s id and what was done so far (`err.result`). Pass
@@ -6315,7 +6349,7 @@ Fetch a video’s live metadata & engagement numbers.
 
 # About this build
 
-This documentation was built on **2026-11-03 15:54 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/5a6724d7f2803067fa0fd1a549c8ebd4d34eb224"><code>5a6724d</code></a> on branch <code>main</code>, for **yb 0.1.32** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-03 16:27 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/d3fb838d11b61039585036fab738f34e9f242865"><code>d3fb838</code></a> on branch <code>main</code>, for **yb 0.1.33** (from <code>pyproject.toml</code>).
 
 #### NOTE
 Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
@@ -6324,7 +6358,7 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 |                     |                                                                                                                                                    |
 |---------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/yb/commit/5a6724d7f2803067fa0fd1a549c8ebd4d34eb224"><code>5a6724d7f2803067fa0fd1a549c8ebd4d34eb224</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/yb/commit/d3fb838d11b61039585036fab738f34e9f242865"><code>d3fb838d11b61039585036fab738f34e9f242865</code></a> |
 | Branch              | <code>main</code>                                                                                                                                  |
 | Tags at this commit | none                                                                                                                                               |
 | Working tree        | clean                                                                                                                                              |
@@ -6335,9 +6369,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/yb</code>                                                                   |
-| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/41663732350">41663732350</a>          |
+| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/41671057676">41671057676</a>          |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>a225877d5f33d00c70cb0ad0a55eb5de0df90907</code> (in the history of the built commit) |
+| Event commit | <code>d3fb838d11b61039585036fab738f34e9f242865</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -6362,13 +6396,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/yb/0.1.32/">0.1.32</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/yb/0.1.33/">0.1.33</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/yb && cd yb
-git checkout 5a6724d7f2803067fa0fd1a549c8ebd4d34eb224
+git checkout d3fb838d11b61039585036fab738f34e9f242865
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

@@ -6,11 +6,6 @@ These wrap the YouTube Data API v3 `videos`/`thumbnails` resources for both
 creating videos and *editing already-published ones* (titles, descriptions,
 tags, languages, and chapter blocks in the description).
 
-### Module Attributes
-
-| [`PRIVACY_STATUSES`](#yb.youtube.api.PRIVACY_STATUSES)   | Privacy values `videos.update(part="status")` accepts, least visible first.   |
-|---------------------------------------------------------------------|-------------------------------------------------------------------------------|
-
 ### Functions
 
 | [`get_video`](#yb.youtube.api.get_video)(video_id, \*[, part, service])           | Fetch a video resource (raises `KeyError` if not found/visible).      |
@@ -27,10 +22,6 @@ tags, languages, and chapter blocks in the description).
 
 | [`VisibilityDropWarning`](#yb.youtube.api.VisibilityDropWarning)   | [`supersede()`](#yb.youtube.api.supersede) leaves the re-cut less visible than the original was.   |
 |--------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------|
-
-### yb.youtube.api.PRIVACY_STATUSES *= ('private', 'unlisted', 'public')*
-
-Privacy values `videos.update(part="status")` accepts, least visible first.
 
 ### *exception* yb.youtube.api.VisibilityDropWarning
 
@@ -136,7 +127,7 @@ that time, and a past `publishAt` read back is refused by the API. Pass
 `keep_schedule=True` to keep it (only meaningful with `"private"`).
 
 * **Raises:**
-  [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – `privacy_status` is not one of [`PRIVACY_STATUSES`](#yb.youtube.api.PRIVACY_STATUSES).
+  [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – `privacy_status` is not one of `PRIVACY_STATUSES`.
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
 

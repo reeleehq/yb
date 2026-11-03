@@ -290,6 +290,7 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">mixing.chapters</span><span class="w"> </span><span class="kn">import</span> <span class="n">Chapter</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">yb.content</span><span class="w"> </span><span class="kn">import</span> <span class="n">format_chapter_lines</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">yb.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">PRIVACY_STATUSES</span>  <span class="c1"># re-exported by yb.youtube</span>
 
 <span class="n">PathLike</span> <span class="o">=</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span>
 
@@ -401,10 +402,6 @@
     <span class="p">}</span>
     <span class="k">return</span> <span class="n">update_video</span><span class="p">(</span><span class="n">video_id</span><span class="p">,</span> <span class="n">writable</span><span class="p">,</span> <span class="n">service</span><span class="o">=</span><span class="n">service</span><span class="p">)</span></div>
 
-
-
-<span class="c1">#: Privacy values ``videos.update(part="status")`` accepts, least visible first.</span>
-<span class="n">PRIVACY_STATUSES</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"private"</span><span class="p">,</span> <span class="s2">"unlisted"</span><span class="p">,</span> <span class="s2">"public"</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="VisibilityDropWarning">
@@ -714,7 +711,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=201c9933"></script>
+</div><script src="../../../_static/documentation_options.js?v=895ced55"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

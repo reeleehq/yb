@@ -287,6 +287,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">Counter</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">replace</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Sequence</span>
 
@@ -450,6 +451,20 @@
     <span class="p">)</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_resolve_config</span><span class="p">(</span><span class="n">config</span><span class="p">:</span> <span class="n">YbConfig</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">profile</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">call</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">YbConfig</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The profile's config (or ``config``), with every non-``None`` call value on top.</span>
+
+<span class="sd">    The precedence rule the publish paths use for these settings: the call, then</span>
+<span class="sd">    the config, then the built-in default (``playlist`` keeps its own sentinel,</span>
+<span class="sd">    since its ``None`` means "no playlist"). ``load_config(**overrides)`` applies</span>
+<span class="sd">    the same rule for callers that build a config themselves. (Before this, ``privacy_status`` passed alongside</span>
+<span class="sd">    ``config=`` was ignored, so a call asking for ``"private"`` could upload</span>
+<span class="sd">    with the config's ``"public"``.)</span>
+<span class="sd">    """</span>
+    <span class="n">base</span> <span class="o">=</span> <span class="n">config</span> <span class="ow">or</span> <span class="n">load_config</span><span class="p">(</span><span class="n">profile</span><span class="o">=</span><span class="n">profile</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">replace</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="o">**</span><span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">call</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">v</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">})</span>
+
+
 <div class="viewcode-block" id="publish_content">
 <a class="viewcode-back" href="../../../_autosummary/yb.youtube.publish.html#yb.publish_content">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">publish_content</span><span class="p">(</span>
@@ -459,6 +474,7 @@
     <span class="n">playlist</span><span class="o">=</span><span class="n">_USE_CONFIG</span><span class="p">,</span>
     <span class="n">category_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">CATEGORY_SCIENCE_TECH</span><span class="p">,</span>
     <span class="n">with_chapters</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">contains_synthetic_media</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">attach_caption</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">set_thumb</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">config</span><span class="p">:</span> <span class="n">YbConfig</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -483,6 +499,11 @@
 <span class="sd">    ``playlist=None`` to skip the playlist for one call, or ``playlist="Name"``</span>
 <span class="sd">    to override the target.</span>
 
+<span class="sd">    ``contains_synthetic_media`` sets YouTube's altered-or-synthetic content</span>
+<span class="sd">    disclosure (see :class:`~yb.youtube.metadata.VideoMetadata`); ``None``</span>
+<span class="sd">    uses the config's ``contains_synthetic_media``, else leaves it unset. The</span>
+<span class="sd">    Data API accepts the flag but never returns it (only Studio shows it).</span>
+
 <span class="sd">    ``profile`` publishes as a named account/channel (own token and config</span>
 <span class="sd">    section; see :mod:`yb.config`); ``None`` uses ``$YB_PROFILE`` or the default.</span>
 
@@ -501,7 +522,12 @@
 <span class="sd">            ``err.result`` holds the video id and what was done. Pass</span>
 <span class="sd">            ``resume=err.result`` to finish without uploading again (yb#21).</span>
 <span class="sd">    """</span>
-    <span class="n">cfg</span> <span class="o">=</span> <span class="n">config</span> <span class="ow">or</span> <span class="n">load_config</span><span class="p">(</span><span class="n">profile</span><span class="o">=</span><span class="n">profile</span><span class="p">,</span> <span class="n">privacy_status</span><span class="o">=</span><span class="n">privacy_status</span><span class="p">)</span>
+    <span class="n">cfg</span> <span class="o">=</span> <span class="n">_resolve_config</span><span class="p">(</span>
+        <span class="n">config</span><span class="p">,</span>
+        <span class="n">profile</span><span class="p">,</span>
+        <span class="n">privacy_status</span><span class="o">=</span><span class="n">privacy_status</span><span class="p">,</span>
+        <span class="n">contains_synthetic_media</span><span class="o">=</span><span class="n">contains_synthetic_media</span><span class="p">,</span>
+    <span class="p">)</span>
     <span class="n">privacy_status</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">privacy_status</span>
     <span class="n">service</span> <span class="o">=</span> <span class="n">service</span> <span class="ow">or</span> <span class="n">get_service</span><span class="p">(</span>
         <span class="n">client_secrets_file</span><span class="o">=</span><span class="n">client_secrets_file</span><span class="p">,</span>
@@ -512,7 +538,10 @@
     <span class="k">if</span> <span class="n">cfg</span><span class="o">.</span><span class="n">channel_id</span><span class="p">:</span>  <span class="c1"># refuse to upload to the wrong account's channel</span>
         <span class="n">check_channel</span><span class="p">(</span><span class="n">service</span><span class="p">,</span> <span class="n">cfg</span><span class="o">.</span><span class="n">channel_id</span><span class="p">)</span>
     <span class="n">meta</span> <span class="o">=</span> <span class="n">VideoMetadata</span><span class="o">.</span><span class="n">from_content</span><span class="p">(</span>
-        <span class="n">content</span><span class="p">,</span> <span class="n">category_id</span><span class="o">=</span><span class="n">category_id</span><span class="p">,</span> <span class="n">with_chapters</span><span class="o">=</span><span class="n">with_chapters</span>
+        <span class="n">content</span><span class="p">,</span>
+        <span class="n">category_id</span><span class="o">=</span><span class="n">category_id</span><span class="p">,</span>
+        <span class="n">with_chapters</span><span class="o">=</span><span class="n">with_chapters</span><span class="p">,</span>
+        <span class="n">contains_synthetic_media</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">contains_synthetic_media</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="n">body</span> <span class="o">=</span> <span class="n">meta</span><span class="o">.</span><span class="n">insert_body</span><span class="p">(</span><span class="n">privacy_status</span><span class="o">=</span><span class="n">privacy_status</span><span class="p">)</span>
 
@@ -583,6 +612,7 @@
     <span class="n">privacy_status</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">playlist</span><span class="o">=</span><span class="n">_USE_CONFIG</span><span class="p">,</span>
     <span class="n">category_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">CATEGORY_SCIENCE_TECH</span><span class="p">,</span>
+    <span class="n">contains_synthetic_media</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">config</span><span class="p">:</span> <span class="n">YbConfig</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">client_secrets_file</span><span class="p">:</span> <span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">token_file</span><span class="p">:</span> <span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -595,8 +625,8 @@
 <span class="sd">    Transcribes (persisting the SRT next to the media) if needed, writes</span>
 <span class="sd">    LLM metadata, detects chapters, renders a thumbnail, then uploads with</span>
 <span class="sd">    captions + thumbnail + chapters and adds the video to the configured</span>
-<span class="sd">    playlist. ``privacy_status`` and ``playlist`` default to your ``yb`` config</span>
-<span class="sd">    (see :func:`publish_content`).</span>
+<span class="sd">    playlist. ``privacy_status``, ``playlist`` and ``contains_synthetic_media``</span>
+<span class="sd">    default to your ``yb`` config (see :func:`publish_content`).</span>
 
 <span class="sd">    ``profile`` publishes as a named account/channel (own token and config</span>
 <span class="sd">    section; see :mod:`yb.config`); ``None`` uses ``$YB_PROFILE`` or the default.</span>
@@ -620,6 +650,7 @@
         <span class="n">playlist</span><span class="o">=</span><span class="n">playlist</span><span class="p">,</span>
         <span class="n">category_id</span><span class="o">=</span><span class="n">category_id</span><span class="p">,</span>
         <span class="n">with_chapters</span><span class="o">=</span><span class="n">with_chapters</span><span class="p">,</span>
+        <span class="n">contains_synthetic_media</span><span class="o">=</span><span class="n">contains_synthetic_media</span><span class="p">,</span>
         <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">,</span>
         <span class="n">client_secrets_file</span><span class="o">=</span><span class="n">client_secrets_file</span><span class="p">,</span>
         <span class="n">token_file</span><span class="o">=</span><span class="n">token_file</span><span class="p">,</span>
@@ -652,7 +683,8 @@
 <span class="w">    </span><span class="sd">"""Lower-level upload: explicit :class:`VideoMetadata` + caption tracks.</span>
 
 <span class="sd">    ``privacy_status`` and ``playlist`` default to your ``yb`` config (see</span>
-<span class="sd">    :func:`publish_content`).</span>
+<span class="sd">    :func:`publish_content`), as does ``metadata.contains_synthetic_media`` when</span>
+<span class="sd">    it is ``None``.</span>
 
 <span class="sd">    If a step after the upload fails, :class:`PartialPublish` is raised with</span>
 <span class="sd">    the new video's id and what was done so far (``err.result``). Pass</span>
@@ -664,7 +696,7 @@
 <span class="sd">    ``cred_kwargs`` reach :func:`~yb.youtube.auth.get_credentials` (e.g.</span>
 <span class="sd">    ``open_browser=False, port=8080`` for headless consent).</span>
 <span class="sd">    """</span>
-    <span class="n">cfg</span> <span class="o">=</span> <span class="n">config</span> <span class="ow">or</span> <span class="n">load_config</span><span class="p">(</span><span class="n">profile</span><span class="o">=</span><span class="n">profile</span><span class="p">,</span> <span class="n">privacy_status</span><span class="o">=</span><span class="n">privacy_status</span><span class="p">)</span>
+    <span class="n">cfg</span> <span class="o">=</span> <span class="n">_resolve_config</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">profile</span><span class="p">,</span> <span class="n">privacy_status</span><span class="o">=</span><span class="n">privacy_status</span><span class="p">)</span>
     <span class="n">privacy_status</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">privacy_status</span>
     <span class="n">service</span> <span class="o">=</span> <span class="n">service</span> <span class="ow">or</span> <span class="n">get_service</span><span class="p">(</span>
         <span class="n">client_secrets_file</span><span class="o">=</span><span class="n">client_secrets_file</span><span class="p">,</span>
@@ -674,6 +706,13 @@
     <span class="p">)</span>
     <span class="k">if</span> <span class="n">cfg</span><span class="o">.</span><span class="n">channel_id</span><span class="p">:</span>  <span class="c1"># refuse to upload to the wrong account's channel</span>
         <span class="n">check_channel</span><span class="p">(</span><span class="n">service</span><span class="p">,</span> <span class="n">cfg</span><span class="o">.</span><span class="n">channel_id</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span>
+        <span class="n">metadata</span><span class="o">.</span><span class="n">contains_synthetic_media</span> <span class="ow">is</span> <span class="kc">None</span>
+        <span class="ow">and</span> <span class="n">cfg</span><span class="o">.</span><span class="n">contains_synthetic_media</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="n">metadata</span> <span class="o">=</span> <span class="n">replace</span><span class="p">(</span>
+            <span class="n">metadata</span><span class="p">,</span> <span class="n">contains_synthetic_media</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">contains_synthetic_media</span>
+        <span class="p">)</span>
     <span class="n">body</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="n">insert_body</span><span class="p">(</span><span class="n">privacy_status</span><span class="o">=</span><span class="n">privacy_status</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">upload</span><span class="p">():</span>
@@ -767,7 +806,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=201c9933"></script>
+</div><script src="../../../_static/documentation_options.js?v=895ced55"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

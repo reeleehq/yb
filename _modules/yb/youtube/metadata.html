@@ -330,8 +330,9 @@
     <span class="n">contains_synthetic_media</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">title</span><span class="o">.</span><span class="n">strip</span><span class="p">()[:</span><span class="n">_TITLE_MAX</span><span class="p">]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="o">.</span><span class="n">strip</span><span class="p">()[:</span><span class="n">_DESC_MAX</span><span class="p">]</span>
+        <span class="c1"># rstrip after the cut, so cleaning twice (``dataclasses.replace``) is a no-op</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">title</span><span class="o">.</span><span class="n">strip</span><span class="p">()[:</span><span class="n">_TITLE_MAX</span><span class="p">]</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="o">.</span><span class="n">strip</span><span class="p">()[:</span><span class="n">_DESC_MAX</span><span class="p">]</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">tags</span> <span class="o">=</span> <span class="n">_cap_tags</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tags</span><span class="p">,</span> <span class="n">_TAGS_TOTAL_MAX</span><span class="p">)</span>
 
 <div class="viewcode-block" id="VideoMetadata.from_content">
@@ -343,11 +344,13 @@
         <span class="o">*</span><span class="p">,</span>
         <span class="n">category_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">CATEGORY_SCIENCE_TECH</span><span class="p">,</span>
         <span class="n">with_chapters</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">contains_synthetic_media</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"VideoMetadata"</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Build YouTube metadata from a platform-neutral content bundle.</span>
 
 <span class="sd">        Embeds the chapters block into the description (when present and</span>
 <span class="sd">        ``with_chapters``), so YouTube renders interactive chapters.</span>
+<span class="sd">        ``contains_synthetic_media``: see the class attribute.</span>
 <span class="sd">        """</span>
         <span class="n">description</span> <span class="o">=</span> <span class="n">content</span><span class="o">.</span><span class="n">description</span>
         <span class="k">if</span> <span class="n">with_chapters</span> <span class="ow">and</span> <span class="n">content</span><span class="o">.</span><span class="n">chapters</span><span class="p">:</span>
@@ -363,6 +366,7 @@
             <span class="n">category_id</span><span class="o">=</span><span class="n">category_id</span><span class="p">,</span>
             <span class="n">default_language</span><span class="o">=</span><span class="n">content</span><span class="o">.</span><span class="n">language</span><span class="p">,</span>
             <span class="n">default_audio_language</span><span class="o">=</span><span class="n">content</span><span class="o">.</span><span class="n">audio_language</span><span class="p">,</span>
+            <span class="n">contains_synthetic_media</span><span class="o">=</span><span class="n">contains_synthetic_media</span><span class="p">,</span>
         <span class="p">)</span></div>
 
 
@@ -443,7 +447,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=201c9933"></script>
+</div><script src="../../../_static/documentation_options.js?v=895ced55"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

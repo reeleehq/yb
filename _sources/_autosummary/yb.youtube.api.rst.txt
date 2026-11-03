@@ -4,12 +4,6 @@ yb.youtube.api
 .. automodule:: yb.youtube.api
 
    
-   .. rubric:: Module Attributes
-
-   .. autosummary::
-   
-      PRIVACY_STATUSES
-   
    .. rubric:: Functions
 
    .. autosummary::

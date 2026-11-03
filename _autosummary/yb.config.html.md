@@ -50,10 +50,11 @@ that account, so the wrong one is not picked in the first place.
 
 ### Module Attributes
 
-| [`DEFAULT_PRIVACY_STATUS`](#yb.config.DEFAULT_PRIVACY_STATUS)          | Default privacy for a freshly uploaded video when neither the call nor the config file specifies one.   |
-|----------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------|
-| [`DEFAULT_PLAYLIST_PRIVACY_STATUS`](#yb.config.DEFAULT_PLAYLIST_PRIVACY_STATUS) | Default privacy for a playlist that `yb` auto-creates.                                                  |
-| [`PROFILE_ENV`](#yb.config.PROFILE_ENV)                     | Environment variable naming the profile to use when none is passed.                                     |
+| [`DEFAULT_PRIVACY_STATUS`](#yb.config.DEFAULT_PRIVACY_STATUS)          | Default privacy for a freshly uploaded video when neither the call nor the config file specifies one.         |
+|----------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------|
+| [`DEFAULT_PLAYLIST_PRIVACY_STATUS`](#yb.config.DEFAULT_PLAYLIST_PRIVACY_STATUS) | Default privacy for a playlist that `yb` auto-creates.                                                        |
+| [`PRIVACY_STATUSES`](#yb.config.PRIVACY_STATUSES)                | The privacy values YouTube accepts, least visible first (`supersede`'s visibility check ranks by this order). |
+| [`PROFILE_ENV`](#yb.config.PROFILE_ENV)                     | Environment variable naming the profile to use when none is passed.                                           |
 
 ### Functions
 
@@ -79,11 +80,16 @@ Default privacy for a freshly uploaded video when neither the call nor the
 config file specifies one. `"unlisted"` keeps videos off your public feed
 but shareable by link until you deliberately make one `"public"`.
 
+### yb.config.PRIVACY_STATUSES *= ('private', 'unlisted', 'public')*
+
+The privacy values YouTube accepts, least visible first (`supersede`’s
+visibility check ranks by this order).
+
 ### yb.config.PROFILE_ENV *= 'YB_PROFILE'*
 
 Environment variable naming the profile to use when none is passed.
 
-### *class* yb.config.YbConfig(privacy_status='unlisted', playlist=None, create_playlist_if_missing=True, playlist_privacy_status='private', channel_id=None, login_hint=None)
+### *class* yb.config.YbConfig(privacy_status='unlisted', playlist=None, create_playlist_if_missing=True, playlist_privacy_status='private', channel_id=None, login_hint=None, contains_synthetic_media=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -134,9 +140,18 @@ page preselects it (`None` = whatever the browser is signed in as).
 * **Type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
+#### contains_synthetic_media
+
+Default for YouTube’s altered-or-synthetic
+content disclosure on uploads (`None` = leave it unset). A
+channel that publishes realistic AI-made videos can set `true`.
+
+* **Type:**
+  [`bool`](https://docs.python.org/3/builtins/functions.html#bool) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
 #### *classmethod* from_mapping(mapping)
 
-Build a config from a mapping, ignoring unknown keys.
+Build a config from a mapping, ignoring unknown keys; `null` = the default.
 
 * **Return type:**
   [`YbConfig`](#yb.config.YbConfig)

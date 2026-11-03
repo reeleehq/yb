@@ -81,12 +81,13 @@ not to stylised artwork or a visualizer. Left unset when `None`.
 * **Type:**
   [`bool`](https://docs.python.org/3/builtins/functions.html#bool) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
-#### *classmethod* from_content(content, , category_id='28', with_chapters=True)
+#### *classmethod* from_content(content, , category_id='28', with_chapters=True, contains_synthetic_media=None)
 
 Build YouTube metadata from a platform-neutral content bundle.
 
 Embeds the chapters block into the description (when present and
 `with_chapters`), so YouTube renders interactive chapters.
+`contains_synthetic_media`: see the class attribute.
 
 * **Return type:**
   [`VideoMetadata`](#yb.youtube.metadata.VideoMetadata)

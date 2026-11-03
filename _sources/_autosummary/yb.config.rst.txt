@@ -10,6 +10,7 @@ yb.config
    
       DEFAULT_PRIVACY_STATUS
       DEFAULT_PLAYLIST_PRIVACY_STATUS
+      PRIVACY_STATUSES
       PROFILE_ENV
    
    .. rubric:: Functions

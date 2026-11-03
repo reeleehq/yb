@@ -122,7 +122,7 @@ Description with a chapters block appended (if any chapters).
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
-### *class* yb.YbConfig(privacy_status='unlisted', playlist=None, create_playlist_if_missing=True, playlist_privacy_status='private', channel_id=None, login_hint=None)
+### *class* yb.YbConfig(privacy_status='unlisted', playlist=None, create_playlist_if_missing=True, playlist_privacy_status='private', channel_id=None, login_hint=None, contains_synthetic_media=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -173,9 +173,18 @@ page preselects it (`None` = whatever the browser is signed in as).
 * **Type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
+#### contains_synthetic_media
+
+Default for YouTube’s altered-or-synthetic
+content disclosure on uploads (`None` = leave it unset). A
+channel that publishes realistic AI-made videos can set `true`.
+
+* **Type:**
+  [`bool`](https://docs.python.org/3/builtins/functions.html#bool) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
 #### *classmethod* from_mapping(mapping)
 
-Build a config from a mapping, ignoring unknown keys.
+Build a config from a mapping, ignoring unknown keys; `null` = the default.
 
 * **Return type:**
   [`YbConfig`](yb.config.html.md#yb.config.YbConfig)
@@ -392,15 +401,15 @@ to read instead of the top-level keys; an unknown profile is an error.
 * **Return type:**
   [`YbConfig`](yb.config.html.md#yb.config.YbConfig)
 
-### yb.prepare_and_publish(media, \*, language='English', language_code=None, audio_language_code=None, brand=None, extra_context=None, with_chapters=True, with_thumbnail=True, privacy_status=None, playlist=<object object>, category_id='28', config=None, client_secrets_file=None, token_file=None, profile=None, progress=True, \*\*cred_kwargs)
+### yb.prepare_and_publish(media, \*, language='English', language_code=None, audio_language_code=None, brand=None, extra_context=None, with_chapters=True, with_thumbnail=True, privacy_status=None, playlist=<object object>, category_id='28', contains_synthetic_media=None, config=None, client_secrets_file=None, token_file=None, profile=None, progress=True, \*\*cred_kwargs)
 
 One call: prepare publication content from `media` and upload it.
 
 Transcribes (persisting the SRT next to the media) if needed, writes
 LLM metadata, detects chapters, renders a thumbnail, then uploads with
 captions + thumbnail + chapters and adds the video to the configured
-playlist. `privacy_status` and `playlist` default to your `yb` config
-(see [`publish_content()`](#yb.publish_content)).
+playlist. `privacy_status`, `playlist` and `contains_synthetic_media`
+default to your `yb` config (see [`publish_content()`](#yb.publish_content)).
 
 `profile` publishes as a named account/channel (own token and config
 section; see [`yb.config`](yb.config.html.md#module-yb.config)); `None` uses `$YB_PROFILE` or the default.
@@ -462,7 +471,7 @@ Build a podcast episode bundle from `media` into `output_dir`.
 * **Returns:**
   A `PodcastEpisode` with the asset paths.
 
-### yb.publish_content(content, \*, privacy_status=None, playlist=<object object>, category_id='28', with_chapters=True, attach_caption=True, set_thumb=True, config=None, client_secrets_file=None, token_file=None, profile=None, progress=True, service=None, resume=None, \*\*cred_kwargs)
+### yb.publish_content(content, \*, privacy_status=None, playlist=<object object>, category_id='28', with_chapters=True, contains_synthetic_media=None, attach_caption=True, set_thumb=True, config=None, client_secrets_file=None, token_file=None, profile=None, progress=True, service=None, resume=None, \*\*cred_kwargs)
 
 Upload a prepared [`PublicationContent`](#yb.PublicationContent) to YouTube.
 
@@ -476,6 +485,11 @@ thumbnail when available, and adds the video to the configured playlist.
 to `unlisted` and the video joins your configured playlist. Pass
 `playlist=None` to skip the playlist for one call, or `playlist="Name"`
 to override the target.
+
+`contains_synthetic_media` sets YouTube’s altered-or-synthetic content
+disclosure (see [`VideoMetadata`](yb.youtube.metadata.html.md#yb.youtube.metadata.VideoMetadata)); `None`
+uses the config’s `contains_synthetic_media`, else leaves it unset. The
+Data API accepts the flag but never returns it (only Studio shows it).
 
 `profile` publishes as a named account/channel (own token and config
 section; see [`yb.config`](yb.config.html.md#module-yb.config)); `None` uses `$YB_PROFILE` or the default.
