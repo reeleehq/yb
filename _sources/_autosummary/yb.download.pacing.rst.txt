@@ -9,6 +9,7 @@ yb.download.pacing
    .. autosummary::
    
       PACE_PRESETS
+      BLOCK_PATTERNS
    
    .. rubric:: Functions
 

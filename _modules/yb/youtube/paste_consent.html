@@ -302,17 +302,18 @@
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">shlex</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">contextlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">contextmanager</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Sequence</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">urllib.parse</span><span class="w"> </span><span class="kn">import</span> <span class="n">urlencode</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">urllib.parse</span><span class="w"> </span><span class="kn">import</span> <span class="n">parse_qs</span><span class="p">,</span> <span class="n">urlencode</span><span class="p">,</span> <span class="n">urlparse</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">yb.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">config_dir</span><span class="p">,</span> <span class="n">resolve_profile</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">yb.youtube.auth</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">DEFAULT_SCOPES</span><span class="p">,</span>
     <span class="n">ConsentRequired</span><span class="p">,</span>
     <span class="n">PathLike</span><span class="p">,</span>
-    <span class="n">_config_dir</span><span class="p">,</span>
     <span class="n">_resolve_client_secrets</span><span class="p">,</span>
 <span class="p">)</span>
 
@@ -340,33 +341,101 @@
 <span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">__reduce__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>  <span class="c1"># keyword-only __init__: default pickling would fail</span>
-        <span class="k">return</span> <span class="p">(</span><span class="n">_rebuild_pending</span><span class="p">,</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">redirect_uri</span><span class="p">))</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="n">_rebuild_pending</span><span class="p">,</span>
+            <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">redirect_uri</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">profile</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">login_hint</span><span class="p">),</span>
+        <span class="p">)</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">redirect_uri</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">redirect_uri</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">profile</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">login_hint</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">url</span> <span class="o">=</span> <span class="n">url</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">redirect_uri</span> <span class="o">=</span> <span class="n">redirect_uri</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">profile</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">login_hint</span> <span class="o">=</span> <span class="n">profile</span><span class="p">,</span> <span class="n">login_hint</span>
+        <span class="n">flag</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">" --profile </span><span class="si">{</span><span class="n">shlex</span><span class="o">.</span><span class="n">quote</span><span class="p">(</span><span class="n">profile</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span> <span class="k">if</span> <span class="n">profile</span> <span class="k">else</span> <span class="s2">""</span>
+        <span class="n">kw</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"profile=</span><span class="si">{</span><span class="n">profile</span><span class="si">!r}</span><span class="s2">, "</span> <span class="k">if</span> <span class="n">profile</span> <span class="k">else</span> <span class="s2">""</span>
+        <span class="n">sign_in</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">" Sign in as </span><span class="si">{</span><span class="n">login_hint</span><span class="si">}</span><span class="s2">."</span> <span class="k">if</span> <span class="n">login_hint</span> <span class="k">else</span> <span class="s2">""</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
             <span class="s2">"YouTube consent is waiting for you.</span><span class="se">\n</span><span class="s2">"</span>
-            <span class="sa">f</span><span class="s2">"1. Open this URL in any browser and approve:</span><span class="se">\n</span><span class="s2">   </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="se">\n</span><span class="s2">"</span>
+            <span class="sa">f</span><span class="s2">"1. Open this URL in any browser and approve:</span><span class="si">{</span><span class="n">sign_in</span><span class="si">}</span><span class="se">\n</span><span class="s2">   </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="se">\n</span><span class="s2">"</span>
             <span class="sa">f</span><span class="s2">"2. The browser then tries to load </span><span class="si">{</span><span class="n">redirect_uri</span><span class="si">}</span><span class="s2">... and fails to "</span>
             <span class="s2">"connect. That is expected. Copy the full URL from the address bar "</span>
             <span class="s2">"(or just the code value).</span><span class="se">\n</span><span class="s2">"</span>
-            <span class="s2">"3. Finish with: yb auth --paste '&lt;that URL&gt;'   or   "</span>
-            <span class="s2">"get_credentials(consent='paste', authorization_response='&lt;that URL&gt;')"</span>
+            <span class="sa">f</span><span class="s2">"3. Finish with: yb auth</span><span class="si">{</span><span class="n">flag</span><span class="si">}</span><span class="s2"> --paste '&lt;that URL&gt;'   or   "</span>
+            <span class="sa">f</span><span class="s2">"get_credentials(</span><span class="si">{</span><span class="n">kw</span><span class="si">}</span><span class="s2">consent='paste', authorization_response='&lt;that URL&gt;')"</span>
         <span class="p">)</span></div>
 
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_rebuild_pending</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">redirect_uri</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ConsentPending</span><span class="p">:</span>
-    <span class="k">return</span> <span class="n">ConsentPending</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">redirect_uri</span><span class="o">=</span><span class="n">redirect_uri</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_rebuild_pending</span><span class="p">(</span>
+    <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">redirect_uri</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">profile</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">login_hint</span><span class="o">=</span><span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ConsentPending</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">ConsentPending</span><span class="p">(</span>
+        <span class="n">url</span><span class="p">,</span> <span class="n">redirect_uri</span><span class="o">=</span><span class="n">redirect_uri</span><span class="p">,</span> <span class="n">profile</span><span class="o">=</span><span class="n">profile</span><span class="p">,</span> <span class="n">login_hint</span><span class="o">=</span><span class="n">login_hint</span>
+    <span class="p">)</span>
+
+
+<span class="c1">#: Pending-consent file names: ``&lt;stem&gt;.json`` for the default profile,</span>
+<span class="c1">#: ``&lt;stem&gt;.&lt;profile&gt;.json`` for a named one.</span>
+<span class="n">PENDING_STEM</span> <span class="o">=</span> <span class="s2">"youtube_consent_pending"</span>
+
+<span class="c1">#: How a profile is named back to the user when it is the default one</span>
+<span class="c1">#: (``--profile default`` selects it, see :func:`yb.config.resolve_profile`).</span>
+<span class="n">DEFAULT_PROFILE_NAME</span> <span class="o">=</span> <span class="s2">"default"</span>
 
 
 <div class="viewcode-block" id="pending_consent_file">
 <a class="viewcode-back" href="../../../_autosummary/yb.youtube.paste_consent.html#yb.youtube.pending_consent_file">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">pending_consent_file</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Where the in-progress consent is kept (next to the token, mode 0600)."""</span>
-    <span class="k">return</span> <span class="n">_config_dir</span><span class="p">()</span> <span class="o">/</span> <span class="s2">"youtube_consent_pending.json"</span></div>
+<span class="k">def</span><span class="w"> </span><span class="nf">pending_consent_file</span><span class="p">(</span><span class="n">profile</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Where the in-progress consent of ``profile`` is kept (next to the token, 0600).</span>
 
+<span class="sd">    A named profile keeps its own file, so two consents in flight (one per</span>
+<span class="sd">    account) cannot overwrite each other.</span>
+<span class="sd">    """</span>
+    <span class="n">profile</span> <span class="o">=</span> <span class="n">resolve_profile</span><span class="p">(</span><span class="n">profile</span><span class="p">)</span>
+    <span class="n">suffix</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">".</span><span class="si">{</span><span class="n">profile</span><span class="si">}</span><span class="s2">"</span> <span class="k">if</span> <span class="n">profile</span> <span class="k">else</span> <span class="s2">""</span>
+    <span class="k">return</span> <span class="n">config_dir</span><span class="p">()</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">PENDING_STEM</span><span class="si">}{</span><span class="n">suffix</span><span class="si">}</span><span class="s2">.json"</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_pending_profiles</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Every profile with a pending-consent file, by name (``"default"`` included)."""</span>
+    <span class="n">found</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">config_dir</span><span class="p">()</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">PENDING_STEM</span><span class="si">}</span><span class="s2">*.json"</span><span class="p">):</span>
+        <span class="n">middle</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">PENDING_STEM</span><span class="p">)</span> <span class="p">:</span> <span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="s2">".json"</span><span class="p">)]</span>
+        <span class="n">found</span><span class="p">[</span><span class="n">middle</span><span class="o">.</span><span class="n">removeprefix</span><span class="p">(</span><span class="s2">"."</span><span class="p">)</span> <span class="ow">or</span> <span class="n">DEFAULT_PROFILE_NAME</span><span class="p">]</span> <span class="o">=</span> <span class="n">path</span>
+    <span class="k">return</span> <span class="n">found</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_pasted_state</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The ``state`` in a pasted redirect or query, ``None`` for a bare code.</span>
+
+<span class="sd">    A bare code carries no state, so it cannot be routed to its profile (PKCE</span>
+<span class="sd">    still binds it to the request that issued it): paste the whole URL.</span>
+<span class="sd">    """</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">"&lt;&gt;</span><span class="se">\"</span><span class="s2">'"</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="n">query</span> <span class="o">=</span> <span class="n">urlparse</span><span class="p">(</span><span class="n">text</span><span class="p">)</span><span class="o">.</span><span class="n">query</span> <span class="ow">or</span> <span class="n">text</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s2">"?"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">parse_qs</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"state"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[</span><span class="kc">None</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_started_elsewhere</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">pending</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""`` This consent was started for profile 'X'...`` when another profile's</span>
+<span class="sd">    pending request holds the pasted ``state``, else ``""``."""</span>
+    <span class="n">state</span> <span class="o">=</span> <span class="n">_pasted_state</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">state</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">""</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">_pending_profiles</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">path</span> <span class="o">!=</span> <span class="n">pending</span> <span class="ow">and</span> <span class="p">(</span><span class="n">_load_pending</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"state"</span><span class="p">)</span> <span class="o">==</span> <span class="n">state</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span>
+                <span class="sa">f</span><span class="s2">" This consent was started for profile </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2">: rerun with "</span>
+                <span class="sa">f</span><span class="s2">"yb auth --profile </span><span class="si">{</span><span class="n">shlex</span><span class="o">.</span><span class="n">quote</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="si">}</span><span class="s2"> --paste '&lt;that URL&gt;'."</span>
+            <span class="p">)</span>
+    <span class="k">return</span> <span class="s2">""</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_redirect_uri</span><span class="p">(</span><span class="n">port</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
@@ -420,12 +489,16 @@
     <span class="n">port</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DEFAULT_PASTE_PORT</span><span class="p">,</span>
     <span class="n">pending_file</span><span class="p">:</span> <span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">reuse_pending</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">login_hint</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Begin paste-back consent and return the URL to open.</span>
 
-<span class="sd">    A consent already pending for the same client, ``scopes`` and ``port`` is reused</span>
-<span class="sd">    (``reuse_pending=True``): re-printing the URL must not invalidate the one the</span>
-<span class="sd">    user already has open on their phone.</span>
+<span class="sd">    A consent already pending for the same client, ``scopes``, ``port`` and</span>
+<span class="sd">    ``login_hint`` is reused (``reuse_pending=True``): re-printing the URL must</span>
+<span class="sd">    not invalidate the one the user already has open on their phone.</span>
+
+<span class="sd">    ``login_hint`` (an email) makes Google preselect that account, so consent is</span>
+<span class="sd">    not given by whichever account the browser happens to be signed in as.</span>
 <span class="sd">    """</span>
     <span class="n">scopes</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">scopes</span><span class="p">)</span>
     <span class="n">port</span> <span class="o">=</span> <span class="n">port</span> <span class="ow">or</span> <span class="n">DEFAULT_PASTE_PORT</span>
@@ -438,14 +511,16 @@
     <span class="n">client_id</span> <span class="o">=</span> <span class="n">flow</span><span class="o">.</span><span class="n">client_config</span><span class="p">[</span><span class="s2">"client_id"</span><span class="p">]</span>
 
     <span class="n">saved</span> <span class="o">=</span> <span class="n">_load_pending</span><span class="p">(</span><span class="n">pending</span><span class="p">)</span> <span class="k">if</span> <span class="n">reuse_pending</span> <span class="k">else</span> <span class="kc">None</span>
-    <span class="k">if</span> <span class="n">saved</span> <span class="ow">and</span> <span class="p">(</span><span class="n">saved</span><span class="p">[</span><span class="s2">"scopes"</span><span class="p">],</span> <span class="n">saved</span><span class="p">[</span><span class="s2">"redirect_uri"</span><span class="p">],</span> <span class="n">saved</span><span class="p">[</span><span class="s2">"client_id"</span><span class="p">])</span> <span class="o">==</span> <span class="p">(</span>
-        <span class="n">scopes</span><span class="p">,</span>
-        <span class="n">redirect_uri</span><span class="p">,</span>
-        <span class="n">client_id</span><span class="p">,</span>
-    <span class="p">):</span>
+    <span class="k">if</span> <span class="n">saved</span> <span class="ow">and</span> <span class="p">(</span>
+        <span class="n">saved</span><span class="p">[</span><span class="s2">"scopes"</span><span class="p">],</span>
+        <span class="n">saved</span><span class="p">[</span><span class="s2">"redirect_uri"</span><span class="p">],</span>
+        <span class="n">saved</span><span class="p">[</span><span class="s2">"client_id"</span><span class="p">],</span>
+        <span class="n">saved</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"login_hint"</span><span class="p">),</span>
+    <span class="p">)</span> <span class="o">==</span> <span class="p">(</span><span class="n">scopes</span><span class="p">,</span> <span class="n">redirect_uri</span><span class="p">,</span> <span class="n">client_id</span><span class="p">,</span> <span class="n">login_hint</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">saved</span><span class="p">[</span><span class="s2">"url"</span><span class="p">]</span>
 
-    <span class="n">url</span><span class="p">,</span> <span class="n">state</span> <span class="o">=</span> <span class="n">flow</span><span class="o">.</span><span class="n">authorization_url</span><span class="p">(</span><span class="n">prompt</span><span class="o">=</span><span class="s2">"consent"</span><span class="p">)</span>
+    <span class="n">hint</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"login_hint"</span><span class="p">:</span> <span class="n">login_hint</span><span class="p">}</span> <span class="k">if</span> <span class="n">login_hint</span> <span class="k">else</span> <span class="p">{}</span>
+    <span class="n">url</span><span class="p">,</span> <span class="n">state</span> <span class="o">=</span> <span class="n">flow</span><span class="o">.</span><span class="n">authorization_url</span><span class="p">(</span><span class="n">prompt</span><span class="o">=</span><span class="s2">"consent"</span><span class="p">,</span> <span class="o">**</span><span class="n">hint</span><span class="p">)</span>
     <span class="n">_save_pending</span><span class="p">(</span>
         <span class="n">pending</span><span class="p">,</span>
         <span class="nb">dict</span><span class="p">(</span>
@@ -455,6 +530,7 @@
             <span class="n">scopes</span><span class="o">=</span><span class="n">scopes</span><span class="p">,</span>
             <span class="n">redirect_uri</span><span class="o">=</span><span class="n">redirect_uri</span><span class="p">,</span>
             <span class="n">client_id</span><span class="o">=</span><span class="n">client_id</span><span class="p">,</span>
+            <span class="n">login_hint</span><span class="o">=</span><span class="n">login_hint</span><span class="p">,</span>
             <span class="n">created_at</span><span class="o">=</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">(),</span>
         <span class="p">),</span>
     <span class="p">)</span>
@@ -524,8 +600,11 @@
     <span class="k">if</span> <span class="n">saved</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">ConsentRequired</span><span class="p">(</span>
             <span class="s2">"No consent is pending (or it is older than "</span>
-            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">PENDING_TTL_S</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">3600</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">h). Start one first: `yb auth`, or "</span>
-            <span class="s2">"get_credentials(consent='paste')."</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">PENDING_TTL_S</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">3600</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">h) here."</span>
+            <span class="o">+</span> <span class="p">(</span>
+                <span class="n">_started_elsewhere</span><span class="p">(</span><span class="n">authorization_response</span><span class="p">,</span> <span class="n">pending</span><span class="p">)</span>
+                <span class="ow">or</span> <span class="s2">" Start one first: `yb auth`, or get_credentials(consent='paste')."</span>
+            <span class="p">)</span>
         <span class="p">)</span>
     <span class="n">flow</span> <span class="o">=</span> <span class="n">_flow</span><span class="p">(</span>
         <span class="n">_resolve_client_secrets</span><span class="p">(</span><span class="n">client_secrets_file</span><span class="p">),</span>
@@ -541,8 +620,12 @@
     <span class="k">except</span> <span class="n">MismatchingStateError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">ConsentRequired</span><span class="p">(</span>
             <span class="s2">"The pasted redirect belongs to a different consent request (its "</span>
-            <span class="s2">"state does not match). Paste the URL from the browser tab opened "</span>
-            <span class="s2">"from the *latest* consent URL."</span>
+            <span class="s2">"state does not match)."</span>
+            <span class="o">+</span> <span class="p">(</span>
+                <span class="n">_started_elsewhere</span><span class="p">(</span><span class="n">authorization_response</span><span class="p">,</span> <span class="n">pending</span><span class="p">)</span>
+                <span class="ow">or</span> <span class="s2">" Paste the URL from the browser tab opened from the *latest* "</span>
+                <span class="s2">"consent URL."</span>
+            <span class="p">)</span>
         <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">error</span>
     <span class="k">except</span> <span class="ne">Warning</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>  <span class="c1"># oauthlib: the user granted fewer scopes than asked</span>
         <span class="k">raise</span> <span class="n">ConsentRequired</span><span class="p">(</span>
@@ -587,7 +670,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=a9ed77be"></script>
+</div><script src="../../../_static/documentation_options.js?v=00ad03d8"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

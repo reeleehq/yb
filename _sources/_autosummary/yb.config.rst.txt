@@ -16,6 +16,7 @@ yb.config
 
    .. autosummary::
    
+      config_dir
       default_config_file
       load_config
       resolve_profile

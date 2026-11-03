@@ -460,7 +460,7 @@ missing extra — the error surfaces only when you actually use that feature.</p
 
 <dl class="py class">
 <dt class="sig sig-object py" id="yb.YbConfig">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">yb.</span></span><span class="sig-name descname"><span class="pre">YbConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">privacy_status</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'unlisted'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">playlist</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">create_playlist_if_missing</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">playlist_privacy_status</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'private'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/config.html#YbConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.YbConfig" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">yb.</span></span><span class="sig-name descname"><span class="pre">YbConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">privacy_status</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'unlisted'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">playlist</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">create_playlist_if_missing</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">playlist_privacy_status</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'private'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">login_hint</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/config.html#YbConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.YbConfig" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#object" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <p>Resolved publishing defaults.</p>
 <dl class="field-list simple">
@@ -522,6 +522,18 @@ title exists yet, rather than erroring.</p>
 </dl>
 </dd></dl>
 
+<dl class="py attribute">
+<dt class="sig sig-object py" id="yb.YbConfig.login_hint">
+<span class="sig-name descname"><span class="pre">login_hint</span></span><a class="headerlink" href="#yb.YbConfig.login_hint" title="Link to this definition">¶</a></dt>
+<dd><p>Email of the Google account to consent with; the consent
+page preselects it (<code class="docutils literal notranslate"><span class="pre">None</span></code> = whatever the browser is signed in as).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a> | <span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code></a></span></span></p>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="yb.YbConfig.from_mapping">
 <span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_mapping</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mapping</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/config.html#YbConfig.from_mapping"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.YbConfig.from_mapping" title="Link to this definition">¶</a></dt>
@@ -559,7 +571,7 @@ if the playlist had to be made.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="yb.default_config_file">
 <span class="sig-prename descclassname"><span class="pre">yb.</span></span><span class="sig-name descname"><span class="pre">default_config_file</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/config.html#default_config_file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.default_config_file" title="Link to this definition">¶</a></dt>
-<dd><p>Config file location (<code class="docutils literal notranslate"><span class="pre">$XDG_CONFIG_HOME</span></code> or <code class="docutils literal notranslate"><span class="pre">~/.config</span></code>).</p>
+<dd><p>Config file location (in <code class="xref py py-func docutils literal notranslate"><span class="pre">config_dir()</span></code>).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a></span></p>
@@ -709,11 +721,12 @@ requests, 4 MB/s cap). Default <code class="docutils literal notranslate"><span 
 options in <code class="docutils literal notranslate"><span class="pre">extra_opts</span></code> win over it.</p></li>
 <li><p><strong>on_subtitle_error</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Literal" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Literal</span></code></a>[<span class="highlight sphinx_autodoc_typehints-value"><code class="docutils literal notranslate"><span class="s1"><span class="pre">'raise'</span></span></code></span>, <span class="highlight sphinx_autodoc_typehints-value"><code class="docutils literal notranslate"><span class="s1"><span class="pre">'warn'</span></span></code></span>]</span>) – When subtitles were asked for and only their fetch
 fails (YouTube rate-limits its captions endpoint before the video
-one): <code class="docutils literal notranslate"><span class="pre">&quot;warn&quot;</span></code> (default) warns, retries once without subtitles
-(even if <code class="docutils literal notranslate"><span class="pre">extra_opts</span></code> asks for them), and records the reason in
+one): <code class="docutils literal notranslate"><span class="pre">&quot;warn&quot;</span></code> (default) warns, processes the video again without
+subtitles (even if <code class="docutils literal notranslate"><span class="pre">extra_opts</span></code> asks for them; the formats chosen
+are kept, nothing is extracted twice), and records the reason in
 <code class="docutils literal notranslate"><span class="pre">result.subtitles_error</span></code>; <code class="docutils literal notranslate"><span class="pre">&quot;raise&quot;</span></code> propagates the error (a
 <a class="reference internal" href="yb.download.html#yb.download.RateLimitedError" title="yb.download.RateLimitedError"><code class="xref py py-class docutils literal notranslate"><span class="pre">RateLimitedError</span></code></a> for a 429, saying only the
-subtitles were refused). Playlist downloads are not covered.</p></li>
+subtitles were refused). See <code class="xref py py-func docutils literal notranslate"><span class="pre">install_subtitle_fallback()</span></code>.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
@@ -1076,6 +1089,7 @@ the title/duration/chapters before deciding to download.</p>
 <li><a class="reference internal" href="#yb.YbConfig.create_playlist_if_missing"><code class="docutils literal notranslate"><span class="pre">YbConfig.create_playlist_if_missing</span></code></a></li>
 <li><a class="reference internal" href="#yb.YbConfig.playlist_privacy_status"><code class="docutils literal notranslate"><span class="pre">YbConfig.playlist_privacy_status</span></code></a></li>
 <li><a class="reference internal" href="#yb.YbConfig.channel_id"><code class="docutils literal notranslate"><span class="pre">YbConfig.channel_id</span></code></a></li>
+<li><a class="reference internal" href="#yb.YbConfig.login_hint"><code class="docutils literal notranslate"><span class="pre">YbConfig.login_hint</span></code></a></li>
 <li><a class="reference internal" href="#yb.YbConfig.from_mapping"><code class="docutils literal notranslate"><span class="pre">YbConfig.from_mapping()</span></code></a></li>
 </ul>
 </li>
@@ -1106,7 +1120,7 @@ the title/duration/chapters before deciding to download.</p>
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=a9ed77be"></script>
+</div><script src="../_static/documentation_options.js?v=00ad03d8"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>

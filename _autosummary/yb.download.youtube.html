@@ -363,25 +363,28 @@ also save) is overridable, and any raw yt-dlp option can be passed through.</p>
 <tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.youtube.glob_escape" title="yb.download.youtube.glob_escape"><code class="xref py py-obj docutils literal notranslate"><span class="pre">glob_escape</span></code></a>(name)</p></td>
 <td><p>Escape glob metacharacters in a literal filename stem.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#yb.download.youtube.resolve_output_path" title="yb.download.youtube.resolve_output_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">resolve_output_path</span></code></a>(info, ydl, out_dir, merge_to)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#yb.download.youtube.install_subtitle_fallback" title="yb.download.youtube.install_subtitle_fallback"><code class="xref py py-obj docutils literal notranslate"><span class="pre">install_subtitle_fallback</span></code></a>(ydl, *, ...)</p></td>
+<td><p>Make <code class="docutils literal notranslate"><span class="pre">ydl</span></code> survive a failed subtitle fetch; returns the failures as they happen.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.youtube.resolve_output_path" title="yb.download.youtube.resolve_output_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">resolve_output_path</span></code></a>(info, ydl, out_dir, merge_to)</p></td>
 <td><p>Best-effort resolution of the final media path yt-dlp produced.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.youtube.search_youtube" title="yb.download.youtube.search_youtube"><code class="xref py py-obj docutils literal notranslate"><span class="pre">search_youtube</span></code></a>(query, *[, limit, ...])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#yb.download.youtube.search_youtube" title="yb.download.youtube.search_youtube"><code class="xref py py-obj docutils literal notranslate"><span class="pre">search_youtube</span></code></a>(query, *[, limit, ...])</p></td>
 <td><p>Search YouTube by name; returns up to <code class="docutils literal notranslate"><span class="pre">limit</span></code> hits, best match first.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">trim_info</span></code>(info)</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">trim_info</span></code>(info)</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.youtube.youtube_dl" title="yb.download.youtube.youtube_dl"><code class="xref py py-obj docutils literal notranslate"><span class="pre">youtube_dl</span></code></a>(base_opts, *[, extra_opts, ...])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#yb.download.youtube.youtube_dl" title="yb.download.youtube.youtube_dl"><code class="xref py py-obj docutils literal notranslate"><span class="pre">youtube_dl</span></code></a>(base_opts, *[, extra_opts, ...])</p></td>
 <td><p>Yield a <code class="docutils literal notranslate"><span class="pre">YoutubeDL</span></code> built the way every yb download builds one.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#yb.download.youtube.youtube_dl_cls" title="yb.download.youtube.youtube_dl_cls"><code class="xref py py-obj docutils literal notranslate"><span class="pre">youtube_dl_cls</span></code></a>()</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.youtube.youtube_dl_cls" title="yb.download.youtube.youtube_dl_cls"><code class="xref py py-obj docutils literal notranslate"><span class="pre">youtube_dl_cls</span></code></a>()</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">yt_dlp.YoutubeDL</span></code>, or an <code class="docutils literal notranslate"><span class="pre">ImportError</span></code> that says how to install it.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.youtube.youtube_playlist_info" title="yb.download.youtube.youtube_playlist_info"><code class="xref py py-obj docutils literal notranslate"><span class="pre">youtube_playlist_info</span></code></a>(url, *[, ...])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#yb.download.youtube.youtube_playlist_info" title="yb.download.youtube.youtube_playlist_info"><code class="xref py py-obj docutils literal notranslate"><span class="pre">youtube_playlist_info</span></code></a>(url, *[, ...])</p></td>
 <td><p>Fetch a playlist's per-video metadata without downloading.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#yb.download.youtube.youtube_video_info" title="yb.download.youtube.youtube_video_info"><code class="xref py py-obj docutils literal notranslate"><span class="pre">youtube_video_info</span></code></a>(url, *[, extra_opts, ...])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.youtube.youtube_video_info" title="yb.download.youtube.youtube_video_info"><code class="xref py py-obj docutils literal notranslate"><span class="pre">youtube_video_info</span></code></a>(url, *[, extra_opts, ...])</p></td>
 <td><p>Fetch a video's metadata without downloading it.</p></td>
 </tr>
 </tbody>
@@ -396,6 +399,19 @@ also save) is overridable, and any raw yt-dlp option can be passed through.</p>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#yb.download.youtube.SearchHit" title="yb.download.youtube.SearchHit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SearchHit</span></code></a>(id, title, duration, channel, url)</p></td>
 <td><p>One row of <a class="reference internal" href="#yb.download.youtube.search_youtube" title="yb.download.youtube.search_youtube"><code class="xref py py-func docutils literal notranslate"><span class="pre">search_youtube()</span></code></a> (flat extraction: no per-video fetch).</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.youtube.SubtitleFailure" title="yb.download.youtube.SubtitleFailure"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SubtitleFailure</span></code></a>(video_id, error)</p></td>
+<td><p>An item whose subtitle fetch failed (see <a class="reference internal" href="#yb.download.youtube.install_subtitle_fallback" title="yb.download.youtube.install_subtitle_fallback"><code class="xref py py-func docutils literal notranslate"><span class="pre">install_subtitle_fallback()</span></code></a>).</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p class="rubric">Exceptions</p>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.youtube.PlaylistSubtitleError" title="yb.download.youtube.PlaylistSubtitleError"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PlaylistSubtitleError</span></code></a>(results, failures)</p></td>
+<td><p>Some playlist items' subtitles failed (<code class="docutils literal notranslate"><span class="pre">on_subtitle_error=&quot;raise&quot;</span></code>).</p></td>
 </tr>
 </tbody>
 </table>
@@ -566,6 +582,27 @@ same vocabulary as <a class="reference internal" href="#yb.download.youtube.OnCo
 <p>alias of <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Literal" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Literal</span></code></a>[‘raise’, ‘warn’]</p>
 </dd></dl>
 
+<dl class="py exception">
+<dt class="sig sig-object py" id="yb.download.youtube.PlaylistSubtitleError">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">yb.download.youtube.</span></span><span class="sig-name descname"><span class="pre">PlaylistSubtitleError</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">results</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">failures</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/download/youtube.html#PlaylistSubtitleError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.download.youtube.PlaylistSubtitleError" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#RuntimeError" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">RuntimeError</span></code></a></p>
+<p>Some playlist items’ subtitles failed (<code class="docutils literal notranslate"><span class="pre">on_subtitle_error=&quot;raise&quot;</span></code>).</p>
+<dl class="field-list simple">
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="yb.download.youtube.PlaylistSubtitleError.results">
+<span class="sig-name descname"><span class="pre">results</span></span><a class="headerlink" href="#yb.download.youtube.PlaylistSubtitleError.results" title="Link to this definition">¶</a></dt>
+<dd><p>The items that did download.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="yb.download.youtube.PlaylistSubtitleError.failures">
+<span class="sig-name descname"><span class="pre">failures</span></span><a class="headerlink" href="#yb.download.youtube.PlaylistSubtitleError.failures" title="Link to this definition">¶</a></dt>
+<dd><p>The <a class="reference internal" href="#yb.download.youtube.SubtitleFailure" title="yb.download.youtube.SubtitleFailure"><code class="xref py py-class docutils literal notranslate"><span class="pre">SubtitleFailure</span></code></a> of each item that did not.</p>
+</dd></dl>
+
+</dd></dl>
+
 <dl class="py data">
 <dt class="sig sig-object py" id="yb.download.youtube.SEARCH_RESULTS_URL">
 <span class="sig-prename descclassname"><span class="pre">yb.download.youtube.</span></span><span class="sig-name descname"><span class="pre">SEARCH_RESULTS_URL</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'https://www.youtube.com/results'</span></span><a class="headerlink" href="#yb.download.youtube.SEARCH_RESULTS_URL" title="Link to this definition">¶</a></dt>
@@ -585,6 +622,15 @@ same vocabulary as <a class="reference internal" href="#yb.download.youtube.OnCo
 <p>One row of <a class="reference internal" href="#yb.download.youtube.search_youtube" title="yb.download.youtube.search_youtube"><code class="xref py py-func docutils literal notranslate"><span class="pre">search_youtube()</span></code></a> (flat extraction: no per-video fetch).</p>
 <p><code class="docutils literal notranslate"><span class="pre">duration</span></code> is in seconds and may be <code class="docutils literal notranslate"><span class="pre">None</span></code> (live streams, some results),
 as may <code class="docutils literal notranslate"><span class="pre">view_count</span></code>.</p>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="yb.download.youtube.SubtitleFailure">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">yb.download.youtube.</span></span><span class="sig-name descname"><span class="pre">SubtitleFailure</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">video_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">error</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/download/youtube.html#SubtitleFailure"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.download.youtube.SubtitleFailure" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#object" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>An item whose subtitle fetch failed (see <a class="reference internal" href="#yb.download.youtube.install_subtitle_fallback" title="yb.download.youtube.install_subtitle_fallback"><code class="xref py py-func docutils literal notranslate"><span class="pre">install_subtitle_fallback()</span></code></a>).</p>
 <dl class="field-list simple">
 </dl>
 </dd></dl>
@@ -696,7 +742,7 @@ when <code class="docutils literal notranslate"><span class="pre">audio_format</
 
 <dl class="py function">
 <dt class="sig sig-object py" id="yb.download.youtube.download_youtube_playlist">
-<span class="sig-prename descclassname"><span class="pre">yb.download.youtube.</span></span><span class="sig-name descname"><span class="pre">download_youtube_playlist</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">download_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">playlist_items</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skip_first</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title_reject</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">download_archive</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fmt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'bestvideo+bestaudio/best'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">merge_to</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'mp4'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename_template</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'%(title)s</span> <span class="pre">(%(id)s).%(ext)s'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">write_info_json</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">write_thumbnail</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">write_description</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">write_subtitles</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">write_auto_subtitles</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subtitle_langs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">('en',)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cookies_from_browser</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extractor_args</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">quiet</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_opts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cookies_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pace</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">item_folders</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">embed_metadata</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/download/youtube.html#download_youtube_playlist"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.download.youtube.download_youtube_playlist" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">yb.download.youtube.</span></span><span class="sig-name descname"><span class="pre">download_youtube_playlist</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">download_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">playlist_items</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skip_first</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title_reject</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">download_archive</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fmt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'bestvideo+bestaudio/best'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">merge_to</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'mp4'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename_template</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'%(title)s</span> <span class="pre">(%(id)s).%(ext)s'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">write_info_json</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">write_thumbnail</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">write_description</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">write_subtitles</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">write_auto_subtitles</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subtitle_langs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">('en',)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cookies_from_browser</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extractor_args</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">quiet</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_opts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cookies_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pace</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">item_folders</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">embed_metadata</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_subtitle_error</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'warn'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/download/youtube.html#download_youtube_playlist"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.download.youtube.download_youtube_playlist" title="Link to this definition">¶</a></dt>
 <dd><p>Download all (or a selected subset of) a YouTube playlist’s videos.</p>
 <p>Simplest use: <code class="docutils literal notranslate"><span class="pre">download_youtube_playlist(url)</span></code> → every video downloaded best
 quality merged to mp4 into <code class="docutils literal notranslate"><span class="pre">download_dir</span></code> (default <code class="docutils literal notranslate"><span class="pre">~/Downloads</span></code>), each with
@@ -764,6 +810,12 @@ options in <code class="docutils literal notranslate"><span class="pre">extra_op
 Incompatible with a custom <code class="docutils literal notranslate"><span class="pre">filename_template</span></code>.</p></li>
 <li><p><strong>embed_metadata</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></span>) – Write title/artist/etc. into the media file (yt-dlp
 <code class="docutils literal notranslate"><span class="pre">--embed-metadata</span></code>; needs ffmpeg).</p></li>
+<li><p><strong>on_subtitle_error</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Literal" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Literal</span></code></a>[<span class="highlight sphinx_autodoc_typehints-value"><code class="docutils literal notranslate"><span class="s1"><span class="pre">'raise'</span></span></code></span>, <span class="highlight sphinx_autodoc_typehints-value"><code class="docutils literal notranslate"><span class="s1"><span class="pre">'warn'</span></span></code></span>]</span>) – When only an item’s subtitle fetch fails (yt-dlp
+would otherwise drop the item): <code class="docutils literal notranslate"><span class="pre">&quot;warn&quot;</span></code> (default) warns and
+downloads that item without subtitles, in place (its result carries
+<code class="docutils literal notranslate"><span class="pre">subtitles_error</span></code>); <code class="docutils literal notranslate"><span class="pre">&quot;raise&quot;</span></code> skips it and raises
+<a class="reference internal" href="#yb.download.youtube.PlaylistSubtitleError" title="yb.download.youtube.PlaylistSubtitleError"><code class="xref py py-class docutils literal notranslate"><span class="pre">PlaylistSubtitleError</span></code></a> after the run, carrying the items
+that did download.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
@@ -774,8 +826,12 @@ Incompatible with a custom <code class="docutils literal notranslate"><span clas
 stream, e.g. <code class="docutils literal notranslate"><span class="pre">.m4a</span></code>, without re-encoding).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Raises<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference internal" href="yb.download.html#yb.download.RateLimitedError" title="yb.download.RateLimitedError"><strong>RateLimitedError</strong></a> – On HTTP 429 or a “confirm you’re not a bot” wall, with
-    a backoff hint. (Per-item failures under <code class="docutils literal notranslate"><span class="pre">ignoreerrors</span></code> are skipped.)</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><a class="reference internal" href="yb.download.html#yb.download.RateLimitedError" title="yb.download.RateLimitedError"><strong>RateLimitedError</strong></a> – On HTTP 429 or a “confirm you’re not a bot” wall, with
+    a backoff hint. (Per-item failures under <code class="docutils literal notranslate"><span class="pre">ignoreerrors</span></code> are skipped.)</p></li>
+<li><p><a class="reference internal" href="#yb.download.youtube.PlaylistSubtitleError" title="yb.download.youtube.PlaylistSubtitleError"><strong>PlaylistSubtitleError</strong></a> – Some items’ subtitles failed and
+    <code class="docutils literal notranslate"><span class="pre">on_subtitle_error=&quot;raise&quot;</span></code>.</p></li>
+</ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference internal" href="#yb.download.youtube.DownloadResult" title="yb.download.youtube.DownloadResult"><code class="xref py py-class docutils literal notranslate"><span class="pre">DownloadResult</span></code></a>]</span></p>
@@ -891,11 +947,12 @@ requests, 4 MB/s cap). Default <code class="docutils literal notranslate"><span 
 options in <code class="docutils literal notranslate"><span class="pre">extra_opts</span></code> win over it.</p></li>
 <li><p><strong>on_subtitle_error</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Literal" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Literal</span></code></a>[<span class="highlight sphinx_autodoc_typehints-value"><code class="docutils literal notranslate"><span class="s1"><span class="pre">'raise'</span></span></code></span>, <span class="highlight sphinx_autodoc_typehints-value"><code class="docutils literal notranslate"><span class="s1"><span class="pre">'warn'</span></span></code></span>]</span>) – When subtitles were asked for and only their fetch
 fails (YouTube rate-limits its captions endpoint before the video
-one): <code class="docutils literal notranslate"><span class="pre">&quot;warn&quot;</span></code> (default) warns, retries once without subtitles
-(even if <code class="docutils literal notranslate"><span class="pre">extra_opts</span></code> asks for them), and records the reason in
+one): <code class="docutils literal notranslate"><span class="pre">&quot;warn&quot;</span></code> (default) warns, processes the video again without
+subtitles (even if <code class="docutils literal notranslate"><span class="pre">extra_opts</span></code> asks for them; the formats chosen
+are kept, nothing is extracted twice), and records the reason in
 <code class="docutils literal notranslate"><span class="pre">result.subtitles_error</span></code>; <code class="docutils literal notranslate"><span class="pre">&quot;raise&quot;</span></code> propagates the error (a
 <a class="reference internal" href="yb.download.html#yb.download.RateLimitedError" title="yb.download.RateLimitedError"><code class="xref py py-class docutils literal notranslate"><span class="pre">RateLimitedError</span></code></a> for a 429, saying only the
-subtitles were refused). Playlist downloads are not covered.</p></li>
+subtitles were refused). See <a class="reference internal" href="#yb.download.youtube.install_subtitle_fallback" title="yb.download.youtube.install_subtitle_fallback"><code class="xref py py-func docutils literal notranslate"><span class="pre">install_subtitle_fallback()</span></code></a>.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
@@ -923,6 +980,29 @@ subtitles were refused). Playlist downloads are not covered.</p></li>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="yb.download.youtube.install_subtitle_fallback">
+<span class="sig-prename descclassname"><span class="pre">yb.download.youtube.</span></span><span class="sig-name descname"><span class="pre">install_subtitle_fallback</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ydl</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_subtitle_error</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/download/youtube.html#install_subtitle_fallback"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.download.youtube.install_subtitle_fallback" title="Link to this definition">¶</a></dt>
+<dd><p>Make <code class="docutils literal notranslate"><span class="pre">ydl</span></code> survive a failed subtitle fetch; returns the failures as they happen.</p>
+<p>Wraps <code class="docutils literal notranslate"><span class="pre">ydl.process_info</span></code> (called once per video, with the formats already
+chosen), so the retry happens in place: same item, same filename and order,
+no second extraction. Failures are keyed by video id (a video listed twice
+in a playlist marks both rows). With several <code class="docutils literal notranslate"><span class="pre">subtitle_langs</span></code>, the ones
+written before the failure stay beside the video. On a failure of the
+subtitle fetch only:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;warn&quot;</span></code>: warn, then process the item again with subtitles off;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;raise&quot;</span></code>: re-raise (a 429 as <a class="reference internal" href="yb.download.html#yb.download.RateLimitedError" title="yb.download.RateLimitedError"><code class="xref py py-class docutils literal notranslate"><span class="pre">RateLimitedError</span></code></a>
+saying only the subtitles were refused). Under <code class="docutils literal notranslate"><span class="pre">ignoreerrors</span></code> yt-dlp
+then skips the item, which the recorded failure still names.</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference internal" href="#yb.download.youtube.SubtitleFailure" title="yb.download.youtube.SubtitleFailure"><code class="xref py py-class docutils literal notranslate"><span class="pre">SubtitleFailure</span></code></a>]</span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -1138,9 +1218,15 @@ the title/duration/chapters before deciding to download.</p>
 <li><a class="reference internal" href="#yb.download.youtube.MAX_SEARCH_LIMIT"><code class="docutils literal notranslate"><span class="pre">MAX_SEARCH_LIMIT</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.youtube.OnConvertError"><code class="docutils literal notranslate"><span class="pre">OnConvertError</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.youtube.OnSubtitleError"><code class="docutils literal notranslate"><span class="pre">OnSubtitleError</span></code></a></li>
+<li><a class="reference internal" href="#yb.download.youtube.PlaylistSubtitleError"><code class="docutils literal notranslate"><span class="pre">PlaylistSubtitleError</span></code></a><ul>
+<li><a class="reference internal" href="#yb.download.youtube.PlaylistSubtitleError.results"><code class="docutils literal notranslate"><span class="pre">PlaylistSubtitleError.results</span></code></a></li>
+<li><a class="reference internal" href="#yb.download.youtube.PlaylistSubtitleError.failures"><code class="docutils literal notranslate"><span class="pre">PlaylistSubtitleError.failures</span></code></a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#yb.download.youtube.SEARCH_RESULTS_URL"><code class="docutils literal notranslate"><span class="pre">SEARCH_RESULTS_URL</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.youtube.SUBTITLE_FAILURE_MARKER"><code class="docutils literal notranslate"><span class="pre">SUBTITLE_FAILURE_MARKER</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.youtube.SearchHit"><code class="docutils literal notranslate"><span class="pre">SearchHit</span></code></a></li>
+<li><a class="reference internal" href="#yb.download.youtube.SubtitleFailure"><code class="docutils literal notranslate"><span class="pre">SubtitleFailure</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.youtube.default_cookies_file"><code class="docutils literal notranslate"><span class="pre">default_cookies_file()</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.youtube.default_download_dir"><code class="docutils literal notranslate"><span class="pre">default_download_dir()</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.youtube.download_youtube_audio"><code class="docutils literal notranslate"><span class="pre">download_youtube_audio()</span></code></a></li>
@@ -1148,6 +1234,7 @@ the title/duration/chapters before deciding to download.</p>
 <li><a class="reference internal" href="#yb.download.youtube.download_youtube_subtitles"><code class="docutils literal notranslate"><span class="pre">download_youtube_subtitles()</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.youtube.download_youtube_video"><code class="docutils literal notranslate"><span class="pre">download_youtube_video()</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.youtube.glob_escape"><code class="docutils literal notranslate"><span class="pre">glob_escape()</span></code></a></li>
+<li><a class="reference internal" href="#yb.download.youtube.install_subtitle_fallback"><code class="docutils literal notranslate"><span class="pre">install_subtitle_fallback()</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.youtube.resolve_output_path"><code class="docutils literal notranslate"><span class="pre">resolve_output_path()</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.youtube.search_youtube"><code class="docutils literal notranslate"><span class="pre">search_youtube()</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.youtube.youtube_dl"><code class="docutils literal notranslate"><span class="pre">youtube_dl()</span></code></a></li>
@@ -1165,7 +1252,7 @@ the title/duration/chapters before deciding to download.</p>
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=a9ed77be"></script>
+</div><script src="../_static/documentation_options.js?v=00ad03d8"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>

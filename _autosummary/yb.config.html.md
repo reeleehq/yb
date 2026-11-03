@@ -37,13 +37,16 @@ apply, exactly as before:
     "privacy_status": "unlisted",
     "playlist": "TW Uploads",
     "profiles": {
-        "reelee": {"privacy_status": "unlisted", "channel_id": "UC..."}
+        "reelee": {"privacy_status": "unlisted", "channel_id": "UC...",
+                   "login_hint": "account@example.com"}
     }
 }
 ```
 
 `channel_id` (optional) is checked against the token’s channel before any
 upload, so a token minted for the wrong Google account fails loudly.
+`login_hint` (optional, the account’s email) makes the consent page preselect
+that account, so the wrong one is not picked in the first place.
 
 ### Module Attributes
 
@@ -54,10 +57,11 @@ upload, so a token minted for the wrong Google account fails loudly.
 
 ### Functions
 
-| [`default_config_file`](#yb.config.default_config_file)()               | Config file location (`$XDG_CONFIG_HOME` or `~/.config`).              |
-|--------------------------------------------------------------------------------------|------------------------------------------------------------------------|
-| [`load_config`](#yb.config.load_config)([config_file, profile]) | Load publishing defaults from `config_file` (or the default location). |
-| [`resolve_profile`](#yb.config.resolve_profile)([profile])          | The active profile name: `profile`, else `$YB_PROFILE`, else `None`.   |
+| [`config_dir`](#yb.config.config_dir)()                        | `yb`'s config directory: `$XDG_CONFIG_HOME/yb`, else `~/.config/yb`.                     |
+|--------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------|
+| [`default_config_file`](#yb.config.default_config_file)()               | Config file location (in [`config_dir()`](#yb.config.config_dir)). |
+| [`load_config`](#yb.config.load_config)([config_file, profile]) | Load publishing defaults from `config_file` (or the default location).                   |
+| [`resolve_profile`](#yb.config.resolve_profile)([profile])          | The active profile name: `profile`, else `$YB_PROFILE`, else `None`.                     |
 
 ### Classes
 
@@ -79,7 +83,7 @@ but shareable by link until you deliberately make one `"public"`.
 
 Environment variable naming the profile to use when none is passed.
 
-### *class* yb.config.YbConfig(privacy_status='unlisted', playlist=None, create_playlist_if_missing=True, playlist_privacy_status='private', channel_id=None)
+### *class* yb.config.YbConfig(privacy_status='unlisted', playlist=None, create_playlist_if_missing=True, playlist_privacy_status='private', channel_id=None, login_hint=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -122,6 +126,14 @@ Channel the token must belong to (`None` = don’t check).
 * **Type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
+#### login_hint
+
+Email of the Google account to consent with; the consent
+page preselects it (`None` = whatever the browser is signed in as).
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
 #### *classmethod* from_mapping(mapping)
 
 Build a config from a mapping, ignoring unknown keys.
@@ -129,9 +141,18 @@ Build a config from a mapping, ignoring unknown keys.
 * **Return type:**
   [`YbConfig`](#yb.config.YbConfig)
 
+### yb.config.config_dir()
+
+`yb`’s config directory: `$XDG_CONFIG_HOME/yb`, else `~/.config/yb`.
+
+The config file, tokens and pending consents all live here.
+
+* **Return type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
+
 ### yb.config.default_config_file()
 
-Config file location (`$XDG_CONFIG_HOME` or `~/.config`).
+Config file location (in [`config_dir()`](#yb.config.config_dir)).
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)

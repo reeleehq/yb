@@ -1,4 +1,4 @@
-> built 2026-11-03 14:49 UTC from 6fb2729 (main) · yb 0.1.30. Details: build_info.json
+> built 2026-11-03 15:39 UTC from a225877 (main) · yb 0.1.31. Details: build_info.json
 
 # index.html.md
 
@@ -98,7 +98,7 @@ download_youtube_audio(url, audio_format="mp3", bitrate="320k")
 
 **Links from untrusted users.** `download_audio_bounded` is the one to call from a service: `validate_target` (your SSRF policy; the default only requires http(s)) is applied to every URL yt-dlp requests, including the media a page points at and where a redirect chain ends (the hops in between are requested blind, their content never returned); the byte cap and the `timeout_s` wall-clock budget hold even when the size is unknown; formats needing an external downloader are never selected; no cookies are sent unless you pass `cookies_file=`. It raises `ValueError` subclasses for every refusal (`AudioTargetError`, `AudioLimitError`, `AudioSourceError`), `RateLimitedError` when the source pushes back, and `ImportError` (with the install command) when yt-dlp is missing.
 
-**Subtitles are best-effort** (`download_youtube_video` / `download_youtube_audio`; not yet playlists). YouTube rate-limits its captions endpoint before the video one, so when only the subtitle fetch fails the video is downloaded without them: `result.subtitles_error` says why, a warning is issued, and `download_youtube_subtitles` fetches them later. Pass `on_subtitle_error="raise"` when the subtitles are not optional.
+**Subtitles are best-effort** (`download_youtube_video`, `download_youtube_audio`, `download_youtube_playlist`). YouTube rate-limits its captions endpoint before the video one, so when only the subtitle fetch fails the video is downloaded without them: `result.subtitles_error` says why, a warning is issued, and `download_youtube_subtitles` fetches them later. The retry is in place (same item, same name, nothing extracted twice), in a playlist too. Pass `on_subtitle_error="raise"` when the subtitles are not optional (a playlist then raises `PlaylistSubtitleError`, carrying the items that did download).
 
 The destination defaults to `$YB_DOWNLOAD_DIR` (else `~/Downloads`). Every knob
 — format, filename template, which sidecar metadata to also save — is
@@ -369,7 +369,7 @@ tokens minted while it is in *Testing* expire after 7 days. With no browser or
 terminal on the machine (a phone-driven session), consent by paste-back:
 `yb auth`, open the URL anywhere, then `yb auth --paste '<redirected URL>'`.
 
-**Several channels (profiles).** Default stays your first account. For another channel add a section under `"profiles"` in `~/.config/yb/config.json`, consent once with `yb auth --profile NAME`, check with `yb whoami --profile NAME` (prints the channel the token uploads to), then publish with `profile="NAME"` or `YB_PROFILE=NAME`. Each profile has its own token (`youtube_token.NAME.json`) and settings; an optional `channel_id` makes `publish_*` refuse a token for the wrong channel.
+**Several channels (profiles).** Default stays your first account. For another channel add a section under `"profiles"` in `~/.config/yb/config.json`, consent once with `yb auth --profile NAME`, check with `yb whoami --profile NAME` (prints the channel the token uploads to), then publish with `profile="NAME"` or `YB_PROFILE=NAME`. Each profile has its own token (`youtube_token.NAME.json`) and settings; an optional `channel_id` makes `publish_*` refuse a token for the wrong channel, and an optional `login_hint` (the account’s email) makes the consent page preselect the right Google account. A redirect pasted without `--profile` is matched to the profile that started it, and yb says which.
 
 > Note: until your Google Cloud project passes YouTube’s one-time API
 > compliance audit, uploads may be forced to **private** even when you request
@@ -531,13 +531,16 @@ apply, exactly as before:
     "privacy_status": "unlisted",
     "playlist": "TW Uploads",
     "profiles": {
-        "reelee": {"privacy_status": "unlisted", "channel_id": "UC..."}
+        "reelee": {"privacy_status": "unlisted", "channel_id": "UC...",
+                   "login_hint": "account@example.com"}
     }
 }
 ```
 
 `channel_id` (optional) is checked against the token’s channel before any
 upload, so a token minted for the wrong Google account fails loudly.
+`login_hint` (optional, the account’s email) makes the consent page preselect
+that account, so the wrong one is not picked in the first place.
 
 ### Module Attributes
 
@@ -548,10 +551,11 @@ upload, so a token minted for the wrong Google account fails loudly.
 
 ### Functions
 
-| [`default_config_file`](_autosummary/yb.config.html.md#yb.config.default_config_file)()               | Config file location (`$XDG_CONFIG_HOME` or `~/.config`).              |
-|--------------------------------------------------------------------------------------|------------------------------------------------------------------------|
-| [`load_config`](_autosummary/yb.config.html.md#yb.config.load_config)([config_file, profile]) | Load publishing defaults from `config_file` (or the default location). |
-| [`resolve_profile`](_autosummary/yb.config.html.md#yb.config.resolve_profile)([profile])          | The active profile name: `profile`, else `$YB_PROFILE`, else `None`.   |
+| [`config_dir`](_autosummary/yb.config.html.md#yb.config.config_dir)()                        | `yb`'s config directory: `$XDG_CONFIG_HOME/yb`, else `~/.config/yb`.                     |
+|--------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------|
+| [`default_config_file`](_autosummary/yb.config.html.md#yb.config.default_config_file)()               | Config file location (in [`config_dir()`](_autosummary/yb.config.html.md#yb.config.config_dir)). |
+| [`load_config`](_autosummary/yb.config.html.md#yb.config.load_config)([config_file, profile]) | Load publishing defaults from `config_file` (or the default location).                   |
+| [`resolve_profile`](_autosummary/yb.config.html.md#yb.config.resolve_profile)([profile])          | The active profile name: `profile`, else `$YB_PROFILE`, else `None`.                     |
 
 ### Classes
 
@@ -573,7 +577,7 @@ but shareable by link until you deliberately make one `"public"`.
 
 Environment variable naming the profile to use when none is passed.
 
-### *class* yb.config.YbConfig(privacy_status='unlisted', playlist=None, create_playlist_if_missing=True, playlist_privacy_status='private', channel_id=None)
+### *class* yb.config.YbConfig(privacy_status='unlisted', playlist=None, create_playlist_if_missing=True, playlist_privacy_status='private', channel_id=None, login_hint=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -616,6 +620,14 @@ Channel the token must belong to (`None` = don’t check).
 * **Type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
+#### login_hint
+
+Email of the Google account to consent with; the consent
+page preselects it (`None` = whatever the browser is signed in as).
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
 #### *classmethod* from_mapping(mapping)
 
 Build a config from a mapping, ignoring unknown keys.
@@ -623,9 +635,18 @@ Build a config from a mapping, ignoring unknown keys.
 * **Return type:**
   [`YbConfig`](_autosummary/yb.config.html.md#yb.config.YbConfig)
 
+### yb.config.config_dir()
+
+`yb`’s config directory: `$XDG_CONFIG_HOME/yb`, else `~/.config/yb`.
+
+The config file, tokens and pending consents all live here.
+
+* **Return type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
+
 ### yb.config.default_config_file()
 
-Config file location (`$XDG_CONFIG_HOME` or `~/.config`).
+Config file location (in [`config_dir()`](_autosummary/yb.config.html.md#yb.config.config_dir)).
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
@@ -1097,43 +1118,46 @@ how to install it. The first download in a process runs it and warns.
 
 ### Functions
 
-| [`download_youtube_video`](_autosummary/yb.download.html.md#yb.download.download_youtube_video)(url, \*[, ...])          | Download a YouTube video to `download_dir` (default `~/Downloads`).           |
-|--------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
-| [`download_youtube_audio`](_autosummary/yb.download.html.md#yb.download.download_youtube_audio)(url, \*[, ...])          | Download only a video's audio (no video stream).                              |
-| [`download_youtube_subtitles`](_autosummary/yb.download.html.md#yb.download.download_youtube_subtitles)(url, \*[, ...])      | Download only a video's subtitles (no media); returns the files written.      |
-| [`youtube_video_info`](_autosummary/yb.download.html.md#yb.download.youtube_video_info)(url, \*[, extra_opts, ...])  | Fetch a video's metadata without downloading it.                              |
-| [`download_youtube_playlist`](_autosummary/yb.download.html.md#yb.download.download_youtube_playlist)(url, \*[, ...])       | Download all (or a selected subset of) a YouTube playlist's videos.           |
-| [`youtube_playlist_info`](_autosummary/yb.download.html.md#yb.download.youtube_playlist_info)(url, \*[, ...])           | Fetch a playlist's per-video metadata without downloading.                    |
-| [`search_youtube`](_autosummary/yb.download.html.md#yb.download.search_youtube)(query, \*[, limit, ...])         | Search YouTube by name; returns up to `limit` hits, best match first.         |
-| [`download_audio_bounded`](_autosummary/yb.download.html.md#yb.download.download_audio_bounded)(url, \*, download_dir)   | Download the audio of one video link as mp3, refusing what exceeds the caps.  |
-| [`require_http_url`](_autosummary/yb.download.html.md#yb.download.require_http_url)(url)                           | Default target check: an http(s) URL with a host.                             |
-| [`default_download_dir`](_autosummary/yb.download.html.md#yb.download.default_download_dir)()                          | Resolve the default download directory (`$YB_DOWNLOAD_DIR` or `~/Downloads`). |
-| [`convert_audio`](_autosummary/yb.download.html.md#yb.download.convert_audio)(src, audio_format, \*[, ...])     | Convert `src` to `audio_format`, returning the resulting path.                |
-| [`check_requirements`](_autosummary/yb.download.html.md#yb.download.check_requirements)(\*[, warn, which, ...])      | Check what YouTube downloads need, and say how to fix what's missing.         |
-| [`check_cookies`](_autosummary/yb.download.html.md#yb.download.check_cookies)([cookies_file, probe_url, ...])   | Problems with the cookies downloads would use (empty when they work).         |
-| [`check_po_token_server`](_autosummary/yb.download.html.md#yb.download.check_po_token_server)([base_url, urlopen, ...]) | Problems reaching the PO-token provider's server (`GET <base_url>/ping`).     |
-| [`find_js_runtime`](_autosummary/yb.download.html.md#yb.download.find_js_runtime)(\*[, which, search_dirs])       | Find Deno on `PATH`, else in its standard install location.                   |
-| [`parse_timestamp`](_autosummary/yb.download.html.md#yb.download.parse_timestamp)(value)                          | Seconds from a number or a `"[[h:]m:]s[.fraction]"` string.                   |
+| [`download_youtube_video`](_autosummary/yb.download.html.md#yb.download.download_youtube_video)(url, \*[, ...])          | Download a YouTube video to `download_dir` (default `~/Downloads`).              |
+|--------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
+| [`download_youtube_audio`](_autosummary/yb.download.html.md#yb.download.download_youtube_audio)(url, \*[, ...])          | Download only a video's audio (no video stream).                                 |
+| [`download_youtube_subtitles`](_autosummary/yb.download.html.md#yb.download.download_youtube_subtitles)(url, \*[, ...])      | Download only a video's subtitles (no media); returns the files written.         |
+| [`youtube_video_info`](_autosummary/yb.download.html.md#yb.download.youtube_video_info)(url, \*[, extra_opts, ...])  | Fetch a video's metadata without downloading it.                                 |
+| [`download_youtube_playlist`](_autosummary/yb.download.html.md#yb.download.download_youtube_playlist)(url, \*[, ...])       | Download all (or a selected subset of) a YouTube playlist's videos.              |
+| [`youtube_playlist_info`](_autosummary/yb.download.html.md#yb.download.youtube_playlist_info)(url, \*[, ...])           | Fetch a playlist's per-video metadata without downloading.                       |
+| [`search_youtube`](_autosummary/yb.download.html.md#yb.download.search_youtube)(query, \*[, limit, ...])         | Search YouTube by name; returns up to `limit` hits, best match first.            |
+| [`download_audio_bounded`](_autosummary/yb.download.html.md#yb.download.download_audio_bounded)(url, \*, download_dir)   | Download the audio of one video link as mp3, refusing what exceeds the caps.     |
+| [`require_http_url`](_autosummary/yb.download.html.md#yb.download.require_http_url)(url)                           | Default target check: an http(s) URL with a host.                                |
+| [`install_subtitle_fallback`](_autosummary/yb.download.html.md#yb.download.install_subtitle_fallback)(ydl, \*, ...)         | Make `ydl` survive a failed subtitle fetch; returns the failures as they happen. |
+| [`default_download_dir`](_autosummary/yb.download.html.md#yb.download.default_download_dir)()                          | Resolve the default download directory (`$YB_DOWNLOAD_DIR` or `~/Downloads`).    |
+| [`convert_audio`](_autosummary/yb.download.html.md#yb.download.convert_audio)(src, audio_format, \*[, ...])     | Convert `src` to `audio_format`, returning the resulting path.                   |
+| [`check_requirements`](_autosummary/yb.download.html.md#yb.download.check_requirements)(\*[, warn, which, ...])      | Check what YouTube downloads need, and say how to fix what's missing.            |
+| [`check_cookies`](_autosummary/yb.download.html.md#yb.download.check_cookies)([cookies_file, probe_url, ...])   | Problems with the cookies downloads would use (empty when they work).            |
+| [`check_po_token_server`](_autosummary/yb.download.html.md#yb.download.check_po_token_server)([base_url, urlopen, ...]) | Problems reaching the PO-token provider's server (`GET <base_url>/ping`).        |
+| [`find_js_runtime`](_autosummary/yb.download.html.md#yb.download.find_js_runtime)(\*[, which, search_dirs])       | Find Deno on `PATH`, else in its standard install location.                      |
+| [`parse_timestamp`](_autosummary/yb.download.html.md#yb.download.parse_timestamp)(value)                          | Seconds from a number or a `"[[h:]m:]s[.fraction]"` string.                      |
 
 ### Classes
 
-| [`AudioDownload`](_autosummary/yb.download.html.md#yb.download.AudioDownload)(path, title, duration_s, ...)     | A bounded audio download.                                                                                           |
-|--------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
-| [`SearchHit`](_autosummary/yb.download.html.md#yb.download.SearchHit)(id, title, duration, channel, url)    | One row of [`search_youtube()`](_autosummary/yb.download.html.md#yb.download.search_youtube) (flat extraction: no per-video fetch). |
-| [`DownloadResult`](_autosummary/yb.download.html.md#yb.download.DownloadResult)(path, info[, sidecars, ...])     | Outcome of a download.                                                                                              |
-| [`JsRuntime`](_autosummary/yb.download.html.md#yb.download.JsRuntime)(name, path, on_path)                  | A JavaScript runtime found for yt-dlp.                                                                              |
-| [`Pace`](_autosummary/yb.download.html.md#yb.download.Pace)([sleep_interval, max_sleep_interval, ...]) | How gently to talk to YouTube.                                                                                      |
-| [`TimeRange`](_autosummary/yb.download.html.md#yb.download.TimeRange)([start, end])                         | A span of a video, in seconds.                                                                                      |
+| [`AudioDownload`](_autosummary/yb.download.html.md#yb.download.AudioDownload)(path, title, duration_s, ...)     | A bounded audio download.                                                                                               |
+|--------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
+| [`SearchHit`](_autosummary/yb.download.html.md#yb.download.SearchHit)(id, title, duration, channel, url)    | One row of [`search_youtube()`](_autosummary/yb.download.html.md#yb.download.search_youtube) (flat extraction: no per-video fetch).     |
+| [`SubtitleFailure`](_autosummary/yb.download.html.md#yb.download.SubtitleFailure)(video_id, error)                | An item whose subtitle fetch failed (see [`install_subtitle_fallback()`](_autosummary/yb.download.html.md#yb.download.install_subtitle_fallback)). |
+| [`DownloadResult`](_autosummary/yb.download.html.md#yb.download.DownloadResult)(path, info[, sidecars, ...])     | Outcome of a download.                                                                                                  |
+| [`JsRuntime`](_autosummary/yb.download.html.md#yb.download.JsRuntime)(name, path, on_path)                  | A JavaScript runtime found for yt-dlp.                                                                                  |
+| [`Pace`](_autosummary/yb.download.html.md#yb.download.Pace)([sleep_interval, max_sleep_interval, ...]) | How gently to talk to YouTube.                                                                                          |
+| [`TimeRange`](_autosummary/yb.download.html.md#yb.download.TimeRange)([start, end])                         | A span of a video, in seconds.                                                                                          |
 
 ### Exceptions
 
-| [`AudioLimitError`](_autosummary/yb.download.html.md#yb.download.AudioLimitError)            | The source exceeds a cap (duration, size or time); nothing is left on disk.   |
-|-----------------------------------------------------------------------------|-------------------------------------------------------------------------------|
-| [`AudioSourceError`](_autosummary/yb.download.html.md#yb.download.AudioSourceError)           | yt-dlp could not get audio from the link (unsupported, unavailable, ...).     |
-| [`AudioTargetError`](_autosummary/yb.download.html.md#yb.download.AudioTargetError)           | `validate_target` refused a URL: the link, or one yt-dlp was about to fetch.  |
-| [`AudioConversionError`](_autosummary/yb.download.html.md#yb.download.AudioConversionError)       | Raised when audio could not be converted to the requested format.             |
-| [`DownloadRequirementWarning`](_autosummary/yb.download.html.md#yb.download.DownloadRequirementWarning) | A download prerequisite (JS runtime, solver scripts) looks missing.           |
-| [`RateLimitedError`](_autosummary/yb.download.html.md#yb.download.RateLimitedError)           | YouTube refused the request (HTTP 429 or a "confirm you're not a bot" wall).  |
+| [`AudioLimitError`](_autosummary/yb.download.html.md#yb.download.AudioLimitError)                          | The source exceeds a cap (duration, size or time); nothing is left on disk.   |
+|-------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
+| [`AudioSourceError`](_autosummary/yb.download.html.md#yb.download.AudioSourceError)                         | yt-dlp could not get audio from the link (unsupported, unavailable, ...).     |
+| [`AudioTargetError`](_autosummary/yb.download.html.md#yb.download.AudioTargetError)                         | `validate_target` refused a URL: the link, or one yt-dlp was about to fetch.  |
+| [`PlaylistSubtitleError`](_autosummary/yb.download.html.md#yb.download.PlaylistSubtitleError)(results, failures) | Some playlist items' subtitles failed (`on_subtitle_error="raise"`).          |
+| [`AudioConversionError`](_autosummary/yb.download.html.md#yb.download.AudioConversionError)                     | Raised when audio could not be converted to the requested format.             |
+| [`DownloadRequirementWarning`](_autosummary/yb.download.html.md#yb.download.DownloadRequirementWarning)               | A download prerequisite (JS runtime, solver scripts) looks missing.           |
+| [`RateLimitedError`](_autosummary/yb.download.html.md#yb.download.RateLimitedError)                         | YouTube refused the request (HTTP 429 or a "confirm you're not a bot" wall).  |
 
 ### *exception* yb.download.AudioConversionError
 
@@ -1313,6 +1337,20 @@ Maximum download rate, e.g. `"4M"` or `"500K"` (bytes/s).
 * **Type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
+### *exception* yb.download.PlaylistSubtitleError(results, failures)
+
+Bases: [`RuntimeError`](https://docs.python.org/3/builtins/exceptions.html#RuntimeError)
+
+Some playlist items’ subtitles failed (`on_subtitle_error="raise"`).
+
+#### results
+
+The items that did download.
+
+#### failures
+
+The [`SubtitleFailure`](_autosummary/yb.download.html.md#yb.download.SubtitleFailure) of each item that did not.
+
 ### *exception* yb.download.RateLimitedError
 
 Bases: [`RuntimeError`](https://docs.python.org/3/builtins/exceptions.html#RuntimeError)
@@ -1327,6 +1365,12 @@ One row of [`search_youtube()`](_autosummary/yb.download.html.md#yb.download.sea
 
 `duration` is in seconds and may be `None` (live streams, some results),
 as may `view_count`.
+
+### *class* yb.download.SubtitleFailure(video_id, error)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+An item whose subtitle fetch failed (see [`install_subtitle_fallback()`](_autosummary/yb.download.html.md#yb.download.install_subtitle_fallback)).
 
 ### *class* yb.download.TimeRange(start=0.0, end=None)
 
@@ -1563,7 +1607,7 @@ Pass `audio_format` to get a specific format instead:
   * [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `on_error` is not `"raise"` or `"warn"`.
   * [**AudioConversionError**](_autosummary/yb.download.html.md#yb.download.AudioConversionError) – If conversion fails and `on_error="raise"`.
 
-### yb.download.download_youtube_playlist(url, , download_dir=None, playlist_items=None, skip_first=False, title_reject=None, download_archive=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=True, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), cookies_from_browser=None, extractor_args=None, quiet=True, extra_opts=None, cookies_file=None, pace=None, item_folders=False, embed_metadata=False)
+### yb.download.download_youtube_playlist(url, , download_dir=None, playlist_items=None, skip_first=False, title_reject=None, download_archive=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=True, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), cookies_from_browser=None, extractor_args=None, quiet=True, extra_opts=None, cookies_file=None, pace=None, item_folders=False, embed_metadata=False, on_subtitle_error='warn')
 
 Download all (or a selected subset of) a YouTube playlist’s videos.
 
@@ -1625,6 +1669,12 @@ Selecting a subset (yt-dlp `--playlist-items` is **1-based**):
     Incompatible with a custom `filename_template`.
   * **embed_metadata** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Write title/artist/etc. into the media file (yt-dlp
     `--embed-metadata`; needs ffmpeg).
+  * **on_subtitle_error** ([`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`'raise'`, `'warn'`]) – When only an item’s subtitle fetch fails (yt-dlp
+    would otherwise drop the item): `"warn"` (default) warns and
+    downloads that item without subtitles, in place (its result carries
+    `subtitles_error`); `"raise"` skips it and raises
+    [`PlaylistSubtitleError`](_autosummary/yb.download.html.md#yb.download.PlaylistSubtitleError) after the run, carrying the items
+    that did download.
 * **Return type:**
   [*list*](https://docs.python.org/3/builtins/stdtypes.html#list)[[*DownloadResult*](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DownloadResult)]
 
@@ -1632,8 +1682,10 @@ Audio only: pass `fmt="bestaudio/best", merge_to=None` (keeps the source
 stream, e.g. `.m4a`, without re-encoding).
 
 * **Raises:**
-  [**RateLimitedError**](_autosummary/yb.download.html.md#yb.download.RateLimitedError) – On HTTP 429 or a “confirm you’re not a bot” wall, with
-      a backoff hint. (Per-item failures under `ignoreerrors` are skipped.)
+  * [**RateLimitedError**](_autosummary/yb.download.html.md#yb.download.RateLimitedError) – On HTTP 429 or a “confirm you’re not a bot” wall, with
+        a backoff hint. (Per-item failures under `ignoreerrors` are skipped.)
+  * [**PlaylistSubtitleError**](_autosummary/yb.download.html.md#yb.download.PlaylistSubtitleError) – Some items’ subtitles failed and
+        `on_subtitle_error="raise"`.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`DownloadResult`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DownloadResult)]
 * **Returns:**
@@ -1736,11 +1788,12 @@ named `Title (video_id).mp4` in `~/Downloads`.
     options in `extra_opts` win over it.
   * **on_subtitle_error** ([`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`'raise'`, `'warn'`]) – When subtitles were asked for and only their fetch
     fails (YouTube rate-limits its captions endpoint before the video
-    one): `"warn"` (default) warns, retries once without subtitles
-    (even if `extra_opts` asks for them), and records the reason in
+    one): `"warn"` (default) warns, processes the video again without
+    subtitles (even if `extra_opts` asks for them; the formats chosen
+    are kept, nothing is extracted twice), and records the reason in
     `result.subtitles_error`; `"raise"` propagates the error (a
     [`RateLimitedError`](_autosummary/yb.download.html.md#yb.download.RateLimitedError) for a 429, saying only the
-    subtitles were refused). Playlist downloads are not covered.
+    subtitles were refused). See [`install_subtitle_fallback()`](_autosummary/yb.download.html.md#yb.download.install_subtitle_fallback).
 * **Return type:**
   [`DownloadResult`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DownloadResult)
 * **Returns:**
@@ -1764,6 +1817,25 @@ Find Deno on `PATH`, else in its standard install location.
   [`JsRuntime`](_autosummary/yb.download.requirements.html.md#yb.download.requirements.JsRuntime) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 * **Returns:**
   The runtime found, or `None`.
+
+### yb.download.install_subtitle_fallback(ydl, , on_subtitle_error)
+
+Make `ydl` survive a failed subtitle fetch; returns the failures as they happen.
+
+Wraps `ydl.process_info` (called once per video, with the formats already
+chosen), so the retry happens in place: same item, same filename and order,
+no second extraction. Failures are keyed by video id (a video listed twice
+in a playlist marks both rows). With several `subtitle_langs`, the ones
+written before the failure stay beside the video. On a failure of the
+subtitle fetch only:
+
+- `"warn"`: warn, then process the item again with subtitles off;
+- `"raise"`: re-raise (a 429 as [`RateLimitedError`](_autosummary/yb.download.html.md#yb.download.RateLimitedError)
+  saying only the subtitles were refused). Under `ignoreerrors` yt-dlp
+  then skips the item, which the recorded failure still names.
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`SubtitleFailure`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.SubtitleFailure)]
 
 ### yb.download.parse_timestamp(value)
 
@@ -1898,8 +1970,9 @@ unchanged. A raw yt-dlp option in `extra_opts` still wins over a pace.
 
 ### Module Attributes
 
-| [`PACE_PRESETS`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.PACE_PRESETS)   | Named paces accepted wherever `pace=` is.   |
-|-----------------------------------------------------------------|---------------------------------------------|
+| [`PACE_PRESETS`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.PACE_PRESETS)   | Named paces accepted wherever `pace=` is.                      |
+|-----------------------------------------------------------------|----------------------------------------------------------------|
+| [`BLOCK_PATTERNS`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.BLOCK_PATTERNS) | What yt-dlp says when YouTube blocks or bot-checks the client. |
 
 ### Functions
 
@@ -1918,6 +1991,10 @@ unchanged. A raw yt-dlp option in `extra_opts` still wins over a pace.
 
 | [`RateLimitedError`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.RateLimitedError)   | YouTube refused the request (HTTP 429 or a "confirm you're not a bot" wall).   |
 |---------------------------------------------------------------------|--------------------------------------------------------------------------------|
+
+### yb.download.pacing.BLOCK_PATTERNS *= re.compile('HTTP Error 429|Too Many Requests|confirm you.re not a bot|Sign in to confirm', re.IGNORECASE)*
+
+What yt-dlp says when YouTube blocks or bot-checks the client.
 
 ### yb.download.pacing.PACE_PRESETS *: [dict](https://docs.python.org/3/builtins/stdtypes.html#dict)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [Pace](_autosummary/yb.download.pacing.html.md#yb.download.pacing.Pace)]* *= {'polite': Pace(sleep_interval=20, max_sleep_interval=60, sleep_requests=1, limit_rate='4M')}*
 
@@ -2628,27 +2705,34 @@ The destination defaults to `$YB_DOWNLOAD_DIR` when set, else `~/Downloads`.
 
 ### Functions
 
-| [`default_cookies_file`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.default_cookies_file)()                            | The cookies file downloads use when none is passed, or `None`.                |
-|----------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
-| [`default_download_dir`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.default_download_dir)()                            | Resolve the default download directory (`$YB_DOWNLOAD_DIR` or `~/Downloads`). |
-| [`download_youtube_audio`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_audio)(url, \*[, ...])            | Download only a video's audio (no video stream).                              |
-| [`download_youtube_playlist`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_playlist)(url, \*[, ...])         | Download all (or a selected subset of) a YouTube playlist's videos.           |
-| [`download_youtube_subtitles`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_subtitles)(url, \*[, ...])        | Download only a video's subtitles (no media); returns the files written.      |
-| [`download_youtube_video`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_video)(url, \*[, ...])            | Download a YouTube video to `download_dir` (default `~/Downloads`).           |
-| [`glob_escape`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.glob_escape)(name)                                 | Escape glob metacharacters in a literal filename stem.                        |
-| [`resolve_output_path`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.resolve_output_path)(info, ydl, out_dir, merge_to) | Best-effort resolution of the final media path yt-dlp produced.               |
-| [`search_youtube`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.search_youtube)(query, \*[, limit, ...])           | Search YouTube by name; returns up to `limit` hits, best match first.         |
-| `trim_info`(info)                                                                                  |                                                                               |
-| [`youtube_dl`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.youtube_dl)(base_opts, \*[, extra_opts, ...])      | Yield a `YoutubeDL` built the way every yb download builds one.               |
-| [`youtube_dl_cls`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.youtube_dl_cls)()                                  | `yt_dlp.YoutubeDL`, or an `ImportError` that says how to install it.          |
-| [`youtube_playlist_info`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.youtube_playlist_info)(url, \*[, ...])             | Fetch a playlist's per-video metadata without downloading.                    |
-| [`youtube_video_info`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.youtube_video_info)(url, \*[, extra_opts, ...])    | Fetch a video's metadata without downloading it.                              |
+| [`default_cookies_file`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.default_cookies_file)()                            | The cookies file downloads use when none is passed, or `None`.                   |
+|----------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
+| [`default_download_dir`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.default_download_dir)()                            | Resolve the default download directory (`$YB_DOWNLOAD_DIR` or `~/Downloads`).    |
+| [`download_youtube_audio`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_audio)(url, \*[, ...])            | Download only a video's audio (no video stream).                                 |
+| [`download_youtube_playlist`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_playlist)(url, \*[, ...])         | Download all (or a selected subset of) a YouTube playlist's videos.              |
+| [`download_youtube_subtitles`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_subtitles)(url, \*[, ...])        | Download only a video's subtitles (no media); returns the files written.         |
+| [`download_youtube_video`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_video)(url, \*[, ...])            | Download a YouTube video to `download_dir` (default `~/Downloads`).              |
+| [`glob_escape`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.glob_escape)(name)                                 | Escape glob metacharacters in a literal filename stem.                           |
+| [`install_subtitle_fallback`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.install_subtitle_fallback)(ydl, \*, ...)           | Make `ydl` survive a failed subtitle fetch; returns the failures as they happen. |
+| [`resolve_output_path`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.resolve_output_path)(info, ydl, out_dir, merge_to) | Best-effort resolution of the final media path yt-dlp produced.                  |
+| [`search_youtube`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.search_youtube)(query, \*[, limit, ...])           | Search YouTube by name; returns up to `limit` hits, best match first.            |
+| `trim_info`(info)                                                                                  |                                                                                  |
+| [`youtube_dl`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.youtube_dl)(base_opts, \*[, extra_opts, ...])      | Yield a `YoutubeDL` built the way every yb download builds one.                  |
+| [`youtube_dl_cls`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.youtube_dl_cls)()                                  | `yt_dlp.YoutubeDL`, or an `ImportError` that says how to install it.             |
+| [`youtube_playlist_info`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.youtube_playlist_info)(url, \*[, ...])             | Fetch a playlist's per-video metadata without downloading.                       |
+| [`youtube_video_info`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.youtube_video_info)(url, \*[, extra_opts, ...])    | Fetch a video's metadata without downloading it.                                 |
 
 ### Classes
 
-| [`DownloadResult`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DownloadResult)(path, info[, sidecars, ...])   | Outcome of a download.                                                                                              |
-|------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
-| [`SearchHit`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.SearchHit)(id, title, duration, channel, url)  | One row of [`search_youtube()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.search_youtube) (flat extraction: no per-video fetch). |
+| [`DownloadResult`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DownloadResult)(path, info[, sidecars, ...])   | Outcome of a download.                                                                                                  |
+|------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
+| [`SearchHit`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.SearchHit)(id, title, duration, channel, url)  | One row of [`search_youtube()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.search_youtube) (flat extraction: no per-video fetch).     |
+| [`SubtitleFailure`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.SubtitleFailure)(video_id, error)              | An item whose subtitle fetch failed (see [`install_subtitle_fallback()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.install_subtitle_fallback)). |
+
+### Exceptions
+
+| [`PlaylistSubtitleError`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.PlaylistSubtitleError)(results, failures)   | Some playlist items' subtitles failed (`on_subtitle_error="raise"`).   |
+|---------------------------------------------------------------------------------------------|------------------------------------------------------------------------|
 
 ### yb.download.youtube.COOKIES_FILE_ENV *= 'YB_COOKIES_FILE'*
 
@@ -2766,6 +2850,20 @@ same vocabulary as [`OnConvertError`](_autosummary/yb.download.youtube.html.md#y
 
 alias of [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[‘raise’, ‘warn’]
 
+### *exception* yb.download.youtube.PlaylistSubtitleError(results, failures)
+
+Bases: [`RuntimeError`](https://docs.python.org/3/builtins/exceptions.html#RuntimeError)
+
+Some playlist items’ subtitles failed (`on_subtitle_error="raise"`).
+
+#### results
+
+The items that did download.
+
+#### failures
+
+The [`SubtitleFailure`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.SubtitleFailure) of each item that did not.
+
 ### yb.download.youtube.SEARCH_RESULTS_URL *= 'https://www.youtube.com/results'*
 
 YouTube’s search results page; yt-dlp extracts it as a playlist of hits.
@@ -2782,6 +2880,12 @@ One row of [`search_youtube()`](_autosummary/yb.download.youtube.html.md#yb.down
 
 `duration` is in seconds and may be `None` (live streams, some results),
 as may `view_count`.
+
+### *class* yb.download.youtube.SubtitleFailure(video_id, error)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+An item whose subtitle fetch failed (see [`install_subtitle_fallback()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.install_subtitle_fallback)).
 
 ### yb.download.youtube.default_cookies_file()
 
@@ -2876,7 +2980,7 @@ Pass `audio_format` to get a specific format instead:
   * [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `on_error` is not `"raise"` or `"warn"`.
   * [**AudioConversionError**](_autosummary/yb.audio_convert.html.md#yb.audio_convert.AudioConversionError) – If conversion fails and `on_error="raise"`.
 
-### yb.download.youtube.download_youtube_playlist(url, , download_dir=None, playlist_items=None, skip_first=False, title_reject=None, download_archive=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=True, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), cookies_from_browser=None, extractor_args=None, quiet=True, extra_opts=None, cookies_file=None, pace=None, item_folders=False, embed_metadata=False)
+### yb.download.youtube.download_youtube_playlist(url, , download_dir=None, playlist_items=None, skip_first=False, title_reject=None, download_archive=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=True, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), cookies_from_browser=None, extractor_args=None, quiet=True, extra_opts=None, cookies_file=None, pace=None, item_folders=False, embed_metadata=False, on_subtitle_error='warn')
 
 Download all (or a selected subset of) a YouTube playlist’s videos.
 
@@ -2938,6 +3042,12 @@ Selecting a subset (yt-dlp `--playlist-items` is **1-based**):
     Incompatible with a custom `filename_template`.
   * **embed_metadata** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Write title/artist/etc. into the media file (yt-dlp
     `--embed-metadata`; needs ffmpeg).
+  * **on_subtitle_error** ([`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`'raise'`, `'warn'`]) – When only an item’s subtitle fetch fails (yt-dlp
+    would otherwise drop the item): `"warn"` (default) warns and
+    downloads that item without subtitles, in place (its result carries
+    `subtitles_error`); `"raise"` skips it and raises
+    [`PlaylistSubtitleError`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.PlaylistSubtitleError) after the run, carrying the items
+    that did download.
 * **Return type:**
   [*list*](https://docs.python.org/3/builtins/stdtypes.html#list)[[*DownloadResult*](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DownloadResult)]
 
@@ -2945,8 +3055,10 @@ Audio only: pass `fmt="bestaudio/best", merge_to=None` (keeps the source
 stream, e.g. `.m4a`, without re-encoding).
 
 * **Raises:**
-  [**RateLimitedError**](_autosummary/yb.download.html.md#yb.download.RateLimitedError) – On HTTP 429 or a “confirm you’re not a bot” wall, with
-      a backoff hint. (Per-item failures under `ignoreerrors` are skipped.)
+  * [**RateLimitedError**](_autosummary/yb.download.html.md#yb.download.RateLimitedError) – On HTTP 429 or a “confirm you’re not a bot” wall, with
+        a backoff hint. (Per-item failures under `ignoreerrors` are skipped.)
+  * [**PlaylistSubtitleError**](_autosummary/yb.download.youtube.html.md#yb.download.youtube.PlaylistSubtitleError) – Some items’ subtitles failed and
+        `on_subtitle_error="raise"`.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`DownloadResult`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DownloadResult)]
 * **Returns:**
@@ -3049,11 +3161,12 @@ named `Title (video_id).mp4` in `~/Downloads`.
     options in `extra_opts` win over it.
   * **on_subtitle_error** ([`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`'raise'`, `'warn'`]) – When subtitles were asked for and only their fetch
     fails (YouTube rate-limits its captions endpoint before the video
-    one): `"warn"` (default) warns, retries once without subtitles
-    (even if `extra_opts` asks for them), and records the reason in
+    one): `"warn"` (default) warns, processes the video again without
+    subtitles (even if `extra_opts` asks for them; the formats chosen
+    are kept, nothing is extracted twice), and records the reason in
     `result.subtitles_error`; `"raise"` propagates the error (a
     [`RateLimitedError`](_autosummary/yb.download.html.md#yb.download.RateLimitedError) for a 429, saying only the
-    subtitles were refused). Playlist downloads are not covered.
+    subtitles were refused). See [`install_subtitle_fallback()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.install_subtitle_fallback).
 * **Return type:**
   [`DownloadResult`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DownloadResult)
 * **Returns:**
@@ -3071,6 +3184,25 @@ Escape glob metacharacters in a literal filename stem.
 
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
+### yb.download.youtube.install_subtitle_fallback(ydl, , on_subtitle_error)
+
+Make `ydl` survive a failed subtitle fetch; returns the failures as they happen.
+
+Wraps `ydl.process_info` (called once per video, with the formats already
+chosen), so the retry happens in place: same item, same filename and order,
+no second extraction. Failures are keyed by video id (a video listed twice
+in a playlist marks both rows). With several `subtitle_langs`, the ones
+written before the failure stay beside the video. On a failure of the
+subtitle fetch only:
+
+- `"warn"`: warn, then process the item again with subtitles off;
+- `"raise"`: re-raise (a 429 as [`RateLimitedError`](_autosummary/yb.download.html.md#yb.download.RateLimitedError)
+  saying only the subtitles were refused). Under `ignoreerrors` yt-dlp
+  then skips the item, which the recorded failure still names.
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`SubtitleFailure`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.SubtitleFailure)]
 
 ### yb.download.youtube.resolve_output_path(info, ydl, out_dir, merge_to)
 
@@ -3313,7 +3445,7 @@ Description with a chapters block appended (if any chapters).
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
-### *class* yb.YbConfig(privacy_status='unlisted', playlist=None, create_playlist_if_missing=True, playlist_privacy_status='private', channel_id=None)
+### *class* yb.YbConfig(privacy_status='unlisted', playlist=None, create_playlist_if_missing=True, playlist_privacy_status='private', channel_id=None, login_hint=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -3356,6 +3488,14 @@ Channel the token must belong to (`None` = don’t check).
 * **Type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
+#### login_hint
+
+Email of the Google account to consent with; the consent
+page preselects it (`None` = whatever the browser is signed in as).
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
 #### *classmethod* from_mapping(mapping)
 
 Build a config from a mapping, ignoring unknown keys.
@@ -3381,7 +3521,7 @@ playlist is left alone instead of duplicated.
 
 ### yb.default_config_file()
 
-Config file location (`$XDG_CONFIG_HOME` or `~/.config`).
+Config file location (in `config_dir()`).
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
@@ -3522,11 +3662,12 @@ named `Title (video_id).mp4` in `~/Downloads`.
     options in `extra_opts` win over it.
   * **on_subtitle_error** ([`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`'raise'`, `'warn'`]) – When subtitles were asked for and only their fetch
     fails (YouTube rate-limits its captions endpoint before the video
-    one): `"warn"` (default) warns, retries once without subtitles
-    (even if `extra_opts` asks for them), and records the reason in
+    one): `"warn"` (default) warns, processes the video again without
+    subtitles (even if `extra_opts` asks for them; the formats chosen
+    are kept, nothing is extracted twice), and records the reason in
     `result.subtitles_error`; `"raise"` propagates the error (a
     [`RateLimitedError`](_autosummary/yb.download.html.md#yb.download.RateLimitedError) for a 429, saying only the
-    subtitles were refused). Playlist downloads are not covered.
+    subtitles were refused). See `install_subtitle_fallback()`.
 * **Return type:**
   [`DownloadResult`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DownloadResult)
 * **Returns:**
@@ -4390,7 +4531,7 @@ The default profile keeps `youtube_token.json`; a named profile gets
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
-### yb.youtube.auth.get_credentials(, client_secrets_file=None, token_file=None, profile=None, scopes=['https://www.googleapis.com/auth/youtube.upload', 'https://www.googleapis.com/auth/youtube.force-ssl'], open_browser=True, port=0, timeout_seconds=300.0, interactive=True, consent='local', authorization_response=None)
+### yb.youtube.auth.get_credentials(, client_secrets_file=None, token_file=None, profile=None, scopes=['https://www.googleapis.com/auth/youtube.upload', 'https://www.googleapis.com/auth/youtube.force-ssl'], open_browser=True, port=0, timeout_seconds=300.0, interactive=True, consent='local', authorization_response=None, login_hint=None)
 
 Return OAuth user credentials, running the consent flow if needed.
 
@@ -4440,6 +4581,11 @@ to load, and the second call passes that address-bar URL (or just its
 `code`) as `authorization_response=` to finish and cache the token. The
 two calls may be separate turns or separate processes; `yb auth` is the
 command-line form. `port` only names the (unreachable) redirect.
+
+`login_hint` (the account’s email) makes Google preselect that account on
+the consent page, so a token is not minted for whichever account the
+browser is signed in as. Default: the profile’s `login_hint` in the
+config file (see [`yb.config`](_autosummary/yb.config.html.md#module-yb.config)), else none.
 
 These keywords ride `**cred_kwargs` through [`get_service()`](_autosummary/yb.youtube.auth.html.md#yb.youtube.auth.get_service) and the
 publishing helpers. The few entry points that take none (notably
@@ -4652,12 +4798,12 @@ Edit an existing video:
 
 ### Exceptions
 
-| [`ConsentRequired`](_autosummary/yb.youtube.html.md#yb.youtube.ConsentRequired)                         | Consent is needed and this process cannot obtain it.                                                               |
-|------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
-| [`ConsentPending`](_autosummary/yb.youtube.html.md#yb.youtube.ConsentPending)(url, \*, redirect_uri)   | Consent was started, and now waits for the user to paste the redirect back.                                        |
-| [`WrongChannel`](_autosummary/yb.youtube.html.md#yb.youtube.WrongChannel)                            | The token uploads to a different channel than the profile expects.                                                 |
-| [`VisibilityDropWarning`](_autosummary/yb.youtube.html.md#yb.youtube.VisibilityDropWarning)                   | [`supersede()`](_autosummary/yb.youtube.html.md#yb.youtube.supersede) leaves the re-cut less visible than the original was. |
-| [`PartialPublish`](_autosummary/yb.youtube.html.md#yb.youtube.PartialPublish)(result, \*, step, error) | The video was uploaded, then a later step failed (yb#21).                                                          |
+| [`ConsentRequired`](_autosummary/yb.youtube.html.md#yb.youtube.ConsentRequired)                              | Consent is needed and this process cannot obtain it.                                                               |
+|-----------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
+| [`ConsentPending`](_autosummary/yb.youtube.html.md#yb.youtube.ConsentPending)(url, \*, redirect_uri[, ...]) | Consent was started, and now waits for the user to paste the redirect back.                                        |
+| [`WrongChannel`](_autosummary/yb.youtube.html.md#yb.youtube.WrongChannel)                                 | The token uploads to a different channel than the profile expects.                                                 |
+| [`VisibilityDropWarning`](_autosummary/yb.youtube.html.md#yb.youtube.VisibilityDropWarning)                        | [`supersede()`](_autosummary/yb.youtube.html.md#yb.youtube.supersede) leaves the re-cut less visible than the original was. |
+| [`PartialPublish`](_autosummary/yb.youtube.html.md#yb.youtube.PartialPublish)(result, \*, step, error)      | The video was uploaded, then a later step failed (yb#21).                                                          |
 
 ### *class* yb.youtube.CaptionTrack(path, language, name='', is_draft=False)
 
@@ -4693,7 +4839,7 @@ When `True`, uploaded but not published to viewers.
 * **Type:**
   [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
 
-### *exception* yb.youtube.ConsentPending(url, , redirect_uri)
+### *exception* yb.youtube.ConsentPending(url, , redirect_uri, profile=None, login_hint=None)
 
 Bases: [`ConsentRequired`](_autosummary/yb.youtube.auth.html.md#yb.youtube.auth.ConsentRequired)
 
@@ -4991,7 +5137,7 @@ Pure: pass the dict returned by the API. Missing pieces (from a partial
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
 
-### yb.youtube.get_credentials(, client_secrets_file=None, token_file=None, profile=None, scopes=['https://www.googleapis.com/auth/youtube.upload', 'https://www.googleapis.com/auth/youtube.force-ssl'], open_browser=True, port=0, timeout_seconds=300.0, interactive=True, consent='local', authorization_response=None)
+### yb.youtube.get_credentials(, client_secrets_file=None, token_file=None, profile=None, scopes=['https://www.googleapis.com/auth/youtube.upload', 'https://www.googleapis.com/auth/youtube.force-ssl'], open_browser=True, port=0, timeout_seconds=300.0, interactive=True, consent='local', authorization_response=None, login_hint=None)
 
 Return OAuth user credentials, running the consent flow if needed.
 
@@ -5041,6 +5187,11 @@ to load, and the second call passes that address-bar URL (or just its
 `code`) as `authorization_response=` to finish and cache the token. The
 two calls may be separate turns or separate processes; `yb auth` is the
 command-line form. `port` only names the (unreachable) redirect.
+
+`login_hint` (the account’s email) makes Google preselect that account on
+the consent page, so a token is not minted for whichever account the
+browser is signed in as. Default: the profile’s `login_hint` in the
+config file (see [`yb.config`](_autosummary/yb.config.html.md#module-yb.config)), else none.
 
 These keywords ride `**cred_kwargs` through [`get_service()`](_autosummary/yb.youtube.html.md#yb.youtube.get_service) and the
 publishing helpers. The few entry points that take none (notably
@@ -5260,13 +5411,16 @@ Set a custom thumbnail (`thumbnails.set`).
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
 
-### yb.youtube.start_paste_consent(, client_secrets_file=None, scopes=['https://www.googleapis.com/auth/youtube.upload', 'https://www.googleapis.com/auth/youtube.force-ssl'], port=8080, pending_file=None, reuse_pending=True)
+### yb.youtube.start_paste_consent(, client_secrets_file=None, scopes=['https://www.googleapis.com/auth/youtube.upload', 'https://www.googleapis.com/auth/youtube.force-ssl'], port=8080, pending_file=None, reuse_pending=True, login_hint=None)
 
 Begin paste-back consent and return the URL to open.
 
-A consent already pending for the same client, `scopes` and `port` is reused
-(`reuse_pending=True`): re-printing the URL must not invalidate the one the
-user already has open on their phone.
+A consent already pending for the same client, `scopes`, `port` and
+`login_hint` is reused (`reuse_pending=True`): re-printing the URL must
+not invalidate the one the user already has open on their phone.
+
+`login_hint` (an email) makes Google preselect that account, so consent is
+not given by whichever account the browser happens to be signed in as.
 
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
@@ -5555,23 +5709,25 @@ the `yb auth` command drive it. Nothing here writes the token — the caller
 
 ### Module Attributes
 
-| [`DEFAULT_PASTE_PORT`](_autosummary/yb.youtube.paste_consent.html.md#yb.youtube.paste_consent.DEFAULT_PASTE_PORT)   | The redirect target.                                                                                                    |
-|-----------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
-| [`PENDING_TTL_S`](_autosummary/yb.youtube.paste_consent.html.md#yb.youtube.paste_consent.PENDING_TTL_S)        | How long a printed consent URL stays usable by [`finish_paste_consent()`](_autosummary/yb.youtube.paste_consent.html.md#yb.youtube.paste_consent.finish_paste_consent). |
+| [`DEFAULT_PASTE_PORT`](_autosummary/yb.youtube.paste_consent.html.md#yb.youtube.paste_consent.DEFAULT_PASTE_PORT)   | The redirect target.                                                                                                                                                                                             |
+|-----------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`PENDING_TTL_S`](_autosummary/yb.youtube.paste_consent.html.md#yb.youtube.paste_consent.PENDING_TTL_S)        | How long a printed consent URL stays usable by [`finish_paste_consent()`](_autosummary/yb.youtube.paste_consent.html.md#yb.youtube.paste_consent.finish_paste_consent).                                                                                          |
+| [`PENDING_STEM`](_autosummary/yb.youtube.paste_consent.html.md#yb.youtube.paste_consent.PENDING_STEM)         | `<stem>.json` for the default profile, `<stem>.<profile>.json` for a named one.                                                                                                                                  |
+| [`DEFAULT_PROFILE_NAME`](_autosummary/yb.youtube.paste_consent.html.md#yb.youtube.paste_consent.DEFAULT_PROFILE_NAME) | How a profile is named back to the user when it is the default one (`--profile default` selects it, see [`yb.config.resolve_profile()`](_autosummary/yb.config.html.md#yb.config.resolve_profile)). |
 
 ### Functions
 
 | [`finish_paste_consent`](_autosummary/yb.youtube.paste_consent.html.md#yb.youtube.paste_consent.finish_paste_consent)(authorization_response, \*)   | Complete a consent begun by [`start_paste_consent()`](_autosummary/yb.youtube.paste_consent.html.md#yb.youtube.paste_consent.start_paste_consent); return credentials.   |
 |-----------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------|
-| [`pending_consent_file`](_autosummary/yb.youtube.paste_consent.html.md#yb.youtube.paste_consent.pending_consent_file)()                             | Where the in-progress consent is kept (next to the token, mode 0600).                                                     |
+| [`pending_consent_file`](_autosummary/yb.youtube.paste_consent.html.md#yb.youtube.paste_consent.pending_consent_file)([profile])                    | Where the in-progress consent of `profile` is kept (next to the token, 0600).                                             |
 | [`start_paste_consent`](_autosummary/yb.youtube.paste_consent.html.md#yb.youtube.paste_consent.start_paste_consent)(\*[, ...])                     | Begin paste-back consent and return the URL to open.                                                                      |
 
 ### Exceptions
 
-| [`ConsentPending`](_autosummary/yb.youtube.paste_consent.html.md#yb.youtube.paste_consent.ConsentPending)(url, \*, redirect_uri)   | Consent was started, and now waits for the user to paste the redirect back.   |
-|------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
+| [`ConsentPending`](_autosummary/yb.youtube.paste_consent.html.md#yb.youtube.paste_consent.ConsentPending)(url, \*, redirect_uri[, ...])   | Consent was started, and now waits for the user to paste the redirect back.   |
+|-------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
 
-### *exception* yb.youtube.paste_consent.ConsentPending(url, , redirect_uri)
+### *exception* yb.youtube.paste_consent.ConsentPending(url, , redirect_uri, profile=None, login_hint=None)
 
 Bases: [`ConsentRequired`](_autosummary/yb.youtube.auth.html.md#yb.youtube.auth.ConsentRequired)
 
@@ -5588,6 +5744,19 @@ can catch this and relay `url`.
 The redirect target. Nothing listens there in paste mode — the page failing to
 load is the expected outcome; only its address-bar URL matters.
 
+### yb.youtube.paste_consent.DEFAULT_PROFILE_NAME *= 'default'*
+
+How a profile is named back to the user when it is the default one
+(`--profile default` selects it, see [`yb.config.resolve_profile()`](_autosummary/yb.config.html.md#yb.config.resolve_profile)).
+
+### yb.youtube.paste_consent.PENDING_STEM *= 'youtube_consent_pending'*
+
+`<stem>.json` for the default profile,
+`<stem>.<profile>.json` for a named one.
+
+* **Type:**
+  Pending-consent file names
+
 ### yb.youtube.paste_consent.PENDING_TTL_S *= 86400.0*
 
 How long a printed consent URL stays usable by [`finish_paste_consent()`](_autosummary/yb.youtube.paste_consent.html.md#yb.youtube.paste_consent.finish_paste_consent).
@@ -5603,20 +5772,26 @@ Complete a consent begun by [`start_paste_consent()`](_autosummary/yb.youtube.pa
 bare `code`. The pending file is removed on success and left in place on
 failure, so a mistyped paste can simply be retried.
 
-### yb.youtube.paste_consent.pending_consent_file()
+### yb.youtube.paste_consent.pending_consent_file(profile=None)
 
-Where the in-progress consent is kept (next to the token, mode 0600).
+Where the in-progress consent of `profile` is kept (next to the token, 0600).
+
+A named profile keeps its own file, so two consents in flight (one per
+account) cannot overwrite each other.
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
-### yb.youtube.paste_consent.start_paste_consent(, client_secrets_file=None, scopes=['https://www.googleapis.com/auth/youtube.upload', 'https://www.googleapis.com/auth/youtube.force-ssl'], port=8080, pending_file=None, reuse_pending=True)
+### yb.youtube.paste_consent.start_paste_consent(, client_secrets_file=None, scopes=['https://www.googleapis.com/auth/youtube.upload', 'https://www.googleapis.com/auth/youtube.force-ssl'], port=8080, pending_file=None, reuse_pending=True, login_hint=None)
 
 Begin paste-back consent and return the URL to open.
 
-A consent already pending for the same client, `scopes` and `port` is reused
-(`reuse_pending=True`): re-printing the URL must not invalidate the one the
-user already has open on their phone.
+A consent already pending for the same client, `scopes`, `port` and
+`login_hint` is reused (`reuse_pending=True`): re-printing the URL must
+not invalidate the one the user already has open on their phone.
+
+`login_hint` (an email) makes Google preselect that account, so consent is
+not given by whichever account the browser happens to be signed in as.
 
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
@@ -6140,16 +6315,18 @@ Fetch a video’s live metadata & engagement numbers.
 
 # About this build
 
-This documentation was built on **2026-11-03 14:49 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/6fb27296331476cc0fb964cd5950fdb362629e86"><code>6fb2729</code></a> on branch <code>main</code>, for **yb 0.1.30** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-03 15:39 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/a225877d5f33d00c70cb0ad0a55eb5de0df90907"><code>a225877</code></a> on branch <code>main</code>, for **yb 0.1.31** (from <code>pyproject.toml</code>).
 
-#### NOTE
-Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
+#### WARNING
+The documentation and the package may be misaligned:
+
+- The documented version (0.1.31) is behind the latest release on PyPI (0.1.32): `pip install yb` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                    |
 |---------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/yb/commit/6fb27296331476cc0fb964cd5950fdb362629e86"><code>6fb27296331476cc0fb964cd5950fdb362629e86</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/yb/commit/a225877d5f33d00c70cb0ad0a55eb5de0df90907"><code>a225877d5f33d00c70cb0ad0a55eb5de0df90907</code></a> |
 | Branch              | <code>main</code>                                                                                                                                  |
 | Tags at this commit | none                                                                                                                                               |
 | Working tree        | clean                                                                                                                                              |
@@ -6160,9 +6337,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/yb</code>                                                                   |
-| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/41652789970">41652789970</a>          |
+| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/41662773260">41662773260</a>          |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>6056303b07e01b0b202a84c0d25d0d4795205889</code> (in the history of the built commit) |
+| Event commit | <code>b247bcf5af2f97e17169e8f89c9828f831b1cb6b</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -6187,13 +6364,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/yb/0.1.30/">0.1.30</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/yb/0.1.32/">0.1.32</a>, newer than the documented version (0.1.31).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/yb && cd yb
-git checkout 6fb27296331476cc0fb964cd5950fdb362629e86
+git checkout a225877d5f33d00c70cb0ad0a55eb5de0df90907
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

@@ -394,7 +394,8 @@
     <span class="s2">"(playlist_items='1-20') also helps."</span>
 <span class="p">)</span>
 
-<span class="n">_BLOCK_PATTERNS</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
+<span class="c1">#: What yt-dlp says when YouTube blocks or bot-checks the client.</span>
+<span class="n">BLOCK_PATTERNS</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
     <span class="sa">r</span><span class="s2">"HTTP Error 429|Too Many Requests|confirm you.re not a bot|Sign in to confirm"</span><span class="p">,</span>
     <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">,</span>
 <span class="p">)</span>
@@ -407,8 +408,10 @@
 <span class="w">    </span><span class="sd">"""Re-raise yt-dlp errors that look like a block as :class:`RateLimitedError`."""</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="k">yield</span>
+    <span class="k">except</span> <span class="n">RateLimitedError</span><span class="p">:</span>
+        <span class="k">raise</span>  <span class="c1"># already explained</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">_BLOCK_PATTERNS</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="n">BLOCK_PATTERNS</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">)):</span>
             <span class="k">raise</span> <span class="n">RateLimitedError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">BACKOFF_HINT</span><span class="si">}</span><span class="se">\n</span><span class="s2">yt-dlp said: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
         <span class="k">raise</span></div>
 
@@ -440,7 +443,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=a9ed77be"></script>
+</div><script src="../../../_static/documentation_options.js?v=00ad03d8"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

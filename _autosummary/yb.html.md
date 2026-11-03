@@ -122,7 +122,7 @@ Description with a chapters block appended (if any chapters).
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
-### *class* yb.YbConfig(privacy_status='unlisted', playlist=None, create_playlist_if_missing=True, playlist_privacy_status='private', channel_id=None)
+### *class* yb.YbConfig(privacy_status='unlisted', playlist=None, create_playlist_if_missing=True, playlist_privacy_status='private', channel_id=None, login_hint=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -165,6 +165,14 @@ Channel the token must belong to (`None` = don’t check).
 * **Type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
+#### login_hint
+
+Email of the Google account to consent with; the consent
+page preselects it (`None` = whatever the browser is signed in as).
+
+* **Type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
 #### *classmethod* from_mapping(mapping)
 
 Build a config from a mapping, ignoring unknown keys.
@@ -190,7 +198,7 @@ playlist is left alone instead of duplicated.
 
 ### yb.default_config_file()
 
-Config file location (`$XDG_CONFIG_HOME` or `~/.config`).
+Config file location (in `config_dir()`).
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
@@ -331,11 +339,12 @@ named `Title (video_id).mp4` in `~/Downloads`.
     options in `extra_opts` win over it.
   * **on_subtitle_error** ([`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`'raise'`, `'warn'`]) – When subtitles were asked for and only their fetch
     fails (YouTube rate-limits its captions endpoint before the video
-    one): `"warn"` (default) warns, retries once without subtitles
-    (even if `extra_opts` asks for them), and records the reason in
+    one): `"warn"` (default) warns, processes the video again without
+    subtitles (even if `extra_opts` asks for them; the formats chosen
+    are kept, nothing is extracted twice), and records the reason in
     `result.subtitles_error`; `"raise"` propagates the error (a
     [`RateLimitedError`](yb.download.html.md#yb.download.RateLimitedError) for a 429, saying only the
-    subtitles were refused). Playlist downloads are not covered.
+    subtitles were refused). See `install_subtitle_fallback()`.
 * **Return type:**
   [`DownloadResult`](yb.download.youtube.html.md#yb.download.youtube.DownloadResult)
 * **Returns:**

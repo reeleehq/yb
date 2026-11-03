@@ -112,7 +112,7 @@ The default profile keeps `youtube_token.json`; a named profile gets
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
-### yb.youtube.auth.get_credentials(, client_secrets_file=None, token_file=None, profile=None, scopes=['https://www.googleapis.com/auth/youtube.upload', 'https://www.googleapis.com/auth/youtube.force-ssl'], open_browser=True, port=0, timeout_seconds=300.0, interactive=True, consent='local', authorization_response=None)
+### yb.youtube.auth.get_credentials(, client_secrets_file=None, token_file=None, profile=None, scopes=['https://www.googleapis.com/auth/youtube.upload', 'https://www.googleapis.com/auth/youtube.force-ssl'], open_browser=True, port=0, timeout_seconds=300.0, interactive=True, consent='local', authorization_response=None, login_hint=None)
 
 Return OAuth user credentials, running the consent flow if needed.
 
@@ -162,6 +162,11 @@ to load, and the second call passes that address-bar URL (or just its
 `code`) as `authorization_response=` to finish and cache the token. The
 two calls may be separate turns or separate processes; `yb auth` is the
 command-line form. `port` only names the (unreachable) redirect.
+
+`login_hint` (the account’s email) makes Google preselect that account on
+the consent page, so a token is not minted for whichever account the
+browser is signed in as. Default: the profile’s `login_hint` in the
+config file (see [`yb.config`](yb.config.html.md#module-yb.config)), else none.
 
 These keywords ride `**cred_kwargs` through [`get_service()`](#yb.youtube.auth.get_service) and the
 publishing helpers. The few entry points that take none (notably

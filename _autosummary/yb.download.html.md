@@ -46,43 +46,46 @@ how to install it. The first download in a process runs it and warns.
 
 ### Functions
 
-| [`download_youtube_video`](#yb.download.download_youtube_video)(url, \*[, ...])          | Download a YouTube video to `download_dir` (default `~/Downloads`).           |
-|--------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
-| [`download_youtube_audio`](#yb.download.download_youtube_audio)(url, \*[, ...])          | Download only a video's audio (no video stream).                              |
-| [`download_youtube_subtitles`](#yb.download.download_youtube_subtitles)(url, \*[, ...])      | Download only a video's subtitles (no media); returns the files written.      |
-| [`youtube_video_info`](#yb.download.youtube_video_info)(url, \*[, extra_opts, ...])  | Fetch a video's metadata without downloading it.                              |
-| [`download_youtube_playlist`](#yb.download.download_youtube_playlist)(url, \*[, ...])       | Download all (or a selected subset of) a YouTube playlist's videos.           |
-| [`youtube_playlist_info`](#yb.download.youtube_playlist_info)(url, \*[, ...])           | Fetch a playlist's per-video metadata without downloading.                    |
-| [`search_youtube`](#yb.download.search_youtube)(query, \*[, limit, ...])         | Search YouTube by name; returns up to `limit` hits, best match first.         |
-| [`download_audio_bounded`](#yb.download.download_audio_bounded)(url, \*, download_dir)   | Download the audio of one video link as mp3, refusing what exceeds the caps.  |
-| [`require_http_url`](#yb.download.require_http_url)(url)                           | Default target check: an http(s) URL with a host.                             |
-| [`default_download_dir`](#yb.download.default_download_dir)()                          | Resolve the default download directory (`$YB_DOWNLOAD_DIR` or `~/Downloads`). |
-| [`convert_audio`](#yb.download.convert_audio)(src, audio_format, \*[, ...])     | Convert `src` to `audio_format`, returning the resulting path.                |
-| [`check_requirements`](#yb.download.check_requirements)(\*[, warn, which, ...])      | Check what YouTube downloads need, and say how to fix what's missing.         |
-| [`check_cookies`](#yb.download.check_cookies)([cookies_file, probe_url, ...])   | Problems with the cookies downloads would use (empty when they work).         |
-| [`check_po_token_server`](#yb.download.check_po_token_server)([base_url, urlopen, ...]) | Problems reaching the PO-token provider's server (`GET <base_url>/ping`).     |
-| [`find_js_runtime`](#yb.download.find_js_runtime)(\*[, which, search_dirs])       | Find Deno on `PATH`, else in its standard install location.                   |
-| [`parse_timestamp`](#yb.download.parse_timestamp)(value)                          | Seconds from a number or a `"[[h:]m:]s[.fraction]"` string.                   |
+| [`download_youtube_video`](#yb.download.download_youtube_video)(url, \*[, ...])          | Download a YouTube video to `download_dir` (default `~/Downloads`).              |
+|--------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
+| [`download_youtube_audio`](#yb.download.download_youtube_audio)(url, \*[, ...])          | Download only a video's audio (no video stream).                                 |
+| [`download_youtube_subtitles`](#yb.download.download_youtube_subtitles)(url, \*[, ...])      | Download only a video's subtitles (no media); returns the files written.         |
+| [`youtube_video_info`](#yb.download.youtube_video_info)(url, \*[, extra_opts, ...])  | Fetch a video's metadata without downloading it.                                 |
+| [`download_youtube_playlist`](#yb.download.download_youtube_playlist)(url, \*[, ...])       | Download all (or a selected subset of) a YouTube playlist's videos.              |
+| [`youtube_playlist_info`](#yb.download.youtube_playlist_info)(url, \*[, ...])           | Fetch a playlist's per-video metadata without downloading.                       |
+| [`search_youtube`](#yb.download.search_youtube)(query, \*[, limit, ...])         | Search YouTube by name; returns up to `limit` hits, best match first.            |
+| [`download_audio_bounded`](#yb.download.download_audio_bounded)(url, \*, download_dir)   | Download the audio of one video link as mp3, refusing what exceeds the caps.     |
+| [`require_http_url`](#yb.download.require_http_url)(url)                           | Default target check: an http(s) URL with a host.                                |
+| [`install_subtitle_fallback`](#yb.download.install_subtitle_fallback)(ydl, \*, ...)         | Make `ydl` survive a failed subtitle fetch; returns the failures as they happen. |
+| [`default_download_dir`](#yb.download.default_download_dir)()                          | Resolve the default download directory (`$YB_DOWNLOAD_DIR` or `~/Downloads`).    |
+| [`convert_audio`](#yb.download.convert_audio)(src, audio_format, \*[, ...])     | Convert `src` to `audio_format`, returning the resulting path.                   |
+| [`check_requirements`](#yb.download.check_requirements)(\*[, warn, which, ...])      | Check what YouTube downloads need, and say how to fix what's missing.            |
+| [`check_cookies`](#yb.download.check_cookies)([cookies_file, probe_url, ...])   | Problems with the cookies downloads would use (empty when they work).            |
+| [`check_po_token_server`](#yb.download.check_po_token_server)([base_url, urlopen, ...]) | Problems reaching the PO-token provider's server (`GET <base_url>/ping`).        |
+| [`find_js_runtime`](#yb.download.find_js_runtime)(\*[, which, search_dirs])       | Find Deno on `PATH`, else in its standard install location.                      |
+| [`parse_timestamp`](#yb.download.parse_timestamp)(value)                          | Seconds from a number or a `"[[h:]m:]s[.fraction]"` string.                      |
 
 ### Classes
 
-| [`AudioDownload`](#yb.download.AudioDownload)(path, title, duration_s, ...)     | A bounded audio download.                                                                                           |
-|--------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
-| [`SearchHit`](#yb.download.SearchHit)(id, title, duration, channel, url)    | One row of [`search_youtube()`](#yb.download.search_youtube) (flat extraction: no per-video fetch). |
-| [`DownloadResult`](#yb.download.DownloadResult)(path, info[, sidecars, ...])     | Outcome of a download.                                                                                              |
-| [`JsRuntime`](#yb.download.JsRuntime)(name, path, on_path)                  | A JavaScript runtime found for yt-dlp.                                                                              |
-| [`Pace`](#yb.download.Pace)([sleep_interval, max_sleep_interval, ...]) | How gently to talk to YouTube.                                                                                      |
-| [`TimeRange`](#yb.download.TimeRange)([start, end])                         | A span of a video, in seconds.                                                                                      |
+| [`AudioDownload`](#yb.download.AudioDownload)(path, title, duration_s, ...)     | A bounded audio download.                                                                                               |
+|--------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
+| [`SearchHit`](#yb.download.SearchHit)(id, title, duration, channel, url)    | One row of [`search_youtube()`](#yb.download.search_youtube) (flat extraction: no per-video fetch).     |
+| [`SubtitleFailure`](#yb.download.SubtitleFailure)(video_id, error)                | An item whose subtitle fetch failed (see [`install_subtitle_fallback()`](#yb.download.install_subtitle_fallback)). |
+| [`DownloadResult`](#yb.download.DownloadResult)(path, info[, sidecars, ...])     | Outcome of a download.                                                                                                  |
+| [`JsRuntime`](#yb.download.JsRuntime)(name, path, on_path)                  | A JavaScript runtime found for yt-dlp.                                                                                  |
+| [`Pace`](#yb.download.Pace)([sleep_interval, max_sleep_interval, ...]) | How gently to talk to YouTube.                                                                                          |
+| [`TimeRange`](#yb.download.TimeRange)([start, end])                         | A span of a video, in seconds.                                                                                          |
 
 ### Exceptions
 
-| [`AudioLimitError`](#yb.download.AudioLimitError)            | The source exceeds a cap (duration, size or time); nothing is left on disk.   |
-|-----------------------------------------------------------------------------|-------------------------------------------------------------------------------|
-| [`AudioSourceError`](#yb.download.AudioSourceError)           | yt-dlp could not get audio from the link (unsupported, unavailable, ...).     |
-| [`AudioTargetError`](#yb.download.AudioTargetError)           | `validate_target` refused a URL: the link, or one yt-dlp was about to fetch.  |
-| [`AudioConversionError`](#yb.download.AudioConversionError)       | Raised when audio could not be converted to the requested format.             |
-| [`DownloadRequirementWarning`](#yb.download.DownloadRequirementWarning) | A download prerequisite (JS runtime, solver scripts) looks missing.           |
-| [`RateLimitedError`](#yb.download.RateLimitedError)           | YouTube refused the request (HTTP 429 or a "confirm you're not a bot" wall).  |
+| [`AudioLimitError`](#yb.download.AudioLimitError)                          | The source exceeds a cap (duration, size or time); nothing is left on disk.   |
+|-------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
+| [`AudioSourceError`](#yb.download.AudioSourceError)                         | yt-dlp could not get audio from the link (unsupported, unavailable, ...).     |
+| [`AudioTargetError`](#yb.download.AudioTargetError)                         | `validate_target` refused a URL: the link, or one yt-dlp was about to fetch.  |
+| [`PlaylistSubtitleError`](#yb.download.PlaylistSubtitleError)(results, failures) | Some playlist items' subtitles failed (`on_subtitle_error="raise"`).          |
+| [`AudioConversionError`](#yb.download.AudioConversionError)                     | Raised when audio could not be converted to the requested format.             |
+| [`DownloadRequirementWarning`](#yb.download.DownloadRequirementWarning)               | A download prerequisite (JS runtime, solver scripts) looks missing.           |
+| [`RateLimitedError`](#yb.download.RateLimitedError)                         | YouTube refused the request (HTTP 429 or a "confirm you're not a bot" wall).  |
 
 ### *exception* yb.download.AudioConversionError
 
@@ -262,6 +265,20 @@ Maximum download rate, e.g. `"4M"` or `"500K"` (bytes/s).
 * **Type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
+### *exception* yb.download.PlaylistSubtitleError(results, failures)
+
+Bases: [`RuntimeError`](https://docs.python.org/3/builtins/exceptions.html#RuntimeError)
+
+Some playlist items’ subtitles failed (`on_subtitle_error="raise"`).
+
+#### results
+
+The items that did download.
+
+#### failures
+
+The [`SubtitleFailure`](#yb.download.SubtitleFailure) of each item that did not.
+
 ### *exception* yb.download.RateLimitedError
 
 Bases: [`RuntimeError`](https://docs.python.org/3/builtins/exceptions.html#RuntimeError)
@@ -276,6 +293,12 @@ One row of [`search_youtube()`](#yb.download.search_youtube) (flat extraction: n
 
 `duration` is in seconds and may be `None` (live streams, some results),
 as may `view_count`.
+
+### *class* yb.download.SubtitleFailure(video_id, error)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+An item whose subtitle fetch failed (see [`install_subtitle_fallback()`](#yb.download.install_subtitle_fallback)).
 
 ### *class* yb.download.TimeRange(start=0.0, end=None)
 
@@ -512,7 +535,7 @@ Pass `audio_format` to get a specific format instead:
   * [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `on_error` is not `"raise"` or `"warn"`.
   * [**AudioConversionError**](#yb.download.AudioConversionError) – If conversion fails and `on_error="raise"`.
 
-### yb.download.download_youtube_playlist(url, , download_dir=None, playlist_items=None, skip_first=False, title_reject=None, download_archive=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=True, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), cookies_from_browser=None, extractor_args=None, quiet=True, extra_opts=None, cookies_file=None, pace=None, item_folders=False, embed_metadata=False)
+### yb.download.download_youtube_playlist(url, , download_dir=None, playlist_items=None, skip_first=False, title_reject=None, download_archive=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=True, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), cookies_from_browser=None, extractor_args=None, quiet=True, extra_opts=None, cookies_file=None, pace=None, item_folders=False, embed_metadata=False, on_subtitle_error='warn')
 
 Download all (or a selected subset of) a YouTube playlist’s videos.
 
@@ -574,6 +597,12 @@ Selecting a subset (yt-dlp `--playlist-items` is **1-based**):
     Incompatible with a custom `filename_template`.
   * **embed_metadata** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Write title/artist/etc. into the media file (yt-dlp
     `--embed-metadata`; needs ffmpeg).
+  * **on_subtitle_error** ([`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`'raise'`, `'warn'`]) – When only an item’s subtitle fetch fails (yt-dlp
+    would otherwise drop the item): `"warn"` (default) warns and
+    downloads that item without subtitles, in place (its result carries
+    `subtitles_error`); `"raise"` skips it and raises
+    [`PlaylistSubtitleError`](#yb.download.PlaylistSubtitleError) after the run, carrying the items
+    that did download.
 * **Return type:**
   [*list*](https://docs.python.org/3/builtins/stdtypes.html#list)[[*DownloadResult*](yb.download.youtube.html.md#yb.download.youtube.DownloadResult)]
 
@@ -581,8 +610,10 @@ Audio only: pass `fmt="bestaudio/best", merge_to=None` (keeps the source
 stream, e.g. `.m4a`, without re-encoding).
 
 * **Raises:**
-  [**RateLimitedError**](#yb.download.RateLimitedError) – On HTTP 429 or a “confirm you’re not a bot” wall, with
-      a backoff hint. (Per-item failures under `ignoreerrors` are skipped.)
+  * [**RateLimitedError**](#yb.download.RateLimitedError) – On HTTP 429 or a “confirm you’re not a bot” wall, with
+        a backoff hint. (Per-item failures under `ignoreerrors` are skipped.)
+  * [**PlaylistSubtitleError**](#yb.download.PlaylistSubtitleError) – Some items’ subtitles failed and
+        `on_subtitle_error="raise"`.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`DownloadResult`](yb.download.youtube.html.md#yb.download.youtube.DownloadResult)]
 * **Returns:**
@@ -685,11 +716,12 @@ named `Title (video_id).mp4` in `~/Downloads`.
     options in `extra_opts` win over it.
   * **on_subtitle_error** ([`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`'raise'`, `'warn'`]) – When subtitles were asked for and only their fetch
     fails (YouTube rate-limits its captions endpoint before the video
-    one): `"warn"` (default) warns, retries once without subtitles
-    (even if `extra_opts` asks for them), and records the reason in
+    one): `"warn"` (default) warns, processes the video again without
+    subtitles (even if `extra_opts` asks for them; the formats chosen
+    are kept, nothing is extracted twice), and records the reason in
     `result.subtitles_error`; `"raise"` propagates the error (a
     [`RateLimitedError`](#yb.download.RateLimitedError) for a 429, saying only the
-    subtitles were refused). Playlist downloads are not covered.
+    subtitles were refused). See [`install_subtitle_fallback()`](#yb.download.install_subtitle_fallback).
 * **Return type:**
   [`DownloadResult`](yb.download.youtube.html.md#yb.download.youtube.DownloadResult)
 * **Returns:**
@@ -713,6 +745,25 @@ Find Deno on `PATH`, else in its standard install location.
   [`JsRuntime`](yb.download.requirements.html.md#yb.download.requirements.JsRuntime) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 * **Returns:**
   The runtime found, or `None`.
+
+### yb.download.install_subtitle_fallback(ydl, , on_subtitle_error)
+
+Make `ydl` survive a failed subtitle fetch; returns the failures as they happen.
+
+Wraps `ydl.process_info` (called once per video, with the formats already
+chosen), so the retry happens in place: same item, same filename and order,
+no second extraction. Failures are keyed by video id (a video listed twice
+in a playlist marks both rows). With several `subtitle_langs`, the ones
+written before the failure stay beside the video. On a failure of the
+subtitle fetch only:
+
+- `"warn"`: warn, then process the item again with subtitles off;
+- `"raise"`: re-raise (a 429 as [`RateLimitedError`](#yb.download.RateLimitedError)
+  saying only the subtitles were refused). Under `ignoreerrors` yt-dlp
+  then skips the item, which the recorded failure still names.
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`SubtitleFailure`](yb.download.youtube.html.md#yb.download.youtube.SubtitleFailure)]
 
 ### yb.download.parse_timestamp(value)
 

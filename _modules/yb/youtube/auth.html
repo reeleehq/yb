@@ -292,7 +292,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Sequence</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">yb.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">resolve_profile</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">yb.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">config_dir</span><span class="p">,</span> <span class="n">resolve_profile</span>
 
 <span class="n">PathLike</span> <span class="o">=</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span>
 
@@ -336,13 +336,6 @@
 <span class="n">DEFAULT_CONSENT_TIMEOUT_S</span> <span class="o">=</span> <span class="mf">300.0</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_config_dir</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""``yb`` config directory (``$XDG_CONFIG_HOME`` or ``~/.config``)/``yb``."""</span>
-    <span class="n">base</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"XDG_CONFIG_HOME"</span><span class="p">)</span>
-    <span class="n">root</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">base</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span> <span class="k">if</span> <span class="n">base</span> <span class="k">else</span> <span class="n">Path</span><span class="o">.</span><span class="n">home</span><span class="p">()</span> <span class="o">/</span> <span class="s2">".config"</span>
-    <span class="k">return</span> <span class="n">root</span> <span class="o">/</span> <span class="s2">"yb"</span>
-
-
 <div class="viewcode-block" id="default_token_file">
 <a class="viewcode-back" href="../../../_autosummary/yb.youtube.auth.html#yb.youtube.default_token_file">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">default_token_file</span><span class="p">(</span><span class="n">profile</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
@@ -353,7 +346,7 @@
 <span class="sd">    """</span>
     <span class="n">profile</span> <span class="o">=</span> <span class="n">resolve_profile</span><span class="p">(</span><span class="n">profile</span><span class="p">)</span>
     <span class="n">name</span> <span class="o">=</span> <span class="s2">"youtube_token.json"</span> <span class="k">if</span> <span class="n">profile</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">"youtube_token.</span><span class="si">{</span><span class="n">profile</span><span class="si">}</span><span class="s2">.json"</span>
-    <span class="k">return</span> <span class="n">_config_dir</span><span class="p">()</span> <span class="o">/</span> <span class="n">name</span></div>
+    <span class="k">return</span> <span class="n">config_dir</span><span class="p">()</span> <span class="o">/</span> <span class="n">name</span></div>
 
 
 
@@ -403,7 +396,7 @@
 <span class="sd">    Used when neither ``client_secrets_file=`` nor the env vars are set, so all</span>
 <span class="sd">    of ``yb``'s state can live in one directory next to the token.</span>
 <span class="sd">    """</span>
-    <span class="k">return</span> <span class="n">_config_dir</span><span class="p">()</span> <span class="o">/</span> <span class="s2">"client_secret.json"</span></div>
+    <span class="k">return</span> <span class="n">config_dir</span><span class="p">()</span> <span class="o">/</span> <span class="s2">"client_secret.json"</span></div>
 
 
 
@@ -465,7 +458,13 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_paste_consent</span><span class="p">(</span>
-    <span class="n">authorization_response</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">client_secrets_file</span><span class="p">,</span> <span class="n">scopes</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">profile</span><span class="o">=</span><span class="kc">None</span>
+    <span class="n">authorization_response</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">client_secrets_file</span><span class="p">,</span>
+    <span class="n">scopes</span><span class="p">,</span>
+    <span class="n">port</span><span class="p">,</span>
+    <span class="n">profile</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">login_hint</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Paste-back consent: finish if given the redirect, else start and raise."""</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">yb.youtube.paste_consent</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
@@ -473,24 +472,45 @@
         <span class="n">ConsentPending</span><span class="p">,</span>
         <span class="n">_redirect_uri</span><span class="p">,</span>
         <span class="n">finish_paste_consent</span><span class="p">,</span>
+        <span class="n">pending_consent_file</span><span class="p">,</span>
         <span class="n">start_paste_consent</span><span class="p">,</span>
     <span class="p">)</span>
 
-    <span class="c1"># A named profile keeps its own pending request, so two consents in flight</span>
-    <span class="c1"># (one per account) cannot overwrite each other.</span>
-    <span class="n">extra</span> <span class="o">=</span> <span class="p">{}</span>
-    <span class="k">if</span> <span class="n">profile</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">extra</span><span class="p">[</span><span class="s2">"pending_file"</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">_config_dir</span><span class="p">()</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"youtube_consent_pending.</span><span class="si">{</span><span class="n">profile</span><span class="si">}</span><span class="s2">.json"</span>
-        <span class="p">)</span>
+    <span class="n">pending</span> <span class="o">=</span> <span class="n">pending_consent_file</span><span class="p">(</span><span class="n">profile</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">authorization_response</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">finish_paste_consent</span><span class="p">(</span>
-            <span class="n">authorization_response</span><span class="p">,</span> <span class="n">client_secrets_file</span><span class="o">=</span><span class="n">client_secrets_file</span><span class="p">,</span> <span class="o">**</span><span class="n">extra</span>
+            <span class="n">authorization_response</span><span class="p">,</span>
+            <span class="n">client_secrets_file</span><span class="o">=</span><span class="n">client_secrets_file</span><span class="p">,</span>
+            <span class="n">pending_file</span><span class="o">=</span><span class="n">pending</span><span class="p">,</span>
         <span class="p">)</span>
     <span class="n">url</span> <span class="o">=</span> <span class="n">start_paste_consent</span><span class="p">(</span>
-        <span class="n">client_secrets_file</span><span class="o">=</span><span class="n">client_secrets_file</span><span class="p">,</span> <span class="n">scopes</span><span class="o">=</span><span class="n">scopes</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="n">port</span><span class="p">,</span> <span class="o">**</span><span class="n">extra</span>
+        <span class="n">client_secrets_file</span><span class="o">=</span><span class="n">client_secrets_file</span><span class="p">,</span>
+        <span class="n">scopes</span><span class="o">=</span><span class="n">scopes</span><span class="p">,</span>
+        <span class="n">port</span><span class="o">=</span><span class="n">port</span><span class="p">,</span>
+        <span class="n">pending_file</span><span class="o">=</span><span class="n">pending</span><span class="p">,</span>
+        <span class="n">login_hint</span><span class="o">=</span><span class="n">login_hint</span><span class="p">,</span>
     <span class="p">)</span>
-    <span class="k">raise</span> <span class="n">ConsentPending</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">redirect_uri</span><span class="o">=</span><span class="n">_redirect_uri</span><span class="p">(</span><span class="n">port</span> <span class="ow">or</span> <span class="n">DEFAULT_PASTE_PORT</span><span class="p">))</span>
+    <span class="k">raise</span> <span class="n">ConsentPending</span><span class="p">(</span>
+        <span class="n">url</span><span class="p">,</span>
+        <span class="n">redirect_uri</span><span class="o">=</span><span class="n">_redirect_uri</span><span class="p">(</span><span class="n">port</span> <span class="ow">or</span> <span class="n">DEFAULT_PASTE_PORT</span><span class="p">),</span>
+        <span class="n">profile</span><span class="o">=</span><span class="n">profile</span><span class="p">,</span>
+        <span class="n">login_hint</span><span class="o">=</span><span class="n">login_hint</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_profile_login_hint</span><span class="p">(</span><span class="n">profile</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The ``login_hint`` configured for ``profile``, if any.</span>
+
+<span class="sd">    A profile with no config section has none (consent for a token-only profile</span>
+<span class="sd">    must still work); a malformed config file raises, so the hint never</span>
+<span class="sd">    silently disappears right after an edit.</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">yb.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_config</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">load_config</span><span class="p">(</span><span class="n">profile</span><span class="o">=</span><span class="n">profile</span><span class="p">)</span><span class="o">.</span><span class="n">login_hint</span>
+    <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>  <span class="c1"># no such profile in the config file</span>
+        <span class="k">return</span> <span class="kc">None</span>
 
 
 <div class="viewcode-block" id="get_credentials">
@@ -507,6 +527,7 @@
     <span class="n">interactive</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">consent</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"local"</span><span class="p">,</span>
     <span class="n">authorization_response</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">login_hint</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Return OAuth user credentials, running the consent flow if needed.</span>
 
@@ -557,6 +578,11 @@
 <span class="sd">    two calls may be separate turns or separate processes; ``yb auth`` is the</span>
 <span class="sd">    command-line form. ``port`` only names the (unreachable) redirect.</span>
 
+<span class="sd">    ``login_hint`` (the account's email) makes Google preselect that account on</span>
+<span class="sd">    the consent page, so a token is not minted for whichever account the</span>
+<span class="sd">    browser is signed in as. Default: the profile's ``login_hint`` in the</span>
+<span class="sd">    config file (see :mod:`yb.config`), else none.</span>
+
 <span class="sd">    These keywords ride ``**cred_kwargs`` through :func:`get_service` and the</span>
 <span class="sd">    publishing helpers. The few entry points that take none (notably</span>
 <span class="sd">    :func:`yb.music.publish.publish_folder`) still work headlessly: call this</span>
@@ -604,6 +630,8 @@
             <span class="k">raise</span> <span class="n">ConsentRequired</span><span class="p">(</span>
                 <span class="n">_consent_required_message</span><span class="p">(</span><span class="n">refresh_error</span><span class="p">,</span> <span class="n">token_path</span><span class="p">,</span> <span class="n">profile</span><span class="p">)</span>
             <span class="p">)</span>
+        <span class="k">if</span> <span class="n">login_hint</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">login_hint</span> <span class="o">=</span> <span class="n">_profile_login_hint</span><span class="p">(</span><span class="n">profile</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">consent</span> <span class="o">==</span> <span class="s2">"paste"</span><span class="p">:</span>
             <span class="n">creds</span> <span class="o">=</span> <span class="n">_paste_consent</span><span class="p">(</span>
                 <span class="n">authorization_response</span><span class="p">,</span>
@@ -611,6 +639,7 @@
                 <span class="n">scopes</span><span class="o">=</span><span class="n">scopes</span><span class="p">,</span>
                 <span class="n">port</span><span class="o">=</span><span class="n">port</span><span class="p">,</span>
                 <span class="n">profile</span><span class="o">=</span><span class="n">profile</span><span class="p">,</span>
+                <span class="n">login_hint</span><span class="o">=</span><span class="n">login_hint</span><span class="p">,</span>
             <span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">secrets</span> <span class="o">=</span> <span class="n">_resolve_client_secrets</span><span class="p">(</span><span class="n">client_secrets_file</span><span class="p">)</span>
@@ -620,6 +649,8 @@
                     <span class="n">port</span><span class="o">=</span><span class="n">port</span><span class="p">,</span>
                     <span class="n">open_browser</span><span class="o">=</span><span class="n">open_browser</span><span class="p">,</span>
                     <span class="n">timeout_seconds</span><span class="o">=</span><span class="n">timeout_seconds</span><span class="p">,</span>
+                    <span class="c1"># passed on to the authorization URL; none when unset</span>
+                    <span class="o">**</span><span class="p">({</span><span class="s2">"login_hint"</span><span class="p">:</span> <span class="n">login_hint</span><span class="p">}</span> <span class="k">if</span> <span class="n">login_hint</span> <span class="k">else</span> <span class="p">{}),</span>
                 <span class="p">)</span>
             <span class="k">except</span> <span class="n">_WSGITimeoutError</span> <span class="k">as</span> <span class="n">timed_out</span><span class="p">:</span>
                 <span class="c1"># Nobody answered. Whatever the caller thought it was doing, the</span>
@@ -677,7 +708,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=a9ed77be"></script>
+</div><script src="../../../_static/documentation_options.js?v=00ad03d8"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

@@ -10,6 +10,8 @@ yb.youtube.paste\_consent
    
       DEFAULT_PASTE_PORT
       PENDING_TTL_S
+      PENDING_STEM
+      DEFAULT_PROFILE_NAME
    
    .. rubric:: Functions
 

@@ -313,13 +313,16 @@ apply, exactly as before:</p>
     <span class="s2">"privacy_status"</span><span class="p">:</span> <span class="s2">"unlisted"</span><span class="p">,</span>
     <span class="s2">"playlist"</span><span class="p">:</span> <span class="s2">"TW Uploads"</span><span class="p">,</span>
     <span class="s2">"profiles"</span><span class="p">:</span> <span class="p">{</span>
-        <span class="s2">"reelee"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"privacy_status"</span><span class="p">:</span> <span class="s2">"unlisted"</span><span class="p">,</span> <span class="s2">"channel_id"</span><span class="p">:</span> <span class="s2">"UC..."</span><span class="p">}</span>
+        <span class="s2">"reelee"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"privacy_status"</span><span class="p">:</span> <span class="s2">"unlisted"</span><span class="p">,</span> <span class="s2">"channel_id"</span><span class="p">:</span> <span class="s2">"UC..."</span><span class="p">,</span>
+                   <span class="s2">"login_hint"</span><span class="p">:</span> <span class="s2">"account@example.com"</span><span class="p">}</span>
     <span class="p">}</span>
 <span class="p">}</span>
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">channel_id</span></code> (optional) is checked against the token’s channel before any
-upload, so a token minted for the wrong Google account fails loudly.</p>
+upload, so a token minted for the wrong Google account fails loudly.
+<code class="docutils literal notranslate"><span class="pre">login_hint</span></code> (optional, the account’s email) makes the consent page preselect
+that account, so the wrong one is not picked in the first place.</p>
 <p class="rubric">Module Attributes</p>
 <div class="table-wrapper autosummary longtable docutils container">
 <table class="autosummary longtable docutils align-default">
@@ -340,13 +343,16 @@ upload, so a token minted for the wrong Google account fails loudly.</p>
 <div class="table-wrapper autosummary longtable docutils container">
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#yb.config.default_config_file" title="yb.config.default_config_file"><code class="xref py py-obj docutils literal notranslate"><span class="pre">default_config_file</span></code></a>()</p></td>
-<td><p>Config file location (<code class="docutils literal notranslate"><span class="pre">$XDG_CONFIG_HOME</span></code> or <code class="docutils literal notranslate"><span class="pre">~/.config</span></code>).</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.config.config_dir" title="yb.config.config_dir"><code class="xref py py-obj docutils literal notranslate"><span class="pre">config_dir</span></code></a>()</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">yb</span></code>'s config directory: <code class="docutils literal notranslate"><span class="pre">$XDG_CONFIG_HOME/yb</span></code>, else <code class="docutils literal notranslate"><span class="pre">~/.config/yb</span></code>.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#yb.config.load_config" title="yb.config.load_config"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_config</span></code></a>([config_file, profile])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#yb.config.default_config_file" title="yb.config.default_config_file"><code class="xref py py-obj docutils literal notranslate"><span class="pre">default_config_file</span></code></a>()</p></td>
+<td><p>Config file location (in <a class="reference internal" href="#yb.config.config_dir" title="yb.config.config_dir"><code class="xref py py-func docutils literal notranslate"><span class="pre">config_dir()</span></code></a>).</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.config.load_config" title="yb.config.load_config"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_config</span></code></a>([config_file, profile])</p></td>
 <td><p>Load publishing defaults from <code class="docutils literal notranslate"><span class="pre">config_file</span></code> (or the default location).</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#yb.config.resolve_profile" title="yb.config.resolve_profile"><code class="xref py py-obj docutils literal notranslate"><span class="pre">resolve_profile</span></code></a>([profile])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#yb.config.resolve_profile" title="yb.config.resolve_profile"><code class="xref py py-obj docutils literal notranslate"><span class="pre">resolve_profile</span></code></a>([profile])</p></td>
 <td><p>The active profile name: <code class="docutils literal notranslate"><span class="pre">profile</span></code>, else <code class="docutils literal notranslate"><span class="pre">$YB_PROFILE</span></code>, else <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></td>
 </tr>
 </tbody>
@@ -385,7 +391,7 @@ but shareable by link until you deliberately make one <code class="docutils lite
 
 <dl class="py class">
 <dt class="sig sig-object py" id="yb.config.YbConfig">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">yb.config.</span></span><span class="sig-name descname"><span class="pre">YbConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">privacy_status</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'unlisted'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">playlist</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">create_playlist_if_missing</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">playlist_privacy_status</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'private'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/config.html#YbConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.config.YbConfig" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">yb.config.</span></span><span class="sig-name descname"><span class="pre">YbConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">privacy_status</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'unlisted'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">playlist</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">create_playlist_if_missing</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">playlist_privacy_status</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'private'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">login_hint</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/config.html#YbConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.config.YbConfig" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#object" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <p>Resolved publishing defaults.</p>
 <dl class="field-list simple">
@@ -447,6 +453,18 @@ title exists yet, rather than erroring.</p>
 </dl>
 </dd></dl>
 
+<dl class="py attribute">
+<dt class="sig sig-object py" id="yb.config.YbConfig.login_hint">
+<span class="sig-name descname"><span class="pre">login_hint</span></span><a class="headerlink" href="#yb.config.YbConfig.login_hint" title="Link to this definition">¶</a></dt>
+<dd><p>Email of the Google account to consent with; the consent
+page preselects it (<code class="docutils literal notranslate"><span class="pre">None</span></code> = whatever the browser is signed in as).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a> | <span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code></a></span></span></p>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="yb.config.YbConfig.from_mapping">
 <span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_mapping</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mapping</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/config.html#YbConfig.from_mapping"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.config.YbConfig.from_mapping" title="Link to this definition">¶</a></dt>
@@ -461,9 +479,21 @@ title exists yet, rather than erroring.</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="yb.config.config_dir">
+<span class="sig-prename descclassname"><span class="pre">yb.config.</span></span><span class="sig-name descname"><span class="pre">config_dir</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/config.html#config_dir"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.config.config_dir" title="Link to this definition">¶</a></dt>
+<dd><p><code class="docutils literal notranslate"><span class="pre">yb</span></code>’s config directory: <code class="docutils literal notranslate"><span class="pre">$XDG_CONFIG_HOME/yb</span></code>, else <code class="docutils literal notranslate"><span class="pre">~/.config/yb</span></code>.</p>
+<p>The config file, tokens and pending consents all live here.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="yb.config.default_config_file">
 <span class="sig-prename descclassname"><span class="pre">yb.config.</span></span><span class="sig-name descname"><span class="pre">default_config_file</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/config.html#default_config_file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.config.default_config_file" title="Link to this definition">¶</a></dt>
-<dd><p>Config file location (<code class="docutils literal notranslate"><span class="pre">$XDG_CONFIG_HOME</span></code> or <code class="docutils literal notranslate"><span class="pre">~/.config</span></code>).</p>
+<dd><p>Config file location (in <a class="reference internal" href="#yb.config.config_dir" title="yb.config.config_dir"><code class="xref py py-func docutils literal notranslate"><span class="pre">config_dir()</span></code></a>).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a></span></p>
@@ -563,9 +593,11 @@ top-level config keys and <code class="docutils literal notranslate"><span class
 <li><a class="reference internal" href="#yb.config.YbConfig.create_playlist_if_missing"><code class="docutils literal notranslate"><span class="pre">YbConfig.create_playlist_if_missing</span></code></a></li>
 <li><a class="reference internal" href="#yb.config.YbConfig.playlist_privacy_status"><code class="docutils literal notranslate"><span class="pre">YbConfig.playlist_privacy_status</span></code></a></li>
 <li><a class="reference internal" href="#yb.config.YbConfig.channel_id"><code class="docutils literal notranslate"><span class="pre">YbConfig.channel_id</span></code></a></li>
+<li><a class="reference internal" href="#yb.config.YbConfig.login_hint"><code class="docutils literal notranslate"><span class="pre">YbConfig.login_hint</span></code></a></li>
 <li><a class="reference internal" href="#yb.config.YbConfig.from_mapping"><code class="docutils literal notranslate"><span class="pre">YbConfig.from_mapping()</span></code></a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#yb.config.config_dir"><code class="docutils literal notranslate"><span class="pre">config_dir()</span></code></a></li>
 <li><a class="reference internal" href="#yb.config.default_config_file"><code class="docutils literal notranslate"><span class="pre">default_config_file()</span></code></a></li>
 <li><a class="reference internal" href="#yb.config.load_config"><code class="docutils literal notranslate"><span class="pre">load_config()</span></code></a></li>
 <li><a class="reference internal" href="#yb.config.resolve_profile"><code class="docutils literal notranslate"><span class="pre">resolve_profile()</span></code></a></li>
@@ -580,7 +612,7 @@ top-level config keys and <code class="docutils literal notranslate"><span class
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=a9ed77be"></script>
+</div><script src="../_static/documentation_options.js?v=00ad03d8"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>

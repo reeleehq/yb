@@ -80,12 +80,12 @@ Edit an existing video:
 
 ### Exceptions
 
-| [`ConsentRequired`](#yb.youtube.ConsentRequired)                         | Consent is needed and this process cannot obtain it.                                                               |
-|------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
-| [`ConsentPending`](#yb.youtube.ConsentPending)(url, \*, redirect_uri)   | Consent was started, and now waits for the user to paste the redirect back.                                        |
-| [`WrongChannel`](#yb.youtube.WrongChannel)                            | The token uploads to a different channel than the profile expects.                                                 |
-| [`VisibilityDropWarning`](#yb.youtube.VisibilityDropWarning)                   | [`supersede()`](#yb.youtube.supersede) leaves the re-cut less visible than the original was. |
-| [`PartialPublish`](#yb.youtube.PartialPublish)(result, \*, step, error) | The video was uploaded, then a later step failed (yb#21).                                                          |
+| [`ConsentRequired`](#yb.youtube.ConsentRequired)                              | Consent is needed and this process cannot obtain it.                                                               |
+|-----------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
+| [`ConsentPending`](#yb.youtube.ConsentPending)(url, \*, redirect_uri[, ...]) | Consent was started, and now waits for the user to paste the redirect back.                                        |
+| [`WrongChannel`](#yb.youtube.WrongChannel)                                 | The token uploads to a different channel than the profile expects.                                                 |
+| [`VisibilityDropWarning`](#yb.youtube.VisibilityDropWarning)                        | [`supersede()`](#yb.youtube.supersede) leaves the re-cut less visible than the original was. |
+| [`PartialPublish`](#yb.youtube.PartialPublish)(result, \*, step, error)      | The video was uploaded, then a later step failed (yb#21).                                                          |
 
 ### *class* yb.youtube.CaptionTrack(path, language, name='', is_draft=False)
 
@@ -121,7 +121,7 @@ When `True`, uploaded but not published to viewers.
 * **Type:**
   [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
 
-### *exception* yb.youtube.ConsentPending(url, , redirect_uri)
+### *exception* yb.youtube.ConsentPending(url, , redirect_uri, profile=None, login_hint=None)
 
 Bases: [`ConsentRequired`](yb.youtube.auth.html.md#yb.youtube.auth.ConsentRequired)
 
@@ -419,7 +419,7 @@ Pure: pass the dict returned by the API. Missing pieces (from a partial
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
 
-### yb.youtube.get_credentials(, client_secrets_file=None, token_file=None, profile=None, scopes=['https://www.googleapis.com/auth/youtube.upload', 'https://www.googleapis.com/auth/youtube.force-ssl'], open_browser=True, port=0, timeout_seconds=300.0, interactive=True, consent='local', authorization_response=None)
+### yb.youtube.get_credentials(, client_secrets_file=None, token_file=None, profile=None, scopes=['https://www.googleapis.com/auth/youtube.upload', 'https://www.googleapis.com/auth/youtube.force-ssl'], open_browser=True, port=0, timeout_seconds=300.0, interactive=True, consent='local', authorization_response=None, login_hint=None)
 
 Return OAuth user credentials, running the consent flow if needed.
 
@@ -469,6 +469,11 @@ to load, and the second call passes that address-bar URL (or just its
 `code`) as `authorization_response=` to finish and cache the token. The
 two calls may be separate turns or separate processes; `yb auth` is the
 command-line form. `port` only names the (unreachable) redirect.
+
+`login_hint` (the account’s email) makes Google preselect that account on
+the consent page, so a token is not minted for whichever account the
+browser is signed in as. Default: the profile’s `login_hint` in the
+config file (see [`yb.config`](yb.config.html.md#module-yb.config)), else none.
 
 These keywords ride `**cred_kwargs` through [`get_service()`](#yb.youtube.get_service) and the
 publishing helpers. The few entry points that take none (notably
@@ -688,13 +693,16 @@ Set a custom thumbnail (`thumbnails.set`).
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
 
-### yb.youtube.start_paste_consent(, client_secrets_file=None, scopes=['https://www.googleapis.com/auth/youtube.upload', 'https://www.googleapis.com/auth/youtube.force-ssl'], port=8080, pending_file=None, reuse_pending=True)
+### yb.youtube.start_paste_consent(, client_secrets_file=None, scopes=['https://www.googleapis.com/auth/youtube.upload', 'https://www.googleapis.com/auth/youtube.force-ssl'], port=8080, pending_file=None, reuse_pending=True, login_hint=None)
 
 Begin paste-back consent and return the URL to open.
 
-A consent already pending for the same client, `scopes` and `port` is reused
-(`reuse_pending=True`): re-printing the URL must not invalidate the one the
-user already has open on their phone.
+A consent already pending for the same client, `scopes`, `port` and
+`login_hint` is reused (`reuse_pending=True`): re-printing the URL must
+not invalidate the one the user already has open on their phone.
+
+`login_hint` (an email) makes Google preselect that account, so consent is
+not given by whichever account the browser happens to be signed in as.
 
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)

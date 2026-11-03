@@ -16,8 +16,9 @@ unchanged. A raw yt-dlp option in `extra_opts` still wins over a pace.
 
 ### Module Attributes
 
-| [`PACE_PRESETS`](#yb.download.pacing.PACE_PRESETS)   | Named paces accepted wherever `pace=` is.   |
-|-----------------------------------------------------------------|---------------------------------------------|
+| [`PACE_PRESETS`](#yb.download.pacing.PACE_PRESETS)   | Named paces accepted wherever `pace=` is.                      |
+|-----------------------------------------------------------------|----------------------------------------------------------------|
+| [`BLOCK_PATTERNS`](#yb.download.pacing.BLOCK_PATTERNS) | What yt-dlp says when YouTube blocks or bot-checks the client. |
 
 ### Functions
 
@@ -36,6 +37,10 @@ unchanged. A raw yt-dlp option in `extra_opts` still wins over a pace.
 
 | [`RateLimitedError`](#yb.download.pacing.RateLimitedError)   | YouTube refused the request (HTTP 429 or a "confirm you're not a bot" wall).   |
 |---------------------------------------------------------------------|--------------------------------------------------------------------------------|
+
+### yb.download.pacing.BLOCK_PATTERNS *= re.compile('HTTP Error 429|Too Many Requests|confirm you.re not a bot|Sign in to confirm', re.IGNORECASE)*
+
+What yt-dlp says when YouTube blocks or bot-checks the client.
 
 ### yb.download.pacing.PACE_PRESETS *: [dict](https://docs.python.org/3/builtins/stdtypes.html#dict)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [Pace](#yb.download.pacing.Pace)]* *= {'polite': Pace(sleep_interval=20, max_sleep_interval=60, sleep_requests=1, limit_rate='4M')}*
 

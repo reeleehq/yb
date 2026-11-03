@@ -26,23 +26,25 @@ the `yb auth` command drive it. Nothing here writes the token — the caller
 
 ### Module Attributes
 
-| [`DEFAULT_PASTE_PORT`](#yb.youtube.paste_consent.DEFAULT_PASTE_PORT)   | The redirect target.                                                                                                    |
-|-----------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
-| [`PENDING_TTL_S`](#yb.youtube.paste_consent.PENDING_TTL_S)        | How long a printed consent URL stays usable by [`finish_paste_consent()`](#yb.youtube.paste_consent.finish_paste_consent). |
+| [`DEFAULT_PASTE_PORT`](#yb.youtube.paste_consent.DEFAULT_PASTE_PORT)   | The redirect target.                                                                                                                                                                                             |
+|-----------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`PENDING_TTL_S`](#yb.youtube.paste_consent.PENDING_TTL_S)        | How long a printed consent URL stays usable by [`finish_paste_consent()`](#yb.youtube.paste_consent.finish_paste_consent).                                                                                          |
+| [`PENDING_STEM`](#yb.youtube.paste_consent.PENDING_STEM)         | `<stem>.json` for the default profile, `<stem>.<profile>.json` for a named one.                                                                                                                                  |
+| [`DEFAULT_PROFILE_NAME`](#yb.youtube.paste_consent.DEFAULT_PROFILE_NAME) | How a profile is named back to the user when it is the default one (`--profile default` selects it, see [`yb.config.resolve_profile()`](yb.config.html.md#yb.config.resolve_profile)). |
 
 ### Functions
 
 | [`finish_paste_consent`](#yb.youtube.paste_consent.finish_paste_consent)(authorization_response, \*)   | Complete a consent begun by [`start_paste_consent()`](#yb.youtube.paste_consent.start_paste_consent); return credentials.   |
 |-----------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------|
-| [`pending_consent_file`](#yb.youtube.paste_consent.pending_consent_file)()                             | Where the in-progress consent is kept (next to the token, mode 0600).                                                     |
+| [`pending_consent_file`](#yb.youtube.paste_consent.pending_consent_file)([profile])                    | Where the in-progress consent of `profile` is kept (next to the token, 0600).                                             |
 | [`start_paste_consent`](#yb.youtube.paste_consent.start_paste_consent)(\*[, ...])                     | Begin paste-back consent and return the URL to open.                                                                      |
 
 ### Exceptions
 
-| [`ConsentPending`](#yb.youtube.paste_consent.ConsentPending)(url, \*, redirect_uri)   | Consent was started, and now waits for the user to paste the redirect back.   |
-|------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
+| [`ConsentPending`](#yb.youtube.paste_consent.ConsentPending)(url, \*, redirect_uri[, ...])   | Consent was started, and now waits for the user to paste the redirect back.   |
+|-------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
 
-### *exception* yb.youtube.paste_consent.ConsentPending(url, , redirect_uri)
+### *exception* yb.youtube.paste_consent.ConsentPending(url, , redirect_uri, profile=None, login_hint=None)
 
 Bases: [`ConsentRequired`](yb.youtube.auth.html.md#yb.youtube.auth.ConsentRequired)
 
@@ -59,6 +61,19 @@ can catch this and relay `url`.
 The redirect target. Nothing listens there in paste mode — the page failing to
 load is the expected outcome; only its address-bar URL matters.
 
+### yb.youtube.paste_consent.DEFAULT_PROFILE_NAME *= 'default'*
+
+How a profile is named back to the user when it is the default one
+(`--profile default` selects it, see [`yb.config.resolve_profile()`](yb.config.html.md#yb.config.resolve_profile)).
+
+### yb.youtube.paste_consent.PENDING_STEM *= 'youtube_consent_pending'*
+
+`<stem>.json` for the default profile,
+`<stem>.<profile>.json` for a named one.
+
+* **Type:**
+  Pending-consent file names
+
 ### yb.youtube.paste_consent.PENDING_TTL_S *= 86400.0*
 
 How long a printed consent URL stays usable by [`finish_paste_consent()`](#yb.youtube.paste_consent.finish_paste_consent).
@@ -74,20 +89,26 @@ Complete a consent begun by [`start_paste_consent()`](#yb.youtube.paste_consent.
 bare `code`. The pending file is removed on success and left in place on
 failure, so a mistyped paste can simply be retried.
 
-### yb.youtube.paste_consent.pending_consent_file()
+### yb.youtube.paste_consent.pending_consent_file(profile=None)
 
-Where the in-progress consent is kept (next to the token, mode 0600).
+Where the in-progress consent of `profile` is kept (next to the token, 0600).
+
+A named profile keeps its own file, so two consents in flight (one per
+account) cannot overwrite each other.
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
-### yb.youtube.paste_consent.start_paste_consent(, client_secrets_file=None, scopes=['https://www.googleapis.com/auth/youtube.upload', 'https://www.googleapis.com/auth/youtube.force-ssl'], port=8080, pending_file=None, reuse_pending=True)
+### yb.youtube.paste_consent.start_paste_consent(, client_secrets_file=None, scopes=['https://www.googleapis.com/auth/youtube.upload', 'https://www.googleapis.com/auth/youtube.force-ssl'], port=8080, pending_file=None, reuse_pending=True, login_hint=None)
 
 Begin paste-back consent and return the URL to open.
 
-A consent already pending for the same client, `scopes` and `port` is reused
-(`reuse_pending=True`): re-printing the URL must not invalidate the one the
-user already has open on their phone.
+A consent already pending for the same client, `scopes`, `port` and
+`login_hint` is reused (`reuse_pending=True`): re-printing the URL must
+not invalidate the one the user already has open on their phone.
+
+`login_hint` (an email) makes Google preselect that account, so consent is
+not given by whichever account the browser happens to be signed in as.
 
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)

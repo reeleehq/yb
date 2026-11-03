@@ -301,6 +301,9 @@ unchanged. A raw yt-dlp option in <code class="docutils literal notranslate"><sp
 <tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.pacing.PACE_PRESETS" title="yb.download.pacing.PACE_PRESETS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PACE_PRESETS</span></code></a></p></td>
 <td><p>Named paces accepted wherever <code class="docutils literal notranslate"><span class="pre">pace=</span></code> is.</p></td>
 </tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#yb.download.pacing.BLOCK_PATTERNS" title="yb.download.pacing.BLOCK_PATTERNS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">BLOCK_PATTERNS</span></code></a></p></td>
+<td><p>What yt-dlp says when YouTube blocks or bot-checks the client.</p></td>
+</tr>
 </tbody>
 </table>
 </div>
@@ -343,6 +346,12 @@ unchanged. A raw yt-dlp option in <code class="docutils literal notranslate"><sp
 </tbody>
 </table>
 </div>
+<dl class="py data">
+<dt class="sig sig-object py" id="yb.download.pacing.BLOCK_PATTERNS">
+<span class="sig-prename descclassname"><span class="pre">yb.download.pacing.</span></span><span class="sig-name descname"><span class="pre">BLOCK_PATTERNS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">re.compile('HTTP</span> <span class="pre">Error</span> <span class="pre">429|Too</span> <span class="pre">Many</span> <span class="pre">Requests|confirm</span> <span class="pre">you.re</span> <span class="pre">not</span> <span class="pre">a</span> <span class="pre">bot|Sign</span> <span class="pre">in</span> <span class="pre">to</span> <span class="pre">confirm',</span> <span class="pre">re.IGNORECASE)</span></span><a class="headerlink" href="#yb.download.pacing.BLOCK_PATTERNS" title="Link to this definition">¶</a></dt>
+<dd><p>What yt-dlp says when YouTube blocks or bot-checks the client.</p>
+</dd></dl>
+
 <dl class="py data">
 <dt class="sig sig-object py" id="yb.download.pacing.PACE_PRESETS">
 <span class="sig-prename descclassname"><span class="pre">yb.download.pacing.</span></span><span class="sig-name descname"><span class="pre">PACE_PRESETS</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#yb.download.pacing.Pace" title="yb.download.pacing.Pace"><span class="pre">Pace</span></a><span class="p"><span class="pre">]</span></span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'polite':</span> <span class="pre">Pace(sleep_interval=20,</span> <span class="pre">max_sleep_interval=60,</span> <span class="pre">sleep_requests=1,</span> <span class="pre">limit_rate='4M')}</span></span><a class="headerlink" href="#yb.download.pacing.PACE_PRESETS" title="Link to this definition">¶</a></dt>
@@ -514,6 +523,7 @@ between is used.</p>
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">yb.download.pacing</a><ul>
+<li><a class="reference internal" href="#yb.download.pacing.BLOCK_PATTERNS"><code class="docutils literal notranslate"><span class="pre">BLOCK_PATTERNS</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.pacing.PACE_PRESETS"><code class="docutils literal notranslate"><span class="pre">PACE_PRESETS</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.pacing.Pace"><code class="docutils literal notranslate"><span class="pre">Pace</span></code></a><ul>
 <li><a class="reference internal" href="#yb.download.pacing.Pace.sleep_interval"><code class="docutils literal notranslate"><span class="pre">Pace.sleep_interval</span></code></a></li>
@@ -538,7 +548,7 @@ between is used.</p>
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=a9ed77be"></script>
+</div><script src="../_static/documentation_options.js?v=00ad03d8"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>

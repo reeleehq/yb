@@ -29,27 +29,34 @@ The destination defaults to `$YB_DOWNLOAD_DIR` when set, else `~/Downloads`.
 
 ### Functions
 
-| [`default_cookies_file`](#yb.download.youtube.default_cookies_file)()                            | The cookies file downloads use when none is passed, or `None`.                |
-|----------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
-| [`default_download_dir`](#yb.download.youtube.default_download_dir)()                            | Resolve the default download directory (`$YB_DOWNLOAD_DIR` or `~/Downloads`). |
-| [`download_youtube_audio`](#yb.download.youtube.download_youtube_audio)(url, \*[, ...])            | Download only a video's audio (no video stream).                              |
-| [`download_youtube_playlist`](#yb.download.youtube.download_youtube_playlist)(url, \*[, ...])         | Download all (or a selected subset of) a YouTube playlist's videos.           |
-| [`download_youtube_subtitles`](#yb.download.youtube.download_youtube_subtitles)(url, \*[, ...])        | Download only a video's subtitles (no media); returns the files written.      |
-| [`download_youtube_video`](#yb.download.youtube.download_youtube_video)(url, \*[, ...])            | Download a YouTube video to `download_dir` (default `~/Downloads`).           |
-| [`glob_escape`](#yb.download.youtube.glob_escape)(name)                                 | Escape glob metacharacters in a literal filename stem.                        |
-| [`resolve_output_path`](#yb.download.youtube.resolve_output_path)(info, ydl, out_dir, merge_to) | Best-effort resolution of the final media path yt-dlp produced.               |
-| [`search_youtube`](#yb.download.youtube.search_youtube)(query, \*[, limit, ...])           | Search YouTube by name; returns up to `limit` hits, best match first.         |
-| `trim_info`(info)                                                                                  |                                                                               |
-| [`youtube_dl`](#yb.download.youtube.youtube_dl)(base_opts, \*[, extra_opts, ...])      | Yield a `YoutubeDL` built the way every yb download builds one.               |
-| [`youtube_dl_cls`](#yb.download.youtube.youtube_dl_cls)()                                  | `yt_dlp.YoutubeDL`, or an `ImportError` that says how to install it.          |
-| [`youtube_playlist_info`](#yb.download.youtube.youtube_playlist_info)(url, \*[, ...])             | Fetch a playlist's per-video metadata without downloading.                    |
-| [`youtube_video_info`](#yb.download.youtube.youtube_video_info)(url, \*[, extra_opts, ...])    | Fetch a video's metadata without downloading it.                              |
+| [`default_cookies_file`](#yb.download.youtube.default_cookies_file)()                            | The cookies file downloads use when none is passed, or `None`.                   |
+|----------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
+| [`default_download_dir`](#yb.download.youtube.default_download_dir)()                            | Resolve the default download directory (`$YB_DOWNLOAD_DIR` or `~/Downloads`).    |
+| [`download_youtube_audio`](#yb.download.youtube.download_youtube_audio)(url, \*[, ...])            | Download only a video's audio (no video stream).                                 |
+| [`download_youtube_playlist`](#yb.download.youtube.download_youtube_playlist)(url, \*[, ...])         | Download all (or a selected subset of) a YouTube playlist's videos.              |
+| [`download_youtube_subtitles`](#yb.download.youtube.download_youtube_subtitles)(url, \*[, ...])        | Download only a video's subtitles (no media); returns the files written.         |
+| [`download_youtube_video`](#yb.download.youtube.download_youtube_video)(url, \*[, ...])            | Download a YouTube video to `download_dir` (default `~/Downloads`).              |
+| [`glob_escape`](#yb.download.youtube.glob_escape)(name)                                 | Escape glob metacharacters in a literal filename stem.                           |
+| [`install_subtitle_fallback`](#yb.download.youtube.install_subtitle_fallback)(ydl, \*, ...)           | Make `ydl` survive a failed subtitle fetch; returns the failures as they happen. |
+| [`resolve_output_path`](#yb.download.youtube.resolve_output_path)(info, ydl, out_dir, merge_to) | Best-effort resolution of the final media path yt-dlp produced.                  |
+| [`search_youtube`](#yb.download.youtube.search_youtube)(query, \*[, limit, ...])           | Search YouTube by name; returns up to `limit` hits, best match first.            |
+| `trim_info`(info)                                                                                  |                                                                                  |
+| [`youtube_dl`](#yb.download.youtube.youtube_dl)(base_opts, \*[, extra_opts, ...])      | Yield a `YoutubeDL` built the way every yb download builds one.                  |
+| [`youtube_dl_cls`](#yb.download.youtube.youtube_dl_cls)()                                  | `yt_dlp.YoutubeDL`, or an `ImportError` that says how to install it.             |
+| [`youtube_playlist_info`](#yb.download.youtube.youtube_playlist_info)(url, \*[, ...])             | Fetch a playlist's per-video metadata without downloading.                       |
+| [`youtube_video_info`](#yb.download.youtube.youtube_video_info)(url, \*[, extra_opts, ...])    | Fetch a video's metadata without downloading it.                                 |
 
 ### Classes
 
-| [`DownloadResult`](#yb.download.youtube.DownloadResult)(path, info[, sidecars, ...])   | Outcome of a download.                                                                                              |
-|------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
-| [`SearchHit`](#yb.download.youtube.SearchHit)(id, title, duration, channel, url)  | One row of [`search_youtube()`](#yb.download.youtube.search_youtube) (flat extraction: no per-video fetch). |
+| [`DownloadResult`](#yb.download.youtube.DownloadResult)(path, info[, sidecars, ...])   | Outcome of a download.                                                                                                  |
+|------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
+| [`SearchHit`](#yb.download.youtube.SearchHit)(id, title, duration, channel, url)  | One row of [`search_youtube()`](#yb.download.youtube.search_youtube) (flat extraction: no per-video fetch).     |
+| [`SubtitleFailure`](#yb.download.youtube.SubtitleFailure)(video_id, error)              | An item whose subtitle fetch failed (see [`install_subtitle_fallback()`](#yb.download.youtube.install_subtitle_fallback)). |
+
+### Exceptions
+
+| [`PlaylistSubtitleError`](#yb.download.youtube.PlaylistSubtitleError)(results, failures)   | Some playlist items' subtitles failed (`on_subtitle_error="raise"`).   |
+|---------------------------------------------------------------------------------------------|------------------------------------------------------------------------|
 
 ### yb.download.youtube.COOKIES_FILE_ENV *= 'YB_COOKIES_FILE'*
 
@@ -167,6 +174,20 @@ same vocabulary as [`OnConvertError`](#yb.download.youtube.OnConvertError).
 
 alias of [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[‘raise’, ‘warn’]
 
+### *exception* yb.download.youtube.PlaylistSubtitleError(results, failures)
+
+Bases: [`RuntimeError`](https://docs.python.org/3/builtins/exceptions.html#RuntimeError)
+
+Some playlist items’ subtitles failed (`on_subtitle_error="raise"`).
+
+#### results
+
+The items that did download.
+
+#### failures
+
+The [`SubtitleFailure`](#yb.download.youtube.SubtitleFailure) of each item that did not.
+
 ### yb.download.youtube.SEARCH_RESULTS_URL *= 'https://www.youtube.com/results'*
 
 YouTube’s search results page; yt-dlp extracts it as a playlist of hits.
@@ -183,6 +204,12 @@ One row of [`search_youtube()`](#yb.download.youtube.search_youtube) (flat extra
 
 `duration` is in seconds and may be `None` (live streams, some results),
 as may `view_count`.
+
+### *class* yb.download.youtube.SubtitleFailure(video_id, error)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+An item whose subtitle fetch failed (see [`install_subtitle_fallback()`](#yb.download.youtube.install_subtitle_fallback)).
 
 ### yb.download.youtube.default_cookies_file()
 
@@ -277,7 +304,7 @@ Pass `audio_format` to get a specific format instead:
   * [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `on_error` is not `"raise"` or `"warn"`.
   * [**AudioConversionError**](yb.audio_convert.html.md#yb.audio_convert.AudioConversionError) – If conversion fails and `on_error="raise"`.
 
-### yb.download.youtube.download_youtube_playlist(url, , download_dir=None, playlist_items=None, skip_first=False, title_reject=None, download_archive=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=True, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), cookies_from_browser=None, extractor_args=None, quiet=True, extra_opts=None, cookies_file=None, pace=None, item_folders=False, embed_metadata=False)
+### yb.download.youtube.download_youtube_playlist(url, , download_dir=None, playlist_items=None, skip_first=False, title_reject=None, download_archive=None, fmt='bestvideo+bestaudio/best', merge_to='mp4', filename_template='%(title)s (%(id)s).%(ext)s', write_info_json=True, write_thumbnail=False, write_description=False, write_subtitles=False, write_auto_subtitles=False, subtitle_langs=('en',), cookies_from_browser=None, extractor_args=None, quiet=True, extra_opts=None, cookies_file=None, pace=None, item_folders=False, embed_metadata=False, on_subtitle_error='warn')
 
 Download all (or a selected subset of) a YouTube playlist’s videos.
 
@@ -339,6 +366,12 @@ Selecting a subset (yt-dlp `--playlist-items` is **1-based**):
     Incompatible with a custom `filename_template`.
   * **embed_metadata** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Write title/artist/etc. into the media file (yt-dlp
     `--embed-metadata`; needs ffmpeg).
+  * **on_subtitle_error** ([`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`'raise'`, `'warn'`]) – When only an item’s subtitle fetch fails (yt-dlp
+    would otherwise drop the item): `"warn"` (default) warns and
+    downloads that item without subtitles, in place (its result carries
+    `subtitles_error`); `"raise"` skips it and raises
+    [`PlaylistSubtitleError`](#yb.download.youtube.PlaylistSubtitleError) after the run, carrying the items
+    that did download.
 * **Return type:**
   [*list*](https://docs.python.org/3/builtins/stdtypes.html#list)[[*DownloadResult*](#yb.download.youtube.DownloadResult)]
 
@@ -346,8 +379,10 @@ Audio only: pass `fmt="bestaudio/best", merge_to=None` (keeps the source
 stream, e.g. `.m4a`, without re-encoding).
 
 * **Raises:**
-  [**RateLimitedError**](yb.download.html.md#yb.download.RateLimitedError) – On HTTP 429 or a “confirm you’re not a bot” wall, with
-      a backoff hint. (Per-item failures under `ignoreerrors` are skipped.)
+  * [**RateLimitedError**](yb.download.html.md#yb.download.RateLimitedError) – On HTTP 429 or a “confirm you’re not a bot” wall, with
+        a backoff hint. (Per-item failures under `ignoreerrors` are skipped.)
+  * [**PlaylistSubtitleError**](#yb.download.youtube.PlaylistSubtitleError) – Some items’ subtitles failed and
+        `on_subtitle_error="raise"`.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`DownloadResult`](#yb.download.youtube.DownloadResult)]
 * **Returns:**
@@ -450,11 +485,12 @@ named `Title (video_id).mp4` in `~/Downloads`.
     options in `extra_opts` win over it.
   * **on_subtitle_error** ([`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`'raise'`, `'warn'`]) – When subtitles were asked for and only their fetch
     fails (YouTube rate-limits its captions endpoint before the video
-    one): `"warn"` (default) warns, retries once without subtitles
-    (even if `extra_opts` asks for them), and records the reason in
+    one): `"warn"` (default) warns, processes the video again without
+    subtitles (even if `extra_opts` asks for them; the formats chosen
+    are kept, nothing is extracted twice), and records the reason in
     `result.subtitles_error`; `"raise"` propagates the error (a
     [`RateLimitedError`](yb.download.html.md#yb.download.RateLimitedError) for a 429, saying only the
-    subtitles were refused). Playlist downloads are not covered.
+    subtitles were refused). See [`install_subtitle_fallback()`](#yb.download.youtube.install_subtitle_fallback).
 * **Return type:**
   [`DownloadResult`](#yb.download.youtube.DownloadResult)
 * **Returns:**
@@ -472,6 +508,25 @@ Escape glob metacharacters in a literal filename stem.
 
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
+### yb.download.youtube.install_subtitle_fallback(ydl, , on_subtitle_error)
+
+Make `ydl` survive a failed subtitle fetch; returns the failures as they happen.
+
+Wraps `ydl.process_info` (called once per video, with the formats already
+chosen), so the retry happens in place: same item, same filename and order,
+no second extraction. Failures are keyed by video id (a video listed twice
+in a playlist marks both rows). With several `subtitle_langs`, the ones
+written before the failure stay beside the video. On a failure of the
+subtitle fetch only:
+
+- `"warn"`: warn, then process the item again with subtitles off;
+- `"raise"`: re-raise (a 429 as [`RateLimitedError`](yb.download.html.md#yb.download.RateLimitedError)
+  saying only the subtitles were refused). Under `ignoreerrors` yt-dlp
+  then skips the item, which the recorded failure still names.
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`SubtitleFailure`](#yb.download.youtube.SubtitleFailure)]
 
 ### yb.download.youtube.resolve_output_path(info, ydl, out_dir, merge_to)
 

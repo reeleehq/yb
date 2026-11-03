@@ -17,6 +17,7 @@ yb.download
       search_youtube
       download_audio_bounded
       require_http_url
+      install_subtitle_fallback
       default_download_dir
       convert_audio
       check_requirements
@@ -31,6 +32,7 @@ yb.download
    
       AudioDownload
       SearchHit
+      SubtitleFailure
       DownloadResult
       JsRuntime
       Pace
@@ -43,6 +45,7 @@ yb.download
       AudioLimitError
       AudioSourceError
       AudioTargetError
+      PlaylistSubtitleError
       AudioConversionError
       DownloadRequirementWarning
       RateLimitedError

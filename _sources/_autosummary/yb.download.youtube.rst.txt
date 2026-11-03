@@ -34,6 +34,7 @@ yb.download.youtube
       download_youtube_subtitles
       download_youtube_video
       glob_escape
+      install_subtitle_fallback
       resolve_output_path
       search_youtube
       trim_info
@@ -48,4 +49,11 @@ yb.download.youtube
    
       DownloadResult
       SearchHit
+      SubtitleFailure
+   
+   .. rubric:: Exceptions
+
+   .. autosummary::
+   
+      PlaylistSubtitleError
    
