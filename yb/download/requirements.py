@@ -71,8 +71,13 @@ PO_TOKEN_HINT = (
     "HTTP 403 or drops automatic captions 'because a PO token was not provided' "
     "(typically servers, even with valid cookies). Install the plugin with "
     f"pip install 'yb[pot]' and run its token server ({PO_TOKEN_PROVIDER_URL}), "
-    "e.g. docker run -d -p 4416:4416 --init brainicism/bgutil-ytdlp-pot-provider"
+    "e.g. docker run -d -p 127.0.0.1:4416:4416 --init "
+    "brainicism/bgutil-ytdlp-pot-provider (bound to localhost: the server must "
+    "not be reachable from other hosts)"
 )
+
+#: Where the PO-token provider's server listens by default.
+PO_TOKEN_SERVER_URL = "http://127.0.0.1:4416"
 
 #: Module that carries yt-dlp's challenge-solver scripts (from ``yt-dlp[default]``).
 EJS_MODULE = "yt_dlp_ejs"

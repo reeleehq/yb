@@ -63,6 +63,7 @@ from yb.download.bounded import (
     DEPLOYMENT_OPT_KEYS,
 )
 from yb.download.ranges import TimeRange, parse_timestamp
+from yb.download.probe import check_cookies, check_po_token_server
 from yb.download.requirements import (
     check_requirements,
     find_js_runtime,
@@ -95,6 +96,8 @@ __all__ = [
     "DEFAULT_OUTTMPL",
     "DEFAULT_AUDIO_FMT",
     "check_requirements",
+    "check_cookies",
+    "check_po_token_server",
     "find_js_runtime",
     "DownloadRequirementWarning",
     "JsRuntime",

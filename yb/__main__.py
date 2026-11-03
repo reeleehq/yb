@@ -16,8 +16,9 @@ publishing; never uploads)::
 
 ``check``: are YouTube downloads ready (JS runtime, solver scripts)? Prints what
 is missing and how to install it; exit status 1 if anything is. ``--online``
-also tests the cookies file against a public video (one request; catches
-rotated cookies before a real download does)::
+also checks the cookies file holds a logged-in session and reads one public
+video with it (one metadata fetch, on a copy of the file; catches rotated
+cookies before a real download does), and pings the PO-token server::
 
     yb check
     yb check --online
@@ -98,19 +99,36 @@ def _check(args: argparse.Namespace) -> int:
     from yb.download import requirements as req
 
     problems = req.check_requirements(warn=False)
-    if args.online and req.has_module(req.YT_DLP_MODULE):
-        from yb.download.probe import check_cookies
-
-        problems += check_cookies()
-    for p in problems:
-        print(f"- {p}", file=sys.stderr)
+    notes = []
     if runtime := req.find_js_runtime():
         where = "on PATH" if runtime.on_path else "off PATH; yb passes yt-dlp its path"
-        print(f"JS runtime: {runtime.name} at {runtime.path} ({where})")
-    if pot := req.installed_version(req.PO_TOKEN_PROVIDER_DIST):
-        print(f"PO-token provider: {req.PO_TOKEN_PROVIDER_DIST} {pot}")
+        notes.append(f"JS runtime: {runtime.name} at {runtime.path} ({where})")
+    pot = req.installed_version(req.PO_TOKEN_PROVIDER_DIST)
+    if pot:
+        notes.append(f"PO-token provider: {req.PO_TOKEN_PROVIDER_DIST} {pot}")
+    elif args.online:
+        notes.append(f"Note: {req.PO_TOKEN_HINT}")
     else:
-        print(f"Note: {req.PO_TOKEN_HINT}")
+        notes.append(
+            "PO-token provider: none (needed only where YouTube answers the media "
+            "with HTTP 403; yb check --online says more)"
+        )
+    if args.online and req.has_module(req.YT_DLP_MODULE):
+        from yb.download import probe
+
+        path, _ = probe.configured_cookies()
+        cookie_problems = probe.check_cookies()
+        problems += cookie_problems
+        if path is None and not cookie_problems:
+            notes.append("Cookies: none configured; nothing probed.")
+        elif not cookie_problems:
+            notes.append(f"Cookies: {path} is a logged-in session YouTube accepts.")
+        if pot:
+            problems += probe.check_po_token_server()
+    for p in problems:
+        print(f"- {p}", file=sys.stderr)
+    for note in notes:
+        print(note)
     if not problems:
         print("Downloads ready.")
     return 1 if problems else 0
@@ -155,7 +173,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     check.add_argument(
         "--online",
         action="store_true",
-        help="also test the cookies file against a public video (one request)",
+        help="also test the cookies file on a public video, and the PO-token server",
     )
     check.set_defaults(run=_check)
     args = parser.parse_args(argv)

@@ -245,8 +245,10 @@ def _cookie_opts(
     return {"cookiefile": usable} if usable else {}
 
 
-def _wants_private_cookie_copy(path: str) -> bool:
-    """Whether yt-dlp must not get ``path`` itself: unwritable, or the env asks."""
+def _wants_private_cookie_copy(path: str, *, private_copy: bool | None = None) -> bool:
+    """Whether yt-dlp must not get ``path`` itself: asked to, unwritable, or the env asks."""
+    if private_copy is not None:
+        return private_copy
     env = os.environ.get(COOKIES_PRIVATE_COPY_ENV, "").strip().lower()
     return env in _TRUTHY or not os.access(path, os.W_OK)
 
@@ -256,6 +258,8 @@ def _final_opts(
     opts: dict[str, Any],
     cookie_opts: dict[str, Any],
     extra_opts: dict | None,
+    *,
+    private_copy: bool | None = None,
 ):
     """Yield the merged yt-dlp options (``opts``, cookies, then ``extra_opts``).
 
@@ -266,11 +270,17 @@ def _final_opts(
     default, or ``extra_opts``), in those cases (or when
     :data:`COOKIES_PRIVATE_COPY_ENV` is set) yt-dlp gets a 0600 temporary copy,
     deleted on exit; the cookies it refreshes are then not persisted back.
+    ``private_copy`` overrides that rule (``True``: always copy, so the file is
+    never written; ``False``: never copy).
     """
     merged = {**opts, **cookie_opts, **(extra_opts or {})}
     source = merged.get("cookiefile")
     # A missing path is left for yt-dlp to report.
-    if not (source and Path(source).is_file() and _wants_private_cookie_copy(source)):
+    if not (
+        source
+        and Path(source).is_file()
+        and _wants_private_cookie_copy(source, private_copy=private_copy)
+    ):
         yield merged
         return
     fd, copy = tempfile.mkstemp(prefix="yb-cookies-", suffix=".txt")  # mode 0600
@@ -299,6 +309,7 @@ def youtube_dl(
     cookies_file: CookiesFile = None,
     cookies_from_browser: str | tuple | None = None,
     ydl_cls: Callable[[dict], Any] | None = None,
+    private_cookie_copy: bool | None = None,
 ):
     """Yield a ``YoutubeDL`` built the way every yb download builds one.
 
@@ -314,6 +325,9 @@ def youtube_dl(
             ``base_opts`` (suppresses the default cookies file).
         ydl_cls: What to build instead of ``yt_dlp.YoutubeDL`` (a subclass, a
             fake in tests); default :func:`youtube_dl_cls`.
+        private_cookie_copy: ``True`` hands yt-dlp a copy of the cookies file
+            so it is never rewritten (a read-only check); ``None`` applies the
+            usual rule (see :func:`_final_opts`).
 
     Raises:
         ImportError: yt-dlp is not installed (with the install command).
@@ -322,7 +336,9 @@ def youtube_dl(
     cookie_opts = _cookie_opts(
         cookies_file, cookies_from_browser=cookies_from_browser, extra_opts=extra_opts
     )
-    with _final_opts(base_opts, cookie_opts, extra_opts) as opts:
+    with _final_opts(
+        base_opts, cookie_opts, extra_opts, private_copy=private_cookie_copy
+    ) as opts:
         with cls(with_runtime_opts(opts)) as ydl:
             yield ydl
 
