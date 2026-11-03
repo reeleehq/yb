@@ -210,6 +210,7 @@
 <li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.pacing.html">yb.download.pacing</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.ranges.html">yb.download.ranges</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.requirements.html">yb.download.requirements</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.warn.html">yb.download.warn</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.youtube.html">yb.download.youtube</a></li>
 </ul>
 </li>
@@ -290,6 +291,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">contextlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">contextmanager</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Literal</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">yb.download.ranges</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
@@ -300,7 +302,8 @@
     <span class="n">ranged_filename_template</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">yb.download.pacing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pace</span><span class="p">,</span> <span class="n">explain_rate_limit</span><span class="p">,</span> <span class="n">pace_opts</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">yb.download.requirements</span><span class="w"> </span><span class="kn">import</span> <span class="n">with_runtime_opts</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">yb.download.requirements</span><span class="w"> </span><span class="kn">import</span> <span class="n">YT_DLP_INSTALL_HINT</span><span class="p">,</span> <span class="n">with_runtime_opts</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">yb.download.warn</span><span class="w"> </span><span class="kn">import</span> <span class="n">warn_at_caller</span>
 
 <span class="n">PathLike</span> <span class="o">=</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span>
 
@@ -415,10 +418,9 @@
         <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">named</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
             <span class="k">return</span> <span class="n">path</span>
-        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+        <span class="n">warn_at_caller</span><span class="p">(</span>
             <span class="sa">f</span><span class="s2">"$</span><span class="si">{</span><span class="n">COOKIES_FILE_ENV</span><span class="si">}</span><span class="s2"> points to a file that does not exist; "</span>
-            <span class="s2">"downloading without cookies."</span><span class="p">,</span>
-            <span class="n">stacklevel</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+            <span class="s2">"downloading without cookies."</span>
         <span class="p">)</span>
         <span class="k">return</span> <span class="kc">None</span>
     <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">DEFAULT_COOKIES_FILE</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span>
@@ -459,7 +461,7 @@
     <span class="p">)</span>
     <span class="k">if</span> <span class="n">explicit</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
-    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">msg</span> <span class="o">+</span> <span class="s2">" Downloading without cookies."</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+    <span class="n">warn_at_caller</span><span class="p">(</span><span class="n">msg</span> <span class="o">+</span> <span class="s2">" Downloading without cookies."</span><span class="p">)</span>
     <span class="k">return</span> <span class="kc">None</span>
 
 
@@ -533,6 +535,57 @@
         <span class="n">Path</span><span class="p">(</span><span class="n">copy</span><span class="p">)</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">missing_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
 
+<div class="viewcode-block" id="youtube_dl_cls">
+<a class="viewcode-back" href="../../../_autosummary/yb.download.youtube.html#yb.youtube_dl_cls">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">youtube_dl_cls</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">"""``yt_dlp.YoutubeDL``, or an ``ImportError`` that says how to install it."""</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">yt_dlp</span><span class="w"> </span><span class="kn">import</span> <span class="n">YoutubeDL</span>
+    <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="n">YT_DLP_INSTALL_HINT</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+    <span class="k">return</span> <span class="n">YoutubeDL</span></div>
+
+
+
+<div class="viewcode-block" id="youtube_dl">
+<a class="viewcode-back" href="../../../_autosummary/yb.download.youtube.html#yb.youtube_dl">[docs]</a>
+<span class="nd">@contextmanager</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">youtube_dl</span><span class="p">(</span>
+    <span class="n">base_opts</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">extra_opts</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">cookies_file</span><span class="p">:</span> <span class="n">CookiesFile</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">cookies_from_browser</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">tuple</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">ydl_cls</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">dict</span><span class="p">],</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Yield a ``YoutubeDL`` built the way every yb download builds one.</span>
+
+<span class="sd">    Options merge as ``base_opts``, then cookies (see :func:`_cookie_opts`), then</span>
+<span class="sd">    ``extra_opts``, then the JS-runtime options; a cookie file yt-dlp must not</span>
+<span class="sd">    rewrite is handed over as a private copy (see :func:`_final_opts`).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        base_opts: The caller's yt-dlp options.</span>
+<span class="sd">        extra_opts: Raw yt-dlp options merged after everything but the runtime.</span>
+<span class="sd">        cookies_file: As in :func:`download_youtube_video`.</span>
+<span class="sd">        cookies_from_browser: A browser cookie source the caller already put in</span>
+<span class="sd">            ``base_opts`` (suppresses the default cookies file).</span>
+<span class="sd">        ydl_cls: What to build instead of ``yt_dlp.YoutubeDL`` (a subclass, a</span>
+<span class="sd">            fake in tests); default :func:`youtube_dl_cls`.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ImportError: yt-dlp is not installed (with the install command).</span>
+<span class="sd">    """</span>
+    <span class="bp">cls</span> <span class="o">=</span> <span class="n">ydl_cls</span> <span class="ow">or</span> <span class="n">youtube_dl_cls</span><span class="p">()</span>
+    <span class="n">cookie_opts</span> <span class="o">=</span> <span class="n">_cookie_opts</span><span class="p">(</span>
+        <span class="n">cookies_file</span><span class="p">,</span> <span class="n">cookies_from_browser</span><span class="o">=</span><span class="n">cookies_from_browser</span><span class="p">,</span> <span class="n">extra_opts</span><span class="o">=</span><span class="n">extra_opts</span>
+    <span class="p">)</span>
+    <span class="k">with</span> <span class="n">_final_opts</span><span class="p">(</span><span class="n">base_opts</span><span class="p">,</span> <span class="n">cookie_opts</span><span class="p">,</span> <span class="n">extra_opts</span><span class="p">)</span> <span class="k">as</span> <span class="n">opts</span><span class="p">:</span>
+        <span class="k">with</span> <span class="bp">cls</span><span class="p">(</span><span class="n">with_runtime_opts</span><span class="p">(</span><span class="n">opts</span><span class="p">))</span> <span class="k">as</span> <span class="n">ydl</span><span class="p">:</span>
+            <span class="k">yield</span> <span class="n">ydl</span></div>
+
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">_extract_info</span><span class="p">(</span>
     <span class="n">target</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">base_opts</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
@@ -540,13 +593,9 @@
     <span class="n">extra_opts</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">cookies_file</span><span class="p">:</span> <span class="n">CookiesFile</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Metadata-only yt-dlp extraction: cookies, then ``extra_opts``, then the JS runtime."""</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">yt_dlp</span><span class="w"> </span><span class="kn">import</span> <span class="n">YoutubeDL</span>
-
-    <span class="n">cookie_opts</span> <span class="o">=</span> <span class="n">_cookie_opts</span><span class="p">(</span><span class="n">cookies_file</span><span class="p">,</span> <span class="n">extra_opts</span><span class="o">=</span><span class="n">extra_opts</span><span class="p">)</span>
-    <span class="k">with</span> <span class="n">_final_opts</span><span class="p">(</span><span class="n">base_opts</span><span class="p">,</span> <span class="n">cookie_opts</span><span class="p">,</span> <span class="n">extra_opts</span><span class="p">)</span> <span class="k">as</span> <span class="n">opts</span><span class="p">:</span>
-        <span class="k">with</span> <span class="n">YoutubeDL</span><span class="p">(</span><span class="n">with_runtime_opts</span><span class="p">(</span><span class="n">opts</span><span class="p">))</span> <span class="k">as</span> <span class="n">ydl</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">ydl</span><span class="o">.</span><span class="n">extract_info</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="w">    </span><span class="sd">"""Metadata-only yt-dlp extraction through :func:`youtube_dl`."""</span>
+    <span class="k">with</span> <span class="n">youtube_dl</span><span class="p">(</span><span class="n">base_opts</span><span class="p">,</span> <span class="n">extra_opts</span><span class="o">=</span><span class="n">extra_opts</span><span class="p">,</span> <span class="n">cookies_file</span><span class="o">=</span><span class="n">cookies_file</span><span class="p">)</span> <span class="k">as</span> <span class="n">ydl</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">ydl</span><span class="o">.</span><span class="n">extract_info</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="youtube_video_info">
@@ -570,7 +619,7 @@
         <span class="n">extra_opts</span><span class="o">=</span><span class="n">extra_opts</span><span class="p">,</span>
         <span class="n">cookies_file</span><span class="o">=</span><span class="n">cookies_file</span><span class="p">,</span>
     <span class="p">)</span>
-    <span class="k">return</span> <span class="n">_trim_info</span><span class="p">(</span><span class="n">info</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="n">trim_info</span><span class="p">(</span><span class="n">info</span><span class="p">)</span></div>
 
 
 
@@ -659,8 +708,6 @@
     <span class="k">if</span> <span class="n">time_range</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">precise_cuts</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"precise_cuts needs a start and/or end to cut at"</span><span class="p">)</span>
 
-    <span class="kn">from</span><span class="w"> </span><span class="nn">yt_dlp</span><span class="w"> </span><span class="kn">import</span> <span class="n">YoutubeDL</span>
-
     <span class="n">out_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">download_dir</span><span class="p">)</span> <span class="k">if</span> <span class="n">download_dir</span> <span class="k">else</span> <span class="n">default_download_dir</span><span class="p">()</span>
     <span class="n">out_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
@@ -689,12 +736,13 @@
             <span class="p">)</span>
     <span class="n">opts</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">pace_opts</span><span class="p">(</span><span class="n">pace</span><span class="p">))</span>
 
-    <span class="n">cookie_opts</span> <span class="o">=</span> <span class="n">_cookie_opts</span><span class="p">(</span><span class="n">cookies_file</span><span class="p">,</span> <span class="n">extra_opts</span><span class="o">=</span><span class="n">extra_opts</span><span class="p">)</span>
-    <span class="k">with</span> <span class="n">_final_opts</span><span class="p">(</span><span class="n">opts</span><span class="p">,</span> <span class="n">cookie_opts</span><span class="p">,</span> <span class="n">extra_opts</span><span class="p">)</span> <span class="k">as</span> <span class="n">final</span><span class="p">:</span>
-        <span class="k">with</span> <span class="n">explain_rate_limit</span><span class="p">(),</span> <span class="n">YoutubeDL</span><span class="p">(</span><span class="n">with_runtime_opts</span><span class="p">(</span><span class="n">final</span><span class="p">))</span> <span class="k">as</span> <span class="n">ydl</span><span class="p">:</span>
-            <span class="n">info</span> <span class="o">=</span> <span class="n">ydl</span><span class="o">.</span><span class="n">extract_info</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">with</span> <span class="p">(</span>
+        <span class="n">explain_rate_limit</span><span class="p">(),</span>
+        <span class="n">youtube_dl</span><span class="p">(</span><span class="n">opts</span><span class="p">,</span> <span class="n">extra_opts</span><span class="o">=</span><span class="n">extra_opts</span><span class="p">,</span> <span class="n">cookies_file</span><span class="o">=</span><span class="n">cookies_file</span><span class="p">)</span> <span class="k">as</span> <span class="n">ydl</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="n">info</span> <span class="o">=</span> <span class="n">ydl</span><span class="o">.</span><span class="n">extract_info</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-    <span class="n">path</span> <span class="o">=</span> <span class="n">_resolve_output_path</span><span class="p">(</span><span class="n">info</span><span class="p">,</span> <span class="n">ydl</span><span class="p">,</span> <span class="n">out_dir</span><span class="p">,</span> <span class="n">merge_to</span><span class="p">)</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">resolve_output_path</span><span class="p">(</span><span class="n">info</span><span class="p">,</span> <span class="n">ydl</span><span class="p">,</span> <span class="n">out_dir</span><span class="p">,</span> <span class="n">merge_to</span><span class="p">)</span>
     <span class="n">sidecars</span> <span class="o">=</span> <span class="n">_collect_sidecars</span><span class="p">(</span>
         <span class="n">info</span><span class="p">,</span>
         <span class="n">path</span><span class="p">,</span>
@@ -703,7 +751,7 @@
         <span class="n">description</span><span class="o">=</span><span class="n">write_description</span><span class="p">,</span>
         <span class="n">subtitles</span><span class="o">=</span><span class="n">write_subtitles</span> <span class="ow">or</span> <span class="n">write_auto_subtitles</span><span class="p">,</span>
     <span class="p">)</span>
-    <span class="n">trimmed</span> <span class="o">=</span> <span class="n">_trim_info</span><span class="p">(</span><span class="n">info</span><span class="p">)</span>
+    <span class="n">trimmed</span> <span class="o">=</span> <span class="n">trim_info</span><span class="p">(</span><span class="n">info</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">time_range</span> <span class="ow">and</span> <span class="s2">"download_ranges"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="n">extra_opts</span> <span class="ow">or</span> <span class="p">{}):</span>
         <span class="n">trimmed</span><span class="p">[</span><span class="n">INFO_RANGE_KEY</span><span class="p">]</span> <span class="o">=</span> <span class="n">time_range</span><span class="o">.</span><span class="n">as_info</span><span class="p">()</span>
     <span class="k">return</span> <span class="n">DownloadResult</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="n">info</span><span class="o">=</span><span class="n">trimmed</span><span class="p">,</span> <span class="n">sidecars</span><span class="o">=</span><span class="n">sidecars</span><span class="p">)</span></div>
@@ -977,7 +1025,7 @@
     <span class="k">if</span> <span class="n">flat</span><span class="p">:</span>
         <span class="n">entries</span> <span class="o">=</span> <span class="p">[</span><span class="n">_flat_playlist_entry</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">raw_entries</span> <span class="k">if</span> <span class="n">e</span><span class="p">]</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">entries</span> <span class="o">=</span> <span class="p">[</span><span class="n">_trim_info</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">raw_entries</span> <span class="k">if</span> <span class="n">e</span><span class="p">]</span>
+        <span class="n">entries</span> <span class="o">=</span> <span class="p">[</span><span class="n">trim_info</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">raw_entries</span> <span class="k">if</span> <span class="n">e</span><span class="p">]</span>
     <span class="k">return</span> <span class="p">{</span>
         <span class="s2">"playlist_id"</span><span class="p">:</span> <span class="p">(</span><span class="n">info</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">),</span>
         <span class="s2">"playlist_title"</span><span class="p">:</span> <span class="p">(</span><span class="n">info</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"title"</span><span class="p">),</span>
@@ -1080,8 +1128,6 @@
 <span class="sd">        in playlist order. Entries skipped by selection/filter or that failed</span>
 <span class="sd">        (under ``ignoreerrors``) are omitted.</span>
 <span class="sd">    """</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">yt_dlp</span><span class="w"> </span><span class="kn">import</span> <span class="n">YoutubeDL</span>
-
     <span class="n">out_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">download_dir</span><span class="p">)</span> <span class="k">if</span> <span class="n">download_dir</span> <span class="k">else</span> <span class="n">default_download_dir</span><span class="p">()</span>
     <span class="n">out_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
@@ -1127,18 +1173,22 @@
             <span class="p">{</span><span class="s2">"key"</span><span class="p">:</span> <span class="s2">"FFmpegMetadata"</span><span class="p">,</span> <span class="s2">"add_metadata"</span><span class="p">:</span> <span class="kc">True</span><span class="p">},</span>
         <span class="p">]</span>
 
-    <span class="n">cookie_opts</span> <span class="o">=</span> <span class="n">_cookie_opts</span><span class="p">(</span>
-        <span class="n">cookies_file</span><span class="p">,</span> <span class="n">cookies_from_browser</span><span class="o">=</span><span class="n">cookies_from_browser</span><span class="p">,</span> <span class="n">extra_opts</span><span class="o">=</span><span class="n">extra_opts</span>
-    <span class="p">)</span>
-    <span class="k">with</span> <span class="n">_final_opts</span><span class="p">(</span><span class="n">opts</span><span class="p">,</span> <span class="n">cookie_opts</span><span class="p">,</span> <span class="n">extra_opts</span><span class="p">)</span> <span class="k">as</span> <span class="n">final</span><span class="p">:</span>
-        <span class="k">with</span> <span class="n">explain_rate_limit</span><span class="p">(),</span> <span class="n">YoutubeDL</span><span class="p">(</span><span class="n">with_runtime_opts</span><span class="p">(</span><span class="n">final</span><span class="p">))</span> <span class="k">as</span> <span class="n">ydl</span><span class="p">:</span>
-            <span class="n">info</span> <span class="o">=</span> <span class="n">ydl</span><span class="o">.</span><span class="n">extract_info</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">with</span> <span class="p">(</span>
+        <span class="n">explain_rate_limit</span><span class="p">(),</span>
+        <span class="n">youtube_dl</span><span class="p">(</span>
+            <span class="n">opts</span><span class="p">,</span>
+            <span class="n">extra_opts</span><span class="o">=</span><span class="n">extra_opts</span><span class="p">,</span>
+            <span class="n">cookies_file</span><span class="o">=</span><span class="n">cookies_file</span><span class="p">,</span>
+            <span class="n">cookies_from_browser</span><span class="o">=</span><span class="n">cookies_from_browser</span><span class="p">,</span>
+        <span class="p">)</span> <span class="k">as</span> <span class="n">ydl</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="n">info</span> <span class="o">=</span> <span class="n">ydl</span><span class="o">.</span><span class="n">extract_info</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
     <span class="n">results</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">DownloadResult</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="p">(</span><span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"entries"</span><span class="p">)</span> <span class="k">if</span> <span class="n">info</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]:</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">entry</span><span class="p">:</span>
             <span class="k">continue</span>  <span class="c1"># selection/filter skipped it, or it failed under ignoreerrors</span>
-        <span class="n">path</span> <span class="o">=</span> <span class="n">_resolve_output_path</span><span class="p">(</span><span class="n">entry</span><span class="p">,</span> <span class="n">ydl</span><span class="p">,</span> <span class="n">out_dir</span><span class="p">,</span> <span class="n">merge_to</span><span class="p">)</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">resolve_output_path</span><span class="p">(</span><span class="n">entry</span><span class="p">,</span> <span class="n">ydl</span><span class="p">,</span> <span class="n">out_dir</span><span class="p">,</span> <span class="n">merge_to</span><span class="p">)</span>
         <span class="n">sidecars</span> <span class="o">=</span> <span class="n">_collect_sidecars</span><span class="p">(</span>
             <span class="n">entry</span><span class="p">,</span>
             <span class="n">path</span><span class="p">,</span>
@@ -1148,7 +1198,7 @@
             <span class="n">subtitles</span><span class="o">=</span><span class="n">write_subtitles</span> <span class="ow">or</span> <span class="n">write_auto_subtitles</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-            <span class="n">DownloadResult</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="n">info</span><span class="o">=</span><span class="n">_trim_info</span><span class="p">(</span><span class="n">entry</span><span class="p">),</span> <span class="n">sidecars</span><span class="o">=</span><span class="n">sidecars</span><span class="p">)</span>
+            <span class="n">DownloadResult</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="n">info</span><span class="o">=</span><span class="n">trim_info</span><span class="p">(</span><span class="n">entry</span><span class="p">),</span> <span class="n">sidecars</span><span class="o">=</span><span class="n">sidecars</span><span class="p">)</span>
         <span class="p">)</span>
     <span class="k">return</span> <span class="n">results</span></div>
 
@@ -1174,7 +1224,9 @@
     <span class="k">return</span> <span class="n">_filter</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_resolve_output_path</span><span class="p">(</span><span class="n">info</span><span class="p">,</span> <span class="n">ydl</span><span class="p">,</span> <span class="n">out_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">merge_to</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<div class="viewcode-block" id="resolve_output_path">
+<a class="viewcode-back" href="../../../_autosummary/yb.download.youtube.html#yb.resolve_output_path">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">resolve_output_path</span><span class="p">(</span><span class="n">info</span><span class="p">,</span> <span class="n">ydl</span><span class="p">,</span> <span class="n">out_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">merge_to</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Best-effort resolution of the final media path yt-dlp produced."""</span>
     <span class="n">downloads</span> <span class="o">=</span> <span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"requested_downloads"</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">downloads</span> <span class="ow">and</span> <span class="n">downloads</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"filepath"</span><span class="p">):</span>
@@ -1185,7 +1237,8 @@
         <span class="n">merged</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="sa">f</span><span class="s2">".</span><span class="si">{</span><span class="n">merge_to</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">merged</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
             <span class="k">return</span> <span class="n">merged</span>
-    <span class="k">return</span> <span class="n">p</span>
+    <span class="k">return</span> <span class="n">p</span></div>
+
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_collect_sidecars</span><span class="p">(</span>
@@ -1240,7 +1293,7 @@
 
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_trim_info</span><span class="p">(</span><span class="n">info</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">trim_info</span><span class="p">(</span><span class="n">info</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">info</span><span class="p">:</span>
         <span class="k">return</span> <span class="p">{}</span>
     <span class="k">return</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">_INFO_FIELDS</span> <span class="k">if</span> <span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">}</span>
@@ -1272,7 +1325,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=4cf6c671"></script>
+</div><script src="../../../_static/documentation_options.js?v=e5b6b217"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

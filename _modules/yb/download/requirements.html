@@ -210,6 +210,7 @@
 <li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.pacing.html">yb.download.pacing</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.ranges.html">yb.download.ranges</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.requirements.html">yb.download.requirements</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.warn.html">yb.download.warn</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.youtube.html">yb.download.youtube</a></li>
 </ul>
 </li>
@@ -310,6 +311,8 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">lru_cache</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">yb.download.warn</span><span class="w"> </span><span class="kn">import</span> <span class="n">warn_at_caller</span>
+
 <span class="c1">#: The JavaScript runtime yt-dlp enables by default, and the one that works.</span>
 <span class="n">DENO</span> <span class="o">=</span> <span class="s2">"deno"</span>
 
@@ -321,6 +324,12 @@
 
 <span class="c1">#: yt-dlp's import name.</span>
 <span class="n">YT_DLP_MODULE</span> <span class="o">=</span> <span class="s2">"yt_dlp"</span>
+
+<span class="c1">#: What to tell someone whose environment has no yt-dlp.</span>
+<span class="n">YT_DLP_INSTALL_HINT</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s2">"yt-dlp is not installed. Install it with its default extras: "</span>
+    <span class="s2">"pip install 'yb[download]' (or pip install 'yt-dlp[default]')."</span>
+<span class="p">)</span>
 
 <span class="c1">#: Module that carries yt-dlp's challenge-solver scripts (from ``yt-dlp[default]``).</span>
 <span class="n">EJS_MODULE</span> <span class="o">=</span> <span class="s2">"yt_dlp_ejs"</span>
@@ -526,10 +535,7 @@
 <span class="sd">    """</span>
     <span class="n">problems</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">has_module</span><span class="p">(</span><span class="n">YT_DLP_MODULE</span><span class="p">,</span> <span class="n">find_spec</span><span class="o">=</span><span class="n">find_spec</span><span class="p">):</span>
-        <span class="n">problems</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-            <span class="s2">"yt-dlp is not installed. Install it with its default extras: "</span>
-            <span class="s2">"pip install 'yb[download]' (or pip install 'yt-dlp[default]')."</span>
-        <span class="p">)</span>
+        <span class="n">problems</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">YT_DLP_INSTALL_HINT</span><span class="p">)</span>
     <span class="k">elif</span> <span class="ow">not</span> <span class="n">has_ejs_scripts</span><span class="p">(</span><span class="n">find_spec</span><span class="o">=</span><span class="n">find_spec</span><span class="p">):</span>
         <span class="n">problems</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
             <span class="s2">"yt-dlp's JavaScript challenge-solver scripts (yt-dlp-ejs) are not "</span>
@@ -602,7 +608,7 @@
 <span class="sd">    """</span>
     <span class="k">for</span> <span class="n">problem</span> <span class="ow">in</span> <span class="n">check_requirements</span><span class="p">(</span><span class="n">warn</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">check_deno_version</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">problem</span><span class="p">,</span> <span class="n">DownloadRequirementWarning</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+            <span class="n">warn_at_caller</span><span class="p">(</span><span class="n">problem</span><span class="p">,</span> <span class="n">DownloadRequirementWarning</span><span class="p">)</span>
         <span class="k">except</span> <span class="n">DownloadRequirementWarning</span><span class="p">:</span>
             <span class="k">pass</span>
     <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">yt_dlp_runtime_opts</span><span class="p">(</span><span class="n">find_js_runtime</span><span class="p">())</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
@@ -649,7 +655,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=4cf6c671"></script>
+</div><script src="../../../_static/documentation_options.js?v=e5b6b217"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

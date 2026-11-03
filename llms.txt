@@ -16,6 +16,7 @@
 - [yb.download.pacing](_autosummary/yb.download.pacing.html.md): Polite pacing for yt-dlp downloads, and a useful message when YouTube pushes back.
 - [yb.download.ranges](_autosummary/yb.download.ranges.html.md): Download just a time range of a video: parse start/end, build yt-dlp’s options.
 - [yb.download.requirements](_autosummary/yb.download.requirements.html.md): Preflight for downloading: does yt-dlp have what YouTube now demands?
+- [yb.download.warn](_autosummary/yb.download.warn.html.md): Warnings attributed to the caller’s code, not to yb’s own plumbing.
 - [yb.download.youtube](_autosummary/yb.download.youtube.html.md): Download YouTube videos (and their metadata) via yt-dlp.
 - [yb.podcast](_autosummary/yb.podcast.html.md): Podcast publishing: show notes, chapters, cover video, and RSS.
 - [yb.podcast.chapters](_autosummary/yb.podcast.chapters.html.md): Podcast chapter markers: Podlove Simple Chapters (PSC) + MP3 ID3 chapters.
@@ -34,7 +35,7 @@
 - [yb.youtube.search](_autosummary/yb.youtube.search.html.md): Search YouTube for videos, with engagement numbers to rank them by.
 - [yb.youtube.stats](_autosummary/yb.youtube.stats.html.md): Read live video metadata &amp; engagement numbers from the YouTube Data API v3.
 - [For AI agents](ai-agents.html.md): &#96;yb&#96; ships artifacts for coding agents alongside its code. This page lists
-- [About this build](about-this-build.html.md): This documentation was built on &#42;&#42;2026-10-27 01:36 UTC&#42;&#42; from commit &lt;a href="https://github.com/ree...
+- [About this build](about-this-build.html.md): This documentation was built on &#42;&#42;2026-11-03 13:39 UTC&#42;&#42; from commit &lt;a href="https://github.com/ree...
 
 ## Optional
 

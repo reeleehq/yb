@@ -32,6 +32,7 @@ the command that fixes them.
 | [`DENO_INSTALL_CMD`](#yb.download.requirements.DENO_INSTALL_CMD)          | Deno's official installer.                                                                          |
 | [`DENO_INSTALL_ENV`](#yb.download.requirements.DENO_INSTALL_ENV)          | Env var Deno's installer honours for its install root (binary in `<root>/bin`).                     |
 | [`YT_DLP_MODULE`](#yb.download.requirements.YT_DLP_MODULE)             | yt-dlp's import name.                                                                               |
+| [`YT_DLP_INSTALL_HINT`](#yb.download.requirements.YT_DLP_INSTALL_HINT)       | What to tell someone whose environment has no yt-dlp.                                               |
 | [`EJS_MODULE`](#yb.download.requirements.EJS_MODULE)                | Module that carries yt-dlp's challenge-solver scripts (from `yt-dlp[default]`).                     |
 | [`DENO_UPGRADE_CMD`](#yb.download.requirements.DENO_UPGRADE_CMD)          | Command that brings an installed Deno up to date.                                                   |
 | [`DENO_MIN_VERSION_FALLBACK`](#yb.download.requirements.DENO_MIN_VERSION_FALLBACK) | Fallback for Deno's minimum version when yt-dlp can't be asked (not importable, or too old to say). |
@@ -132,6 +133,10 @@ Whether yt-dlp would find it by name on `PATH` unaided.
 
 * **Type:**
   [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
+
+### yb.download.requirements.YT_DLP_INSTALL_HINT *= "yt-dlp is not installed. Install it with its default extras: pip install 'yb[download]' (or pip install 'yt-dlp[default]')."*
+
+What to tell someone whose environment has no yt-dlp.
 
 ### yb.download.requirements.YT_DLP_MODULE *= 'yt_dlp'*
 

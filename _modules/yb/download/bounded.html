@@ -210,6 +210,7 @@
 <li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.pacing.html">yb.download.pacing</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.ranges.html">yb.download.ranges</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.requirements.html">yb.download.requirements</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.warn.html">yb.download.warn</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.youtube.html">yb.download.youtube</a></li>
 </ul>
 </li>
@@ -275,9 +276,11 @@
 
 <span class="sd">A service that turns a user-supplied link into an audio file (an MCP tool, an</span>
 <span class="sd">ingest endpoint) needs the same guard rails every time: refuse bad targets before</span>
-<span class="sd">touching the network, refuse over-long sources before fetching a byte, cap the</span>
-<span class="sd">download size, always produce mp3, and carry a copyright notice with the file.</span>
-<span class="sd">That policy lives here so a second consumer does not copy it.</span>
+<span class="sd">touching the network, check every URL yt-dlp then requests (not only the first),</span>
+<span class="sd">refuse over-long sources before fetching a byte, cap the bytes and the wall-clock</span>
+<span class="sd">time even when the size is unknown, always produce mp3, send no ambient cookies,</span>
+<span class="sd">and carry a copyright notice with the file. That policy lives here so a second</span>
+<span class="sd">consumer does not copy it.</span>
 
 <span class="sd">The caps are keyword-only arguments, and they are written *after* any caller</span>
 <span class="sd">``extra_opts``, so a configured yt-dlp option (credentials, cookies, proxies)</span>
@@ -292,17 +295,22 @@
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">urllib.parse</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Mapping</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Iterator</span><span class="p">,</span> <span class="n">Mapping</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">contextlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">contextmanager</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">yb.download.pacing</span><span class="w"> </span><span class="kn">import</span> <span class="n">explain_rate_limit</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">yb.download.youtube</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">CookiesFile</span><span class="p">,</span>
     <span class="n">PathLike</span><span class="p">,</span>
-    <span class="n">_extract_info</span><span class="p">,</span>
-    <span class="n">download_youtube_video</span><span class="p">,</span>
+    <span class="n">resolve_output_path</span><span class="p">,</span>
+    <span class="n">trim_info</span><span class="p">,</span>
+    <span class="n">youtube_dl_cls</span><span class="p">,</span>
+    <span class="n">youtube_dl</span><span class="p">,</span>
 <span class="p">)</span>
 
 <span class="c1">#: Default byte cap. Above the mp3 size of a source at the default duration cap</span>
@@ -311,6 +319,15 @@
 
 <span class="c1">#: Default duration cap, in seconds (refuses livestream-length and multi-hour sources).</span>
 <span class="n">DEFAULT_MAX_DURATION_S</span> <span class="o">=</span> <span class="mi">45</span> <span class="o">*</span> <span class="mi">60</span>
+
+<span class="c1">#: Default wall-clock budget for the whole call (metadata, download, conversion</span>
+<span class="c1">#: start), in seconds. Bounds a stream that trickles bytes under every other cap.</span>
+<span class="n">DEFAULT_TIMEOUT_S</span> <span class="o">=</span> <span class="mi">10</span> <span class="o">*</span> <span class="mi">60</span>
+
+<span class="c1">#: Media protocols whose bytes yt-dlp fetches itself (through the request guard).</span>
+<span class="c1">#: Others (rtmp, rtsp, ffmpeg-only ``m3u8``, ...) are handed to an external</span>
+<span class="c1">#: program that the guard cannot see, so their formats are never selected.</span>
+<span class="n">GUARDED_PROTOCOLS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"https"</span><span class="p">,</span> <span class="s2">"http"</span><span class="p">,</span> <span class="s2">"m3u8_native"</span><span class="p">,</span> <span class="s2">"http_dash_segments"</span><span class="p">)</span>
 
 <span class="c1">#: Output codec and quality handed to yt-dlp's audio extractor.</span>
 <span class="n">AUDIO_CODEC</span> <span class="o">=</span> <span class="s2">"mp3"</span>
@@ -336,6 +353,7 @@
         <span class="s2">"source_address"</span><span class="p">,</span>
         <span class="s2">"js_runtimes"</span><span class="p">,</span>
         <span class="s2">"remote_components"</span><span class="p">,</span>
+        <span class="s2">"logger"</span><span class="p">,</span>
     <span class="p">}</span>
 <span class="p">)</span>
 
@@ -351,8 +369,32 @@
 <div class="viewcode-block" id="AudioLimitError">
 <a class="viewcode-back" href="../../../_autosummary/yb.download.bounded.html#yb.download.AudioLimitError">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">AudioLimitError</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""The source exceeds a cap (duration or size); nothing is left on disk."""</span></div>
+<span class="w">    </span><span class="sd">"""The source exceeds a cap (duration, size or time); nothing is left on disk."""</span></div>
 
+
+
+<div class="viewcode-block" id="AudioSourceError">
+<a class="viewcode-back" href="../../../_autosummary/yb.download.bounded.html#yb.download.AudioSourceError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">AudioSourceError</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""yt-dlp could not get audio from the link (unsupported, unavailable, ...)."""</span></div>
+
+
+
+<div class="viewcode-block" id="AudioTargetError">
+<a class="viewcode-back" href="../../../_autosummary/yb.download.bounded.html#yb.download.AudioTargetError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">AudioTargetError</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""``validate_target`` refused a URL: the link, or one yt-dlp was about to fetch."""</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_validated</span><span class="p">(</span><span class="n">validate</span><span class="p">:</span> <span class="n">TargetValidator</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Run ``validate`` on ``url``; its ``ValueError`` becomes an :class:`AudioTargetError`."""</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">validate</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">AudioTargetError</span><span class="p">:</span>
+        <span class="k">raise</span>
+    <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">AudioTargetError</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">))</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
 
 
 <div class="viewcode-block" id="require_http_url">
@@ -403,20 +445,28 @@
     <span class="k">return</span> <span class="n">converted</span> <span class="k">if</span> <span class="n">converted</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="k">else</span> <span class="n">path</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_pinned_opts</span><span class="p">(</span><span class="n">max_bytes</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">max_duration_s</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""Everything that makes this one bounded, single, non-live mp3 download."""</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">yt_dlp.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">match_filter_func</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_format_selector</span><span class="p">(</span><span class="n">protocols</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Best audio, else best, restricted to ``protocols``."""</span>
+    <span class="n">only</span> <span class="o">=</span> <span class="s2">"[protocol~='^(</span><span class="si">%s</span><span class="s2">)$']"</span> <span class="o">%</span> <span class="s2">"|"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">protocols</span><span class="p">)</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"bestaudio</span><span class="si">{</span><span class="n">only</span><span class="si">}</span><span class="s2">/best</span><span class="si">{</span><span class="n">only</span><span class="si">}</span><span class="s2">"</span>
 
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_pinned_opts</span><span class="p">(</span><span class="n">work</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">max_bytes</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">deadline</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Everything that makes this one bounded, single, non-live mp3 download."""</span>
     <span class="k">return</span> <span class="p">{</span>
-        <span class="s2">"max_filesize"</span><span class="p">:</span> <span class="n">max_bytes</span><span class="p">,</span>  <span class="c1"># yt-dlp skips/aborts oversized formats</span>
+        <span class="s2">"quiet"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="s2">"no_warnings"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>  <span class="c1"># untrusted links must not fill a service's stderr</span>
+        <span class="s2">"noprogress"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="s2">"format"</span><span class="p">:</span> <span class="n">_format_selector</span><span class="p">(</span><span class="n">GUARDED_PROTOCOLS</span><span class="p">),</span>
+        <span class="s2">"outtmpl"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">work</span> <span class="o">/</span> <span class="s2">"</span><span class="si">%(title)s</span><span class="s2"> (</span><span class="si">%(id)s</span><span class="s2">).</span><span class="si">%(ext)s</span><span class="s2">"</span><span class="p">),</span>
+        <span class="s2">"max_filesize"</span><span class="p">:</span> <span class="n">max_bytes</span><span class="p">,</span>  <span class="c1"># yt-dlp skips/aborts formats of known size</span>
+        <span class="s2">"progress_hooks"</span><span class="p">:</span> <span class="p">[</span><span class="n">_byte_and_time_cap</span><span class="p">(</span><span class="n">max_bytes</span><span class="p">,</span> <span class="n">deadline</span><span class="p">)],</span>
+        <span class="c1"># HLS the native downloader cannot handle is delegated to ffmpeg, which</span>
+        <span class="c1"># fetches segments itself, unguarded: let it read local files only.</span>
+        <span class="s2">"external_downloader_args"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"ffmpeg_i"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"-protocol_whitelist"</span><span class="p">,</span> <span class="s2">"file"</span><span class="p">]},</span>
         <span class="s2">"noplaylist"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
         <span class="s2">"playlist_items"</span><span class="p">:</span> <span class="s2">"1"</span><span class="p">,</span>
         <span class="s2">"keepvideo"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
-        <span class="c1"># `&lt;=?` lets a source with no reported duration through; `!is_live` and</span>
-        <span class="c1"># the byte cap bound it.</span>
-        <span class="s2">"match_filter"</span><span class="p">:</span> <span class="n">match_filter_func</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">"duration &lt;=? </span><span class="si">{</span><span class="n">max_duration_s</span><span class="si">}</span><span class="s2"> &amp; !is_live &amp; !is_upcoming"</span>
-        <span class="p">),</span>
         <span class="s2">"postprocessors"</span><span class="p">:</span> <span class="p">[</span>
             <span class="p">{</span>
                 <span class="s2">"key"</span><span class="p">:</span> <span class="s2">"FFmpegExtractAudio"</span><span class="p">,</span>
@@ -425,6 +475,54 @@
             <span class="p">}</span>
         <span class="p">],</span>
     <span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_check_deadline</span><span class="p">(</span><span class="n">deadline</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span> <span class="o">&gt;</span> <span class="n">deadline</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">AudioLimitError</span><span class="p">(</span><span class="s2">"the download took longer than its time limit"</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_byte_and_time_cap</span><span class="p">(</span><span class="n">max_bytes</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">deadline</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">dict</span><span class="p">],</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""A yt-dlp progress hook that aborts past ``max_bytes`` or ``deadline``.</span>
+
+<span class="sd">    ``max_filesize`` only acts on a size known up front; this bounds a chunked</span>
+<span class="sd">    stream of unknown length as its bytes arrive.</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">hook</span><span class="p">(</span><span class="n">status</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">status</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"downloaded_bytes"</span><span class="p">)</span> <span class="ow">or</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">max_bytes</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">AudioLimitError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"download exceeds the </span><span class="si">{</span><span class="n">max_bytes</span><span class="si">}</span><span class="s2">-byte limit"</span><span class="p">)</span>
+        <span class="n">_check_deadline</span><span class="p">(</span><span class="n">deadline</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">hook</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_guard_requests</span><span class="p">(</span><span class="n">ydl</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">validate</span><span class="p">:</span> <span class="n">TargetValidator</span><span class="p">,</span> <span class="n">deadline</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Check every URL ``ydl`` requests (pages, manifests, media) before and after.</span>
+
+<span class="sd">    Extractors and yt-dlp's own downloaders all go through ``ydl.urlopen``, so</span>
+<span class="sd">    wrapping it covers every hop, not only the link the caller passed. The URL a</span>
+<span class="sd">    response ends at (after redirects, which the HTTP layer follows itself) is</span>
+<span class="sd">    checked too, so a redirect into a refused host never yields its content</span>
+<span class="sd">    (the HTTP layer follows redirects itself, so the hops before the last are</span>
+<span class="sd">    requested unchecked: a blind request, never a returned body).</span>
+<span class="sd">    """</span>
+    <span class="n">urlopen</span> <span class="o">=</span> <span class="n">ydl</span><span class="o">.</span><span class="n">urlopen</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">guarded</span><span class="p">(</span><span class="n">req</span><span class="p">):</span>
+        <span class="n">_check_deadline</span><span class="p">(</span><span class="n">deadline</span><span class="p">)</span>
+        <span class="n">_validated</span><span class="p">(</span><span class="n">validate</span><span class="p">,</span> <span class="n">req</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">req</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="n">req</span><span class="o">.</span><span class="n">url</span><span class="p">)</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">urlopen</span><span class="p">(</span><span class="n">req</span><span class="p">)</span>
+        <span class="n">final</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">response</span><span class="p">,</span> <span class="s2">"url"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">final</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">_validated</span><span class="p">(</span><span class="n">validate</span><span class="p">,</span> <span class="n">final</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">BaseException</span><span class="p">:</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                <span class="k">raise</span>
+        <span class="k">return</span> <span class="n">response</span>
+
+    <span class="n">ydl</span><span class="o">.</span><span class="n">urlopen</span> <span class="o">=</span> <span class="n">guarded</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_check_deployment_opts</span><span class="p">(</span><span class="n">extra_opts</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
@@ -453,6 +551,26 @@
         <span class="p">)</span>
 
 
+<span class="nd">@contextmanager</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_typed_errors</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="kc">None</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Our own refusals pass through; any other yt-dlp error is an :class:`AudioSourceError`.</span>
+
+<span class="sd">    yt-dlp sometimes wraps an exception raised in a hook or the request guard in</span>
+<span class="sd">    its own ``DownloadError``; only *our* refusals (:class:`AudioTargetError`,</span>
+<span class="sd">    :class:`AudioLimitError`) are unwrapped. Any other cause, such as an</span>
+<span class="sd">    extractor's own ``ValueError`` on a malformed page, is a source error.</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">yt_dlp.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">YoutubeDLError</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">yield</span>
+    <span class="k">except</span> <span class="n">YoutubeDLError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="n">cause</span> <span class="o">=</span> <span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">exc</span><span class="p">,</span> <span class="s2">"exc_info"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">))[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cause</span><span class="p">,</span> <span class="p">(</span><span class="n">AudioTargetError</span><span class="p">,</span> <span class="n">AudioLimitError</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="n">cause</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+        <span class="k">raise</span> <span class="n">AudioSourceError</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">))</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+
+
 <div class="viewcode-block" id="download_audio_bounded">
 <a class="viewcode-back" href="../../../_autosummary/yb.download.bounded.html#yb.download.download_audio_bounded">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">download_audio_bounded</span><span class="p">(</span>
@@ -461,19 +579,23 @@
     <span class="n">download_dir</span><span class="p">:</span> <span class="n">PathLike</span><span class="p">,</span>
     <span class="n">max_bytes</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DEFAULT_MAX_BYTES</span><span class="p">,</span>
     <span class="n">max_duration_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DEFAULT_MAX_DURATION_S</span><span class="p">,</span>
+    <span class="n">timeout_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DEFAULT_TIMEOUT_S</span><span class="p">,</span>
     <span class="n">validate_target</span><span class="p">:</span> <span class="n">TargetValidator</span> <span class="o">=</span> <span class="n">require_http_url</span><span class="p">,</span>
     <span class="n">extra_opts</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">cookies_file</span><span class="p">:</span> <span class="n">CookiesFile</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">cookies_file</span><span class="p">:</span> <span class="n">CookiesFile</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">notice</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COPYRIGHT_NOTICE</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AudioDownload</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Download the audio of one video link as mp3, refusing what exceeds the caps.</span>
 
-<span class="sd">    Order: ``validate_target`` on ``url`` (before any network), a metadata-only</span>
-<span class="sd">    fetch that refuses playlists, live streams and over-long sources (before any</span>
-<span class="sd">    media bytes) and re-validates the resolved page URL, then the download with</span>
-<span class="sd">    the caps pinned, then a size check on the extracted file. The mp3 is written</span>
-<span class="sd">    to a fresh private directory under ``download_dir`` (so concurrent calls never</span>
-<span class="sd">    collide); on any failure that directory is removed.</span>
+<span class="sd">    Order: ``validate_target`` on ``url`` (before any network); one yt-dlp</span>
+<span class="sd">    session whose every request (page, embedded page, manifest, media, fragment)</span>
+<span class="sd">    passes ``validate_target`` first, and whose final URL after redirects does</span>
+<span class="sd">    too; a metadata pass that refuses playlists, live streams and over-long</span>
+<span class="sd">    sources before any media bytes; the download of those same formats (no</span>
+<span class="sd">    second extraction), aborted past ``max_bytes`` or ``timeout_s`` even when</span>
+<span class="sd">    the size is unknown; a size check on the extracted file. The mp3 is written</span>
+<span class="sd">    to a fresh private directory under ``download_dir`` (so concurrent calls</span>
+<span class="sd">    never collide); on any failure that directory is removed.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        url: A page link (YouTube, SoundCloud, Bandcamp, ...).</span>
@@ -481,66 +603,81 @@
 <span class="sd">            owns that directory from then on and removes it after ingest).</span>
 <span class="sd">        max_bytes: Cap on the downloaded and on the extracted file.</span>
 <span class="sd">        max_duration_s: Cap on the source's duration. A source that reports no</span>
-<span class="sd">            duration passes this check and is bounded by ``max_bytes`` alone.</span>
+<span class="sd">            duration passes this check and is bounded by ``max_bytes`` and</span>
+<span class="sd">            ``timeout_s``.</span>
+<span class="sd">        timeout_s: Wall-clock budget for fetching, checked on every request and</span>
+<span class="sd">            every received chunk (a stalled connection is bounded by yt-dlp's</span>
+<span class="sd">            socket timeout).</span>
 <span class="sd">        validate_target: Raises ``ValueError`` to refuse a URL; see</span>
-<span class="sd">            :func:`require_http_url`. Not an egress sandbox: yt-dlp follows</span>
-<span class="sd">            redirects itself.</span>
+<span class="sd">            :func:`require_http_url`. Applied to every URL yt-dlp requests. Not</span>
+<span class="sd">            an egress sandbox: redirects are followed by the HTTP layer, so only</span>
+<span class="sd">            where a chain ends is checked (its content is then refused; the hops</span>
+<span class="sd">            in between are requested blind), and the check sees a URL, not the</span>
+<span class="sd">            address its host resolves to.</span>
 <span class="sd">        extra_opts: Deployment yt-dlp options, restricted to</span>
 <span class="sd">            :data:`DEPLOYMENT_OPT_KEYS` (credentials, cookies, proxy); anything</span>
 <span class="sd">            else raises, so no option can widen a cap or redirect the output.</span>
-<span class="sd">        cookies_file: As in :func:`~yb.download.download_youtube_video`.</span>
+<span class="sd">        cookies_file: As in :func:`~yb.download.download_youtube_video`, except</span>
+<span class="sd">            the default is ``False``: a service fetching for remote users must</span>
+<span class="sd">            not do it with the operator's account by accident. Pass a path (or</span>
+<span class="sd">            ``None`` for yb's default file) to opt in.</span>
 <span class="sd">        notice: Copyright notice returned in the result.</span>
 
 <span class="sd">    Raises:</span>
-<span class="sd">        ValueError: ``validate_target`` refused a URL, a cap is not positive, or</span>
-<span class="sd">            ``extra_opts`` has a key outside :data:`DEPLOYMENT_OPT_KEYS`.</span>
-<span class="sd">        AudioLimitError: Playlist, live stream, too long, or too large.</span>
+<span class="sd">        ImportError: yt-dlp is not installed (with the install command), raised</span>
+<span class="sd">            before any network.</span>
+<span class="sd">        AudioTargetError: ``validate_target`` refused a URL (a ``ValueError``).</span>
+<span class="sd">        ValueError: A cap is not positive, or ``extra_opts`` has a key outside</span>
+<span class="sd">            :data:`DEPLOYMENT_OPT_KEYS`.</span>
+<span class="sd">        AudioLimitError: Playlist, live stream, too long, too large, or too slow.</span>
+<span class="sd">        AudioSourceError: yt-dlp could not get audio from the link.</span>
+<span class="sd">        RateLimitedError: The source is rate-limiting or bot-checking this</span>
+<span class="sd">            client (a ``RuntimeError``: retry later, the link may be fine).</span>
 <span class="sd">    """</span>
-    <span class="k">if</span> <span class="n">max_bytes</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">max_duration_s</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"max_bytes and max_duration_s must be positive"</span><span class="p">)</span>
+    <span class="n">ydl_cls</span> <span class="o">=</span> <span class="n">youtube_dl_cls</span><span class="p">()</span>  <span class="c1"># ImportError with the install hint, up front</span>
+    <span class="k">if</span> <span class="n">max_bytes</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">max_duration_s</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">timeout_s</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"max_bytes, max_duration_s and timeout_s must be positive"</span><span class="p">)</span>
     <span class="n">deployment_opts</span> <span class="o">=</span> <span class="n">_check_deployment_opts</span><span class="p">(</span><span class="n">extra_opts</span> <span class="ow">or</span> <span class="p">{})</span>
-    <span class="n">validate_target</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
-
-    <span class="n">preview</span> <span class="o">=</span> <span class="n">_extract_info</span><span class="p">(</span>
-        <span class="n">url</span><span class="p">,</span>
-        <span class="p">{</span><span class="s2">"quiet"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"skip_download"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"noplaylist"</span><span class="p">:</span> <span class="kc">True</span><span class="p">},</span>
-        <span class="n">extra_opts</span><span class="o">=</span><span class="n">deployment_opts</span><span class="p">,</span>
-        <span class="n">cookies_file</span><span class="o">=</span><span class="n">cookies_file</span><span class="p">,</span>
-    <span class="p">)</span>
-    <span class="n">_check_preview</span><span class="p">(</span><span class="n">preview</span><span class="p">,</span> <span class="n">max_duration_s</span><span class="o">=</span><span class="n">max_duration_s</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">resolved</span> <span class="o">:=</span> <span class="p">(</span><span class="n">preview</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"webpage_url"</span><span class="p">):</span>
-        <span class="n">validate_target</span><span class="p">(</span><span class="n">resolved</span><span class="p">)</span>
+    <span class="n">_validated</span><span class="p">(</span><span class="n">validate_target</span><span class="p">,</span> <span class="n">url</span><span class="p">)</span>
+    <span class="n">deadline</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span> <span class="o">+</span> <span class="n">timeout_s</span>
 
     <span class="n">out_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">download_dir</span><span class="p">)</span>
     <span class="n">out_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">work</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">tempfile</span><span class="o">.</span><span class="n">mkdtemp</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s2">".yb-audio-"</span><span class="p">,</span> <span class="nb">dir</span><span class="o">=</span><span class="n">out_dir</span><span class="p">))</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">result</span> <span class="o">=</span> <span class="n">download_youtube_video</span><span class="p">(</span>
-            <span class="n">url</span><span class="p">,</span>
-            <span class="n">download_dir</span><span class="o">=</span><span class="n">work</span><span class="p">,</span>
-            <span class="n">fmt</span><span class="o">=</span><span class="s2">"bestaudio/best"</span><span class="p">,</span>
-            <span class="n">merge_to</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-            <span class="n">extra_opts</span><span class="o">=</span><span class="p">{</span><span class="o">**</span><span class="n">deployment_opts</span><span class="p">,</span> <span class="o">**</span><span class="n">_pinned_opts</span><span class="p">(</span><span class="n">max_bytes</span><span class="p">,</span> <span class="n">max_duration_s</span><span class="p">)},</span>
-            <span class="n">cookies_file</span><span class="o">=</span><span class="n">cookies_file</span><span class="p">,</span>
-        <span class="p">)</span>
-        <span class="n">path</span> <span class="o">=</span> <span class="n">_mp3_path</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">path</span><span class="p">))</span>
+        <span class="n">opts</span> <span class="o">=</span> <span class="n">_pinned_opts</span><span class="p">(</span><span class="n">work</span><span class="p">,</span> <span class="n">max_bytes</span><span class="o">=</span><span class="n">max_bytes</span><span class="p">,</span> <span class="n">deadline</span><span class="o">=</span><span class="n">deadline</span><span class="p">)</span>
+        <span class="k">with</span> <span class="p">(</span>
+            <span class="n">youtube_dl</span><span class="p">(</span>
+                <span class="n">opts</span><span class="p">,</span>
+                <span class="n">extra_opts</span><span class="o">=</span><span class="n">deployment_opts</span><span class="p">,</span>
+                <span class="n">cookies_file</span><span class="o">=</span><span class="n">cookies_file</span><span class="p">,</span>
+                <span class="n">ydl_cls</span><span class="o">=</span><span class="n">ydl_cls</span><span class="p">,</span>
+            <span class="p">)</span> <span class="k">as</span> <span class="n">ydl</span><span class="p">,</span>
+            <span class="n">_typed_errors</span><span class="p">(),</span>
+            <span class="n">explain_rate_limit</span><span class="p">(),</span>
+        <span class="p">):</span>
+            <span class="n">_guard_requests</span><span class="p">(</span><span class="n">ydl</span><span class="p">,</span> <span class="n">validate_target</span><span class="p">,</span> <span class="n">deadline</span><span class="p">)</span>
+            <span class="n">preview</span> <span class="o">=</span> <span class="n">ydl</span><span class="o">.</span><span class="n">extract_info</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">_check_preview</span><span class="p">(</span><span class="n">preview</span><span class="p">,</span> <span class="n">max_duration_s</span><span class="o">=</span><span class="n">max_duration_s</span><span class="p">)</span>
+            <span class="n">info</span> <span class="o">=</span> <span class="n">ydl</span><span class="o">.</span><span class="n">process_ie_result</span><span class="p">(</span><span class="n">preview</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="n">_mp3_path</span><span class="p">(</span><span class="n">resolve_output_path</span><span class="p">(</span><span class="n">info</span><span class="p">,</span> <span class="n">ydl</span><span class="p">,</span> <span class="n">work</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
         <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">!=</span> <span class="sa">f</span><span class="s2">".</span><span class="si">{</span><span class="n">AUDIO_CODEC</span><span class="si">}</span><span class="s2">"</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
             <span class="k">raise</span> <span class="n">AudioLimitError</span><span class="p">(</span>
                 <span class="s2">"source was rejected by the limits (no audio produced)"</span>
             <span class="p">)</span>
-        <span class="c1"># max_filesize bounds the download, not the extracted output.</span>
+        <span class="c1"># max_filesize and the progress hook bound the download, not the output.</span>
         <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">stat</span><span class="p">()</span><span class="o">.</span><span class="n">st_size</span> <span class="o">&gt;</span> <span class="n">max_bytes</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">AudioLimitError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"audio exceeds the </span><span class="si">{</span><span class="n">max_bytes</span><span class="si">}</span><span class="s2">-byte limit"</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">BaseException</span><span class="p">:</span>
         <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">work</span><span class="p">,</span> <span class="n">ignore_errors</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="k">raise</span>
-    <span class="n">info</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">info</span> <span class="ow">or</span> <span class="p">{}</span>
+    <span class="n">trimmed</span> <span class="o">=</span> <span class="n">trim_info</span><span class="p">(</span><span class="n">info</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">AudioDownload</span><span class="p">(</span>
         <span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span>
-        <span class="n">title</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"title"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">path</span><span class="o">.</span><span class="n">stem</span><span class="p">,</span>
-        <span class="n">duration_s</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"duration"</span><span class="p">),</span>
+        <span class="n">title</span><span class="o">=</span><span class="n">trimmed</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"title"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">path</span><span class="o">.</span><span class="n">stem</span><span class="p">,</span>
+        <span class="n">duration_s</span><span class="o">=</span><span class="n">trimmed</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"duration"</span><span class="p">),</span>
         <span class="n">notice</span><span class="o">=</span><span class="n">notice</span><span class="p">,</span>
-        <span class="n">info</span><span class="o">=</span><span class="n">info</span><span class="p">,</span>
+        <span class="n">info</span><span class="o">=</span><span class="n">trimmed</span><span class="p">,</span>
     <span class="p">)</span></div>
 
 </pre></div>
@@ -571,7 +708,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=4cf6c671"></script>
+</div><script src="../../../_static/documentation_options.js?v=e5b6b217"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

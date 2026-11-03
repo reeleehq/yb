@@ -1,0 +1,18 @@
+yb.download.warn
+================
+
+.. automodule:: yb.download.warn
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      PLUMBING_FILES
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      warn_at_caller
+   

@@ -10,6 +10,8 @@ yb.download.bounded
    
       DEFAULT_MAX_BYTES
       DEFAULT_MAX_DURATION_S
+      DEFAULT_TIMEOUT_S
+      GUARDED_PROTOCOLS
       AUDIO_CODEC
       COPYRIGHT_NOTICE
       DEPLOYMENT_OPT_KEYS
@@ -33,4 +35,6 @@ yb.download.bounded
    .. autosummary::
    
       AudioLimitError
+      AudioSourceError
+      AudioTargetError
    

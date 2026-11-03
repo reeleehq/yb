@@ -213,6 +213,7 @@
 <li class="toctree-l4"><a class="reference internal" href="yb.download.pacing.html">yb.download.pacing</a></li>
 <li class="toctree-l4"><a class="reference internal" href="yb.download.ranges.html">yb.download.ranges</a></li>
 <li class="toctree-l4"><a class="reference internal" href="yb.download.requirements.html">yb.download.requirements</a></li>
+<li class="toctree-l4"><a class="reference internal" href="yb.download.warn.html">yb.download.warn</a></li>
 <li class="toctree-l4"><a class="reference internal" href="yb.download.youtube.html">yb.download.youtube</a></li>
 </ul>
 </li>
@@ -390,7 +391,13 @@ how to install it. The first download in a process runs it and warns.</p>
 <table class="autosummary longtable docutils align-default">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.AudioLimitError" title="yb.download.AudioLimitError"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AudioLimitError</span></code></a></p></td>
-<td><p>The source exceeds a cap (duration or size); nothing is left on disk.</p></td>
+<td><p>The source exceeds a cap (duration, size or time); nothing is left on disk.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#yb.download.AudioSourceError" title="yb.download.AudioSourceError"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AudioSourceError</span></code></a></p></td>
+<td><p>yt-dlp could not get audio from the link (unsupported, unavailable, ...).</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.AudioTargetError" title="yb.download.AudioTargetError"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AudioTargetError</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">validate_target</span></code> refused a URL: the link, or one yt-dlp was about to fetch.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#yb.download.AudioConversionError" title="yb.download.AudioConversionError"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AudioConversionError</span></code></a></p></td>
 <td><p>Raised when audio could not be converted to the requested format.</p></td>
@@ -480,7 +487,21 @@ directory (<code class="docutils literal notranslate"><span class="pre">path.par
 <dt class="sig sig-object py" id="yb.download.AudioLimitError">
 <span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">yb.download.</span></span><span class="sig-name descname"><span class="pre">AudioLimitError</span></span><a class="reference internal" href="../_modules/yb/download/bounded.html#AudioLimitError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.download.AudioLimitError" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ValueError</span></code></a></p>
-<p>The source exceeds a cap (duration or size); nothing is left on disk.</p>
+<p>The source exceeds a cap (duration, size or time); nothing is left on disk.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="yb.download.AudioSourceError">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">yb.download.</span></span><span class="sig-name descname"><span class="pre">AudioSourceError</span></span><a class="reference internal" href="../_modules/yb/download/bounded.html#AudioSourceError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.download.AudioSourceError" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ValueError</span></code></a></p>
+<p>yt-dlp could not get audio from the link (unsupported, unavailable, …).</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="yb.download.AudioTargetError">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">yb.download.</span></span><span class="sig-name descname"><span class="pre">AudioTargetError</span></span><a class="reference internal" href="../_modules/yb/download/bounded.html#AudioTargetError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.download.AudioTargetError" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ValueError</span></code></a></p>
+<p><code class="docutils literal notranslate"><span class="pre">validate_target</span></code> refused a URL: the link, or one yt-dlp was about to fetch.</p>
 </dd></dl>
 
 <dl class="py exception">
@@ -772,14 +793,17 @@ the target format (no pointless re-encode, no generation loss).</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="yb.download.download_audio_bounded">
-<span class="sig-prename descclassname"><span class="pre">yb.download.</span></span><span class="sig-name descname"><span class="pre">download_audio_bounded</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">download_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_bytes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">83886080</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_duration_s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2700</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validate_target</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;function</span> <span class="pre">require_http_url&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_opts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cookies_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">notice</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&quot;Downloaded</span> <span class="pre">from</span> <span class="pre">a</span> <span class="pre">user-supplied</span> <span class="pre">link</span> <span class="pre">—</span> <span class="pre">respect</span> <span class="pre">the</span> <span class="pre">source's</span> <span class="pre">copyright</span> <span class="pre">and</span> <span class="pre">terms</span> <span class="pre">of</span> <span class="pre">service;</span> <span class="pre">you</span> <span class="pre">are</span> <span class="pre">responsible</span> <span class="pre">for</span> <span class="pre">having</span> <span class="pre">the</span> <span class="pre">right</span> <span class="pre">to</span> <span class="pre">use</span> <span class="pre">it.&quot;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/download/bounded.html#download_audio_bounded"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.download.download_audio_bounded" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">yb.download.</span></span><span class="sig-name descname"><span class="pre">download_audio_bounded</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">download_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_bytes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">83886080</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_duration_s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2700</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout_s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">600</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validate_target</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;function</span> <span class="pre">require_http_url&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_opts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cookies_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">notice</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&quot;Downloaded</span> <span class="pre">from</span> <span class="pre">a</span> <span class="pre">user-supplied</span> <span class="pre">link</span> <span class="pre">—</span> <span class="pre">respect</span> <span class="pre">the</span> <span class="pre">source's</span> <span class="pre">copyright</span> <span class="pre">and</span> <span class="pre">terms</span> <span class="pre">of</span> <span class="pre">service;</span> <span class="pre">you</span> <span class="pre">are</span> <span class="pre">responsible</span> <span class="pre">for</span> <span class="pre">having</span> <span class="pre">the</span> <span class="pre">right</span> <span class="pre">to</span> <span class="pre">use</span> <span class="pre">it.&quot;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/download/bounded.html#download_audio_bounded"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.download.download_audio_bounded" title="Link to this definition">¶</a></dt>
 <dd><p>Download the audio of one video link as mp3, refusing what exceeds the caps.</p>
-<p>Order: <code class="docutils literal notranslate"><span class="pre">validate_target</span></code> on <code class="docutils literal notranslate"><span class="pre">url</span></code> (before any network), a metadata-only
-fetch that refuses playlists, live streams and over-long sources (before any
-media bytes) and re-validates the resolved page URL, then the download with
-the caps pinned, then a size check on the extracted file. The mp3 is written
-to a fresh private directory under <code class="docutils literal notranslate"><span class="pre">download_dir</span></code> (so concurrent calls never
-collide); on any failure that directory is removed.</p>
+<p>Order: <code class="docutils literal notranslate"><span class="pre">validate_target</span></code> on <code class="docutils literal notranslate"><span class="pre">url</span></code> (before any network); one yt-dlp
+session whose every request (page, embedded page, manifest, media, fragment)
+passes <code class="docutils literal notranslate"><span class="pre">validate_target</span></code> first, and whose final URL after redirects does
+too; a metadata pass that refuses playlists, live streams and over-long
+sources before any media bytes; the download of those same formats (no
+second extraction), aborted past <code class="docutils literal notranslate"><span class="pre">max_bytes</span></code> or <code class="docutils literal notranslate"><span class="pre">timeout_s</span></code> even when
+the size is unknown; a size check on the extracted file. The mp3 is written
+to a fresh private directory under <code class="docutils literal notranslate"><span class="pre">download_dir</span></code> (so concurrent calls
+never collide); on any failure that directory is removed.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -788,22 +812,38 @@ collide); on any failure that directory is removed.</p>
 owns that directory from then on and removes it after ingest).</p></li>
 <li><p><strong>max_bytes</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a></span>) – Cap on the downloaded and on the extracted file.</p></li>
 <li><p><strong>max_duration_s</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a></span>) – Cap on the source’s duration. A source that reports no
-duration passes this check and is bounded by <code class="docutils literal notranslate"><span class="pre">max_bytes</span></code> alone.</p></li>
+duration passes this check and is bounded by <code class="docutils literal notranslate"><span class="pre">max_bytes</span></code> and
+<code class="docutils literal notranslate"><span class="pre">timeout_s</span></code>.</p></li>
+<li><p><strong>timeout_s</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a></span>) – Wall-clock budget for fetching, checked on every request and
+every received chunk (a stalled connection is bounded by yt-dlp’s
+socket timeout).</p></li>
 <li><p><strong>validate_target</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Callable</span></code></a>[[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>], <span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code></a></span>]</span>) – Raises <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> to refuse a URL; see
-<a class="reference internal" href="#yb.download.require_http_url" title="yb.download.require_http_url"><code class="xref py py-func docutils literal notranslate"><span class="pre">require_http_url()</span></code></a>. Not an egress sandbox: yt-dlp follows
-redirects itself.</p></li>
+<a class="reference internal" href="#yb.download.require_http_url" title="yb.download.require_http_url"><code class="xref py py-func docutils literal notranslate"><span class="pre">require_http_url()</span></code></a>. Applied to every URL yt-dlp requests. Not
+an egress sandbox: redirects are followed by the HTTP layer, so only
+where a chain ends is checked (its content is then refused; the hops
+in between are requested blind), and the check sees a URL, not the
+address its host resolves to.</p></li>
 <li><p><strong>extra_opts</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Mapping</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code></a>] | <span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code></a></span></span>) – Deployment yt-dlp options, restricted to
 <code class="xref py py-data docutils literal notranslate"><span class="pre">DEPLOYMENT_OPT_KEYS</span></code> (credentials, cookies, proxy); anything
 else raises, so no option can widen a cap or redirect the output.</p></li>
-<li><p><strong>cookies_file</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Literal" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Literal</span></code></a>[<span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#False" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="kc"><span class="pre">False</span></span></code></a></span>], <span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code></a></span>]</span>) – As in <a class="reference internal" href="#yb.download.download_youtube_video" title="yb.download.download_youtube_video"><code class="xref py py-func docutils literal notranslate"><span class="pre">download_youtube_video()</span></code></a>.</p></li>
+<li><p><strong>cookies_file</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Literal" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Literal</span></code></a>[<span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#False" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="kc"><span class="pre">False</span></span></code></a></span>], <span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code></a></span>]</span>) – As in <a class="reference internal" href="#yb.download.download_youtube_video" title="yb.download.download_youtube_video"><code class="xref py py-func docutils literal notranslate"><span class="pre">download_youtube_video()</span></code></a>, except
+the default is <code class="docutils literal notranslate"><span class="pre">False</span></code>: a service fetching for remote users must
+not do it with the operator’s account by accident. Pass a path (or
+<code class="docutils literal notranslate"><span class="pre">None</span></code> for yb’s default file) to opt in.</p></li>
 <li><p><strong>notice</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span>) – Copyright notice returned in the result.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><ul class="simple">
-<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – <code class="docutils literal notranslate"><span class="pre">validate_target</span></code> refused a URL, a cap is not positive, or
-    <code class="docutils literal notranslate"><span class="pre">extra_opts</span></code> has a key outside <code class="xref py py-data docutils literal notranslate"><span class="pre">DEPLOYMENT_OPT_KEYS</span></code>.</p></li>
-<li><p><a class="reference internal" href="#yb.download.AudioLimitError" title="yb.download.AudioLimitError"><strong>AudioLimitError</strong></a> – Playlist, live stream, too long, or too large.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ImportError" title="(in Python v3.15)"><strong>ImportError</strong></a> – yt-dlp is not installed (with the install command), raised
+    before any network.</p></li>
+<li><p><a class="reference internal" href="#yb.download.AudioTargetError" title="yb.download.AudioTargetError"><strong>AudioTargetError</strong></a> – <code class="docutils literal notranslate"><span class="pre">validate_target</span></code> refused a URL (a <code class="docutils literal notranslate"><span class="pre">ValueError</span></code>).</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – A cap is not positive, or <code class="docutils literal notranslate"><span class="pre">extra_opts</span></code> has a key outside
+    <code class="xref py py-data docutils literal notranslate"><span class="pre">DEPLOYMENT_OPT_KEYS</span></code>.</p></li>
+<li><p><a class="reference internal" href="#yb.download.AudioLimitError" title="yb.download.AudioLimitError"><strong>AudioLimitError</strong></a> – Playlist, live stream, too long, too large, or too slow.</p></li>
+<li><p><a class="reference internal" href="#yb.download.AudioSourceError" title="yb.download.AudioSourceError"><strong>AudioSourceError</strong></a> – yt-dlp could not get audio from the link.</p></li>
+<li><p><a class="reference internal" href="#yb.download.RateLimitedError" title="yb.download.RateLimitedError"><strong>RateLimitedError</strong></a> – The source is rate-limiting or bot-checking this
+    client (a <code class="docutils literal notranslate"><span class="pre">RuntimeError</span></code>: retry later, the link may be fine).</p></li>
 </ul>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
@@ -1196,7 +1236,10 @@ the title/duration/chapters before deciding to download.</p>
 <tr class="row-even"><td><p><a class="reference internal" href="yb.download.requirements.html#module-yb.download.requirements" title="yb.download.requirements"><code class="xref py py-obj docutils literal notranslate"><span class="pre">requirements</span></code></a></p></td>
 <td><p>Preflight for downloading: does yt-dlp have what YouTube now demands?</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="yb.download.youtube.html#module-yb.download.youtube" title="yb.download.youtube"><code class="xref py py-obj docutils literal notranslate"><span class="pre">youtube</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="yb.download.warn.html#module-yb.download.warn" title="yb.download.warn"><code class="xref py py-obj docutils literal notranslate"><span class="pre">warn</span></code></a></p></td>
+<td><p>Warnings attributed to the caller's code, not to yb's own plumbing.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="yb.download.youtube.html#module-yb.download.youtube" title="yb.download.youtube"><code class="xref py py-obj docutils literal notranslate"><span class="pre">youtube</span></code></a></p></td>
 <td><p>Download YouTube videos (and their metadata) via yt-dlp.</p></td>
 </tr>
 </tbody>
@@ -1266,6 +1309,8 @@ the title/duration/chapters before deciding to download.</p>
 </ul>
 </li>
 <li><a class="reference internal" href="#yb.download.AudioLimitError"><code class="docutils literal notranslate"><span class="pre">AudioLimitError</span></code></a></li>
+<li><a class="reference internal" href="#yb.download.AudioSourceError"><code class="docutils literal notranslate"><span class="pre">AudioSourceError</span></code></a></li>
+<li><a class="reference internal" href="#yb.download.AudioTargetError"><code class="docutils literal notranslate"><span class="pre">AudioTargetError</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.DownloadRequirementWarning"><code class="docutils literal notranslate"><span class="pre">DownloadRequirementWarning</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.DownloadResult"><code class="docutils literal notranslate"><span class="pre">DownloadResult</span></code></a><ul>
 <li><a class="reference internal" href="#yb.download.DownloadResult.path"><code class="docutils literal notranslate"><span class="pre">DownloadResult.path</span></code></a></li>
@@ -1319,7 +1364,7 @@ the title/duration/chapters before deciding to download.</p>
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=4cf6c671"></script>
+</div><script src="../_static/documentation_options.js?v=e5b6b217"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>

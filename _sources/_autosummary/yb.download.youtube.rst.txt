@@ -29,7 +29,11 @@ yb.download.youtube
       download_youtube_playlist
       download_youtube_video
       glob_escape
+      resolve_output_path
       search_youtube
+      trim_info
+      youtube_dl
+      youtube_dl_cls
       youtube_playlist_info
       youtube_video_info
    

@@ -14,6 +14,7 @@
 - [yb.download.pacing](yb.download.pacing.html.md): Polite pacing for yt-dlp downloads, and a useful message when YouTube pushes back.
 - [yb.download.ranges](yb.download.ranges.html.md): Download just a time range of a video: parse start/end, build yt-dlp’s options.
 - [yb.download.requirements](yb.download.requirements.html.md): Preflight for downloading: does yt-dlp have what YouTube now demands?
+- [yb.download.warn](yb.download.warn.html.md): Warnings attributed to the caller’s code, not to yb’s own plumbing.
 - [yb.download.youtube](yb.download.youtube.html.md): Download YouTube videos (and their metadata) via yt-dlp.
 - [yb.podcast](yb.podcast.html.md): Podcast publishing: show notes, chapters, cover video, and RSS.
 - [yb.podcast.chapters](yb.podcast.chapters.html.md): Podcast chapter markers: Podlove Simple Chapters (PSC) + MP3 ID3 chapters.

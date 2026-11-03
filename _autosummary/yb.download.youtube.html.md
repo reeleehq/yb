@@ -25,16 +25,20 @@ The destination defaults to `$YB_DOWNLOAD_DIR` when set, else `~/Downloads`.
 
 ### Functions
 
-| [`default_cookies_file`](#yb.download.youtube.default_cookies_file)()                         | The cookies file downloads use when none is passed, or `None`.                |
-|-------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
-| [`default_download_dir`](#yb.download.youtube.default_download_dir)()                         | Resolve the default download directory (`$YB_DOWNLOAD_DIR` or `~/Downloads`). |
-| [`download_youtube_audio`](#yb.download.youtube.download_youtube_audio)(url, \*[, ...])         | Download only a video's audio (no video stream).                              |
-| [`download_youtube_playlist`](#yb.download.youtube.download_youtube_playlist)(url, \*[, ...])      | Download all (or a selected subset of) a YouTube playlist's videos.           |
-| [`download_youtube_video`](#yb.download.youtube.download_youtube_video)(url, \*[, ...])         | Download a YouTube video to `download_dir` (default `~/Downloads`).           |
-| [`glob_escape`](#yb.download.youtube.glob_escape)(name)                              | Escape glob metacharacters in a literal filename stem.                        |
-| [`search_youtube`](#yb.download.youtube.search_youtube)(query, \*[, limit, ...])        | Search YouTube by name; returns up to `limit` hits, best match first.         |
-| [`youtube_playlist_info`](#yb.download.youtube.youtube_playlist_info)(url, \*[, ...])          | Fetch a playlist's per-video metadata without downloading.                    |
-| [`youtube_video_info`](#yb.download.youtube.youtube_video_info)(url, \*[, extra_opts, ...]) | Fetch a video's metadata without downloading it.                              |
+| [`default_cookies_file`](#yb.download.youtube.default_cookies_file)()                            | The cookies file downloads use when none is passed, or `None`.                |
+|----------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
+| [`default_download_dir`](#yb.download.youtube.default_download_dir)()                            | Resolve the default download directory (`$YB_DOWNLOAD_DIR` or `~/Downloads`). |
+| [`download_youtube_audio`](#yb.download.youtube.download_youtube_audio)(url, \*[, ...])            | Download only a video's audio (no video stream).                              |
+| [`download_youtube_playlist`](#yb.download.youtube.download_youtube_playlist)(url, \*[, ...])         | Download all (or a selected subset of) a YouTube playlist's videos.           |
+| [`download_youtube_video`](#yb.download.youtube.download_youtube_video)(url, \*[, ...])            | Download a YouTube video to `download_dir` (default `~/Downloads`).           |
+| [`glob_escape`](#yb.download.youtube.glob_escape)(name)                                 | Escape glob metacharacters in a literal filename stem.                        |
+| [`resolve_output_path`](#yb.download.youtube.resolve_output_path)(info, ydl, out_dir, merge_to) | Best-effort resolution of the final media path yt-dlp produced.               |
+| [`search_youtube`](#yb.download.youtube.search_youtube)(query, \*[, limit, ...])           | Search YouTube by name; returns up to `limit` hits, best match first.         |
+| `trim_info`(info)                                                                                  |                                                                               |
+| [`youtube_dl`](#yb.download.youtube.youtube_dl)(base_opts, \*[, extra_opts, ...])      | Yield a `YoutubeDL` built the way every yb download builds one.               |
+| [`youtube_dl_cls`](#yb.download.youtube.youtube_dl_cls)()                                  | `yt_dlp.YoutubeDL`, or an `ImportError` that says how to install it.          |
+| [`youtube_playlist_info`](#yb.download.youtube.youtube_playlist_info)(url, \*[, ...])             | Fetch a playlist's per-video metadata without downloading.                    |
+| [`youtube_video_info`](#yb.download.youtube.youtube_video_info)(url, \*[, extra_opts, ...])    | Fetch a video's metadata without downloading it.                              |
 
 ### Classes
 
@@ -385,6 +389,13 @@ Escape glob metacharacters in a literal filename stem.
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
+### yb.download.youtube.resolve_output_path(info, ydl, out_dir, merge_to)
+
+Best-effort resolution of the final media path yt-dlp produced.
+
+* **Return type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
+
 ### yb.download.youtube.search_youtube(query, , limit=5, extra_opts=None, cookies_file=None)
 
 Search YouTube by name; returns up to `limit` hits, best match first.
@@ -409,6 +420,29 @@ fetch), sharing the cookie and JS-runtime handling of the downloads.
   [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `query` is blank or `limit` is out of range.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`SearchHit`](#yb.download.youtube.SearchHit)]
+
+### yb.download.youtube.youtube_dl(base_opts, , extra_opts=None, cookies_file=None, cookies_from_browser=None, ydl_cls=None)
+
+Yield a `YoutubeDL` built the way every yb download builds one.
+
+Options merge as `base_opts`, then cookies (see `_cookie_opts()`), then
+`extra_opts`, then the JS-runtime options; a cookie file yt-dlp must not
+rewrite is handed over as a private copy (see `_final_opts()`).
+
+* **Parameters:**
+  * **base_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]) – The caller’s yt-dlp options.
+  * **extra_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Raw yt-dlp options merged after everything but the runtime.
+  * **cookies_file** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[[`False`](https://docs.python.org/3/builtins/constants.html#False)], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – As in [`download_youtube_video()`](#yb.download.youtube.download_youtube_video).
+  * **cookies_from_browser** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A browser cookie source the caller already put in
+    `base_opts` (suppresses the default cookies file).
+  * **ydl_cls** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)], [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – What to build instead of `yt_dlp.YoutubeDL` (a subclass, a
+    fake in tests); default [`youtube_dl_cls()`](#yb.download.youtube.youtube_dl_cls).
+* **Raises:**
+  [**ImportError**](https://docs.python.org/3/builtins/exceptions.html#ImportError) – yt-dlp is not installed (with the install command).
+
+### yb.download.youtube.youtube_dl_cls()
+
+`yt_dlp.YoutubeDL`, or an `ImportError` that says how to install it.
 
 ### yb.download.youtube.youtube_playlist_info(url, , playlist_items=None, flat=True, extra_opts=None, cookies_file=None)
 

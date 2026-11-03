@@ -7,7 +7,7 @@
 <link rel="alternate" type="text/markdown" href="yb.download.requirements.html.md">
 <link rel="describedby" href="../llms.txt" type="text/markdown">
 <link rel="alternate" type="text/markdown" href="yb.download.requirements.html.md">
-<link rel="describedby" href="llms.txt"><link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="yb.download.youtube" href="yb.download.youtube.html"><link rel="prev" title="yb.download.ranges" href="yb.download.ranges.html">
+<link rel="describedby" href="llms.txt"><link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="yb.download.warn" href="yb.download.warn.html"><link rel="prev" title="yb.download.ranges" href="yb.download.ranges.html">
 
     <!-- Generated with Sphinx 9.1.1 and Furo 2025.12.19 -->
         <title>yb.download.requirements - yb</title>
@@ -213,6 +213,7 @@
 <li class="toctree-l4"><a class="reference internal" href="yb.download.pacing.html">yb.download.pacing</a></li>
 <li class="toctree-l4"><a class="reference internal" href="yb.download.ranges.html">yb.download.ranges</a></li>
 <li class="toctree-l4 current current-page"><a class="current reference internal" href="#">yb.download.requirements</a></li>
+<li class="toctree-l4"><a class="reference internal" href="yb.download.warn.html">yb.download.warn</a></li>
 <li class="toctree-l4"><a class="reference internal" href="yb.download.youtube.html">yb.download.youtube</a></li>
 </ul>
 </li>
@@ -318,22 +319,25 @@ the command that fixes them.</p>
 <tr class="row-even"><td><p><a class="reference internal" href="#yb.download.requirements.YT_DLP_MODULE" title="yb.download.requirements.YT_DLP_MODULE"><code class="xref py py-obj docutils literal notranslate"><span class="pre">YT_DLP_MODULE</span></code></a></p></td>
 <td><p>yt-dlp's import name.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.requirements.EJS_MODULE" title="yb.download.requirements.EJS_MODULE"><code class="xref py py-obj docutils literal notranslate"><span class="pre">EJS_MODULE</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.requirements.YT_DLP_INSTALL_HINT" title="yb.download.requirements.YT_DLP_INSTALL_HINT"><code class="xref py py-obj docutils literal notranslate"><span class="pre">YT_DLP_INSTALL_HINT</span></code></a></p></td>
+<td><p>What to tell someone whose environment has no yt-dlp.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#yb.download.requirements.EJS_MODULE" title="yb.download.requirements.EJS_MODULE"><code class="xref py py-obj docutils literal notranslate"><span class="pre">EJS_MODULE</span></code></a></p></td>
 <td><p>Module that carries yt-dlp's challenge-solver scripts (from <code class="docutils literal notranslate"><span class="pre">yt-dlp[default]</span></code>).</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#yb.download.requirements.DENO_UPGRADE_CMD" title="yb.download.requirements.DENO_UPGRADE_CMD"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DENO_UPGRADE_CMD</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.requirements.DENO_UPGRADE_CMD" title="yb.download.requirements.DENO_UPGRADE_CMD"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DENO_UPGRADE_CMD</span></code></a></p></td>
 <td><p>Command that brings an installed Deno up to date.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.requirements.DENO_MIN_VERSION_FALLBACK" title="yb.download.requirements.DENO_MIN_VERSION_FALLBACK"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DENO_MIN_VERSION_FALLBACK</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#yb.download.requirements.DENO_MIN_VERSION_FALLBACK" title="yb.download.requirements.DENO_MIN_VERSION_FALLBACK"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DENO_MIN_VERSION_FALLBACK</span></code></a></p></td>
 <td><p>Fallback for Deno's minimum version when yt-dlp can't be asked (not importable, or too old to say).</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#yb.download.requirements.DENO_VERSION_TIMEOUT" title="yb.download.requirements.DENO_VERSION_TIMEOUT"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DENO_VERSION_TIMEOUT</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.requirements.DENO_VERSION_TIMEOUT" title="yb.download.requirements.DENO_VERSION_TIMEOUT"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DENO_VERSION_TIMEOUT</span></code></a></p></td>
 <td><p>Seconds to wait for <code class="docutils literal notranslate"><span class="pre">deno</span> <span class="pre">--version</span></code>.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.requirements.EJS_WIKI_URL" title="yb.download.requirements.EJS_WIKI_URL"><code class="xref py py-obj docutils literal notranslate"><span class="pre">EJS_WIKI_URL</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#yb.download.requirements.EJS_WIKI_URL" title="yb.download.requirements.EJS_WIKI_URL"><code class="xref py py-obj docutils literal notranslate"><span class="pre">EJS_WIKI_URL</span></code></a></p></td>
 <td><p>yt-dlp's notes on the JavaScript challenge.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#yb.download.requirements.JS_RUNTIMES_OPT" title="yb.download.requirements.JS_RUNTIMES_OPT"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JS_RUNTIMES_OPT</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.requirements.JS_RUNTIMES_OPT" title="yb.download.requirements.JS_RUNTIMES_OPT"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JS_RUNTIMES_OPT</span></code></a></p></td>
 <td><p>The yt-dlp option naming JS runtimes (<code class="docutils literal notranslate"><span class="pre">{&quot;deno&quot;:</span> <span class="pre">{&quot;path&quot;:</span> <span class="pre">...}}</span></code>).</p></td>
 </tr>
 </tbody>
@@ -499,6 +503,12 @@ importable, or too old to say). yt-dlp’s own value wins: see
 </dd></dl>
 
 <dl class="py data">
+<dt class="sig sig-object py" id="yb.download.requirements.YT_DLP_INSTALL_HINT">
+<span class="sig-prename descclassname"><span class="pre">yb.download.requirements.</span></span><span class="sig-name descname"><span class="pre">YT_DLP_INSTALL_HINT</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&quot;yt-dlp</span> <span class="pre">is</span> <span class="pre">not</span> <span class="pre">installed.</span> <span class="pre">Install</span> <span class="pre">it</span> <span class="pre">with</span> <span class="pre">its</span> <span class="pre">default</span> <span class="pre">extras:</span> <span class="pre">pip</span> <span class="pre">install</span> <span class="pre">'yb[download]'</span> <span class="pre">(or</span> <span class="pre">pip</span> <span class="pre">install</span> <span class="pre">'yt-dlp[default]').&quot;</span></span><a class="headerlink" href="#yb.download.requirements.YT_DLP_INSTALL_HINT" title="Link to this definition">¶</a></dt>
+<dd><p>What to tell someone whose environment has no yt-dlp.</p>
+</dd></dl>
+
+<dl class="py data">
 <dt class="sig sig-object py" id="yb.download.requirements.YT_DLP_MODULE">
 <span class="sig-prename descclassname"><span class="pre">yb.download.requirements.</span></span><span class="sig-name descname"><span class="pre">YT_DLP_MODULE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'yt_dlp'</span></span><a class="headerlink" href="#yb.download.requirements.YT_DLP_MODULE" title="Link to this definition">¶</a></dt>
 <dd><p>yt-dlp’s import name.</p>
@@ -653,12 +663,12 @@ check: the caller has chosen a runtime.</p>
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="yb.download.youtube.html">
+          <a class="next-page" href="yb.download.warn.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">yb.download.youtube</div>
+                <div class="title">yb.download.warn</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
@@ -716,6 +726,7 @@ check: the caller has chosen a runtime.</p>
 <li><a class="reference internal" href="#yb.download.requirements.JsRuntime.on_path"><code class="docutils literal notranslate"><span class="pre">JsRuntime.on_path</span></code></a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#yb.download.requirements.YT_DLP_INSTALL_HINT"><code class="docutils literal notranslate"><span class="pre">YT_DLP_INSTALL_HINT</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.requirements.YT_DLP_MODULE"><code class="docutils literal notranslate"><span class="pre">YT_DLP_MODULE</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.requirements.check_requirements"><code class="docutils literal notranslate"><span class="pre">check_requirements()</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.requirements.deno_search_dirs"><code class="docutils literal notranslate"><span class="pre">deno_search_dirs()</span></code></a></li>
@@ -737,7 +748,7 @@ check: the caller has chosen a runtime.</p>
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=4cf6c671"></script>
+</div><script src="../_static/documentation_options.js?v=e5b6b217"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>

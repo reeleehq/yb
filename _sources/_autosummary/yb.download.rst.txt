@@ -38,6 +38,8 @@ yb.download
    .. autosummary::
    
       AudioLimitError
+      AudioSourceError
+      AudioTargetError
       AudioConversionError
       DownloadRequirementWarning
       RateLimitedError
@@ -52,4 +54,5 @@ yb.download
    pacing
    ranges
    requirements
+   warn
    youtube
