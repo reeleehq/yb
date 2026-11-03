@@ -33,6 +33,10 @@ the command that fixes them.
 | [`DENO_INSTALL_ENV`](#yb.download.requirements.DENO_INSTALL_ENV)          | Env var Deno's installer honours for its install root (binary in `<root>/bin`).                     |
 | [`YT_DLP_MODULE`](#yb.download.requirements.YT_DLP_MODULE)             | yt-dlp's import name.                                                                               |
 | [`YT_DLP_INSTALL_HINT`](#yb.download.requirements.YT_DLP_INSTALL_HINT)       | What to tell someone whose environment has no yt-dlp.                                               |
+| [`PO_TOKEN_PROVIDER_DIST`](#yb.download.requirements.PO_TOKEN_PROVIDER_DIST)    | Distribution of the PO-token provider plugin yt-dlp picks up by itself.                             |
+| [`PO_TOKEN_PROVIDER_URL`](#yb.download.requirements.PO_TOKEN_PROVIDER_URL)     | how to run its token server (Docker or Node).                                                       |
+| [`PO_TOKEN_HINT`](#yb.download.requirements.PO_TOKEN_HINT)             | only some servers need one).                                                                        |
+| [`PO_TOKEN_SERVER_URL`](#yb.download.requirements.PO_TOKEN_SERVER_URL)       | Where the PO-token provider's server listens by default.                                            |
 | [`EJS_MODULE`](#yb.download.requirements.EJS_MODULE)                | Module that carries yt-dlp's challenge-solver scripts (from `yt-dlp[default]`).                     |
 | [`DENO_UPGRADE_CMD`](#yb.download.requirements.DENO_UPGRADE_CMD)          | Command that brings an installed Deno up to date.                                                   |
 | [`DENO_MIN_VERSION_FALLBACK`](#yb.download.requirements.DENO_MIN_VERSION_FALLBACK) | Fallback for Deno's minimum version when yt-dlp can't be asked (not importable, or too old to say). |
@@ -49,6 +53,7 @@ the command that fixes them.
 | [`find_js_runtime`](#yb.download.requirements.find_js_runtime)(\*[, which, search_dirs])    | Find Deno on `PATH`, else in its standard install location.             |
 | [`has_ejs_scripts`](#yb.download.requirements.has_ejs_scripts)(\*[, find_spec])             | Whether yt-dlp's challenge-solver scripts (`yt-dlp-ejs`) are installed. |
 | [`has_module`](#yb.download.requirements.has_module)(name, \*[, find_spec])            | Whether module `name` is importable, without importing it.              |
+| [`installed_version`](#yb.download.requirements.installed_version)(dist, \*[, version])       | The installed version of distribution `dist`, or `None`.                |
 | [`min_deno_version`](#yb.download.requirements.min_deno_version)(\*[, import_module])        | The oldest Deno yt-dlp supports, as a version tuple.                    |
 | [`with_runtime_opts`](#yb.download.requirements.with_runtime_opts)(opts)                      | `opts` plus the preflight's runtime path, unless `opts` names runtimes. |
 | [`yt_dlp_runtime_opts`](#yb.download.requirements.yt_dlp_runtime_opts)(runtime)                 | yt-dlp options pointing at `runtime` when yt-dlp can't find it alone.   |
@@ -134,6 +139,29 @@ Whether yt-dlp would find it by name on `PATH` unaided.
 * **Type:**
   [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
 
+### yb.download.requirements.PO_TOKEN_HINT *= "No PO-token provider. Only needed where YouTube answers the video data with HTTP 403 or drops automatic captions 'because a PO token was not provided' (typically servers, even with valid cookies). Install the plugin with pip install 'yb[pot]' and run its token server (https://github.com/Brainicism/bgutil-ytdlp-pot-provider), e.g. docker run -d -p 127.0.0.1:4416:4416 --init brainicism/bgutil-ytdlp-pot-provider (bound to localhost: the server must not be reachable from other hosts)"*
+
+only
+some servers need one).
+
+* **Type:**
+  Shown when no PO-token provider is installed (advice, not a problem
+
+### yb.download.requirements.PO_TOKEN_PROVIDER_DIST *= 'bgutil-ytdlp-pot-provider'*
+
+Distribution of the PO-token provider plugin yt-dlp picks up by itself.
+
+### yb.download.requirements.PO_TOKEN_PROVIDER_URL *= 'https://github.com/Brainicism/bgutil-ytdlp-pot-provider'*
+
+how to run its token server (Docker or Node).
+
+* **Type:**
+  The plugin’s home
+
+### yb.download.requirements.PO_TOKEN_SERVER_URL *= 'http://127.0.0.1:4416'*
+
+Where the PO-token provider’s server listens by default.
+
 ### yb.download.requirements.YT_DLP_INSTALL_HINT *= "yt-dlp is not installed. Install it with its default extras: pip install 'yb[download]' (or pip install 'yt-dlp[default]')."*
 
 What to tell someone whose environment has no yt-dlp.
@@ -215,6 +243,13 @@ present: it raises `ValueError` for an imported module whose `__spec__` is
 
 * **Return type:**
   [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
+
+### yb.download.requirements.installed_version(dist, \*, version=<function version>)
+
+The installed version of distribution `dist`, or `None`.
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 ### yb.download.requirements.min_deno_version(\*, import_module=<function import_module>)
 

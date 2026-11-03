@@ -20,6 +20,8 @@ yb.download.youtube
       ITEM_FOLDER_OUTTMPL
       DEFAULT_AUDIO_FMT
       MAX_SEARCH_LIMIT
+      SEARCH_RESULTS_URL
+      CREATIVE_COMMONS_SP
    
    .. rubric:: Functions
 

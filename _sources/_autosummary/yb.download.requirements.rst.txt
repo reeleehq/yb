@@ -13,6 +13,10 @@ yb.download.requirements
       DENO_INSTALL_ENV
       YT_DLP_MODULE
       YT_DLP_INSTALL_HINT
+      PO_TOKEN_PROVIDER_DIST
+      PO_TOKEN_PROVIDER_URL
+      PO_TOKEN_HINT
+      PO_TOKEN_SERVER_URL
       EJS_MODULE
       DENO_UPGRADE_CMD
       DENO_MIN_VERSION_FALLBACK
@@ -30,6 +34,7 @@ yb.download.requirements
       find_js_runtime
       has_ejs_scripts
       has_module
+      installed_version
       min_deno_version
       with_runtime_opts
       yt_dlp_runtime_opts

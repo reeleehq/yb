@@ -20,6 +20,8 @@ yb.download
       default_download_dir
       convert_audio
       check_requirements
+      check_cookies
+      check_po_token_server
       find_js_runtime
       parse_timestamp
    
@@ -53,6 +55,7 @@ yb.download
 
    bounded
    pacing
+   probe
    ranges
    requirements
    warn

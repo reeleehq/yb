@@ -1,0 +1,541 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<link rel="alternate" type="text/markdown" href="yb.download.probe.html.md">
+<link rel="describedby" href="../llms.txt" type="text/markdown">
+<link rel="alternate" type="text/markdown" href="yb.download.probe.html.md">
+<link rel="describedby" href="llms.txt"><link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="yb.download.ranges" href="yb.download.ranges.html"><link rel="prev" title="yb.download.pacing" href="yb.download.pacing.html">
+
+    <!-- Generated with Sphinx 9.1.1 and Furo 2025.12.19 -->
+        <title>yb.download.probe - yb</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d75fae25" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx_autodoc_typehints.css?v=057ac668" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f0f0f0;
+  --color-code-foreground: black;
+  --color-brand-primary: #006787;
+  --color-brand-content: #006787;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  --color-brand-primary: #30cbed;
+  --color-brand-content: #30cbed;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  --color-brand-primary: #30cbed;
+  --color-brand-content: #30cbed;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">yb</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+  
+  <span class="sidebar-brand-text">yb</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <ul class="current">
+<li class="toctree-l1 current has-children"><a class="reference internal" href="../api.html">API reference</a><input aria-label="Toggle navigation of API reference" checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l2 current has-children"><a class="reference internal" href="yb.html">yb</a><input aria-label="Toggle navigation of yb" checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="yb.audio_convert.html">yb.audio_convert</a></li>
+<li class="toctree-l3"><a class="reference internal" href="yb.config.html">yb.config</a></li>
+<li class="toctree-l3"><a class="reference internal" href="yb.content.html">yb.content</a></li>
+<li class="toctree-l3 current has-children"><a class="reference internal" href="yb.download.html">yb.download</a><input aria-label="Toggle navigation of yb.download" checked="" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="yb.download.bounded.html">yb.download.bounded</a></li>
+<li class="toctree-l4"><a class="reference internal" href="yb.download.pacing.html">yb.download.pacing</a></li>
+<li class="toctree-l4 current current-page"><a class="current reference internal" href="#">yb.download.probe</a></li>
+<li class="toctree-l4"><a class="reference internal" href="yb.download.ranges.html">yb.download.ranges</a></li>
+<li class="toctree-l4"><a class="reference internal" href="yb.download.requirements.html">yb.download.requirements</a></li>
+<li class="toctree-l4"><a class="reference internal" href="yb.download.warn.html">yb.download.warn</a></li>
+<li class="toctree-l4"><a class="reference internal" href="yb.download.youtube.html">yb.download.youtube</a></li>
+</ul>
+</li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="yb.podcast.html">yb.podcast</a><input aria-label="Toggle navigation of yb.podcast" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="yb.podcast.chapters.html">yb.podcast.chapters</a></li>
+<li class="toctree-l4"><a class="reference internal" href="yb.podcast.cover.html">yb.podcast.cover</a></li>
+<li class="toctree-l4"><a class="reference internal" href="yb.podcast.feed.html">yb.podcast.feed</a></li>
+<li class="toctree-l4"><a class="reference internal" href="yb.podcast.publish.html">yb.podcast.publish</a></li>
+<li class="toctree-l4"><a class="reference internal" href="yb.podcast.shownotes.html">yb.podcast.shownotes</a></li>
+</ul>
+</li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="yb.youtube.html">yb.youtube</a><input aria-label="Toggle navigation of yb.youtube" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="yb.youtube.api.html">yb.youtube.api</a></li>
+<li class="toctree-l4"><a class="reference internal" href="yb.youtube.auth.html">yb.youtube.auth</a></li>
+<li class="toctree-l4"><a class="reference internal" href="yb.youtube.captions.html">yb.youtube.captions</a></li>
+<li class="toctree-l4"><a class="reference internal" href="yb.youtube.metadata.html">yb.youtube.metadata</a></li>
+<li class="toctree-l4"><a class="reference internal" href="yb.youtube.paste_consent.html">yb.youtube.paste_consent</a></li>
+<li class="toctree-l4"><a class="reference internal" href="yb.youtube.playlists.html">yb.youtube.playlists</a></li>
+<li class="toctree-l4"><a class="reference internal" href="yb.youtube.publish.html">yb.youtube.publish</a></li>
+<li class="toctree-l4"><a class="reference internal" href="yb.youtube.search.html">yb.youtube.search</a></li>
+<li class="toctree-l4"><a class="reference internal" href="yb.youtube.stats.html">yb.youtube.stats</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../ai-agents.html">For AI agents</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="../_sources/_autosummary/yb.download.probe.rst.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="module-yb.download.probe">
+<span id="yb-download-probe"></span><h1>yb.download.probe<a class="headerlink" href="#module-yb.download.probe" title="Link to this heading">¶</a></h1>
+<p>Online checks for servers: do the configured cookies still get past YouTube?</p>
+<p>A cookies file exported from an everyday browser session goes stale: YouTube
+rotates the session cookies as a security measure, after which every client gets
+“Sign in to confirm you’re not a bot”. <a class="reference internal" href="#yb.download.probe.check_cookies" title="yb.download.probe.check_cookies"><code class="xref py py-func docutils literal notranslate"><span class="pre">check_cookies()</span></code></a> finds that out
+before the first real download: it checks the file holds a logged-in session,
+then reads one known public video with it, on a private copy so the check never
+rewrites the file. <a class="reference internal" href="#yb.download.probe.check_po_token_server" title="yb.download.probe.check_po_token_server"><code class="xref py py-func docutils literal notranslate"><span class="pre">check_po_token_server()</span></code></a> pings the PO-token provider’s
+server. <code class="docutils literal notranslate"><span class="pre">yb</span> <span class="pre">check</span> <span class="pre">--online</span></code> runs both.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">yb.download.probe</span><span class="w"> </span><span class="kn">import</span> <span class="n">check_cookies</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">check_cookies</span><span class="p">())</span> <span class="ow">or</span> <span class="s2">"cookies ok"</span><span class="p">)</span>
+</pre></div>
+</div>
+<p class="rubric">Module Attributes</p>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.probe.PROBE_VIDEO_URL" title="yb.download.probe.PROBE_VIDEO_URL"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PROBE_VIDEO_URL</span></code></a></p></td>
+<td><p>A public video that has stayed up since 2005 (&quot;Me at the zoo&quot;).</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#yb.download.probe.ROTATED_MARKER" title="yb.download.probe.ROTATED_MARKER"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ROTATED_MARKER</span></code></a></p></td>
+<td><p>yt-dlp's wording when the cookies it was given stop authenticating.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.probe.BOT_WALL_MARKERS" title="yb.download.probe.BOT_WALL_MARKERS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">BOT_WALL_MARKERS</span></code></a></p></td>
+<td><p>yt-dlp's wording for YouTube's bot wall.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#yb.download.probe.LOGIN_COOKIE" title="yb.download.probe.LOGIN_COOKIE"><code class="xref py py-obj docutils literal notranslate"><span class="pre">LOGIN_COOKIE</span></code></a></p></td>
+<td><p>the login cookie plus one of the API session ids.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.probe.PING_TIMEOUT_S" title="yb.download.probe.PING_TIMEOUT_S"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PING_TIMEOUT_S</span></code></a></p></td>
+<td><p>Seconds to wait for the PO-token server's <code class="docutils literal notranslate"><span class="pre">/ping</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#yb.download.probe.COOKIE_WIKI_URL" title="yb.download.probe.COOKIE_WIKI_URL"><code class="xref py py-obj docutils literal notranslate"><span class="pre">COOKIE_WIKI_URL</span></code></a></p></td>
+<td><p>yt-dlp's guide to exporting YouTube cookies.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.probe.COOKIE_EXPORT_STEPS" title="yb.download.probe.COOKIE_EXPORT_STEPS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">COOKIE_EXPORT_STEPS</span></code></a></p></td>
+<td><p>How to export cookies the browser will not rotate.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p class="rubric">Functions</p>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.probe.check_cookies" title="yb.download.probe.check_cookies"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_cookies</span></code></a>([cookies_file, probe_url, ...])</p></td>
+<td><p>Problems with the cookies downloads would use (empty when they work).</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#yb.download.probe.check_po_token_server" title="yb.download.probe.check_po_token_server"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_po_token_server</span></code></a>([base_url, urlopen, ...])</p></td>
+<td><p>Problems reaching the PO-token provider's server (<code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">&lt;base_url&gt;/ping</span></code>).</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.probe.configured_cookies" title="yb.download.probe.configured_cookies"><code class="xref py py-obj docutils literal notranslate"><span class="pre">configured_cookies</span></code></a>([cookies_file])</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">(file,</span> <span class="pre">problem)</span></code>: the cookies file downloads would use, or why there is none.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#yb.download.probe.logged_in_problem" title="yb.download.probe.logged_in_problem"><code class="xref py py-obj docutils literal notranslate"><span class="pre">logged_in_problem</span></code></a>(path)</p></td>
+<td><p>Why <code class="docutils literal notranslate"><span class="pre">path</span></code> is not a logged-in YouTube session (unexpired), or <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<dl class="py data">
+<dt class="sig sig-object py" id="yb.download.probe.BOT_WALL_MARKERS">
+<span class="sig-prename descclassname"><span class="pre">yb.download.probe.</span></span><span class="sig-name descname"><span class="pre">BOT_WALL_MARKERS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">(&quot;confirm</span> <span class="pre">you're</span> <span class="pre">not</span> <span class="pre">a</span> <span class="pre">bot&quot;,</span> <span class="pre">'confirm</span> <span class="pre">you’re</span> <span class="pre">not</span> <span class="pre">a</span> <span class="pre">bot')</span></span><a class="headerlink" href="#yb.download.probe.BOT_WALL_MARKERS" title="Link to this definition">¶</a></dt>
+<dd><p>yt-dlp’s wording for YouTube’s bot wall.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="yb.download.probe.COOKIE_EXPORT_STEPS">
+<span class="sig-prename descclassname"><span class="pre">yb.download.probe.</span></span><span class="sig-name descname"><span class="pre">COOKIE_EXPORT_STEPS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'Export</span> <span class="pre">them</span> <span class="pre">again</span> <span class="pre">so</span> <span class="pre">the</span> <span class="pre">browser</span> <span class="pre">never</span> <span class="pre">rotates</span> <span class="pre">them:</span> <span class="pre">open</span> <span class="pre">a</span> <span class="pre">private</span> <span class="pre">/</span> <span class="pre">incognito</span> <span class="pre">window,</span> <span class="pre">log</span> <span class="pre">in</span> <span class="pre">to</span> <span class="pre">YouTube,</span> <span class="pre">go</span> <span class="pre">to</span> <span class="pre">https://www.youtube.com/robots.txt</span> <span class="pre">in</span> <span class="pre">that</span> <span class="pre">same</span> <span class="pre">tab,</span> <span class="pre">export</span> <span class="pre">the</span> <span class="pre">youtube.com</span> <span class="pre">cookies</span> <span class="pre">in</span> <span class="pre">Netscape</span> <span class="pre">format</span> <span class="pre">(a</span> <span class="pre">cookies.txt</span> <span class="pre">extension),</span> <span class="pre">then</span> <span class="pre">close</span> <span class="pre">the</span> <span class="pre">private</span> <span class="pre">window</span> <span class="pre">right</span> <span class="pre">away</span> <span class="pre">and</span> <span class="pre">never</span> <span class="pre">reopen</span> <span class="pre">that</span> <span class="pre">session.</span> <span class="pre">See</span> <span class="pre">https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies'</span></span><a class="headerlink" href="#yb.download.probe.COOKIE_EXPORT_STEPS" title="Link to this definition">¶</a></dt>
+<dd><p>How to export cookies the browser will not rotate.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="yb.download.probe.COOKIE_WIKI_URL">
+<span class="sig-prename descclassname"><span class="pre">yb.download.probe.</span></span><span class="sig-name descname"><span class="pre">COOKIE_WIKI_URL</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies'</span></span><a class="headerlink" href="#yb.download.probe.COOKIE_WIKI_URL" title="Link to this definition">¶</a></dt>
+<dd><p>yt-dlp’s guide to exporting YouTube cookies.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="yb.download.probe.LOGIN_COOKIE">
+<span class="sig-prename descclassname"><span class="pre">yb.download.probe.</span></span><span class="sig-name descname"><span class="pre">LOGIN_COOKIE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'LOGIN_INFO'</span></span><a class="headerlink" href="#yb.download.probe.LOGIN_COOKIE" title="Link to this definition">¶</a></dt>
+<dd><p>the
+login cookie plus one of the API session ids.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>What makes a jar a logged-in YouTube session, by yt-dlp’s own rule</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="yb.download.probe.PING_TIMEOUT_S">
+<span class="sig-prename descclassname"><span class="pre">yb.download.probe.</span></span><span class="sig-name descname"><span class="pre">PING_TIMEOUT_S</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">3</span></span><a class="headerlink" href="#yb.download.probe.PING_TIMEOUT_S" title="Link to this definition">¶</a></dt>
+<dd><p>Seconds to wait for the PO-token server’s <code class="docutils literal notranslate"><span class="pre">/ping</span></code>.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="yb.download.probe.PROBE_VIDEO_URL">
+<span class="sig-prename descclassname"><span class="pre">yb.download.probe.</span></span><span class="sig-name descname"><span class="pre">PROBE_VIDEO_URL</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'https://www.youtube.com/watch?v=jNQXAC9IVRw'</span></span><a class="headerlink" href="#yb.download.probe.PROBE_VIDEO_URL" title="Link to this definition">¶</a></dt>
+<dd><p>A public video that has stayed up since 2005 (“Me at the zoo”).</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="yb.download.probe.ROTATED_MARKER">
+<span class="sig-prename descclassname"><span class="pre">yb.download.probe.</span></span><span class="sig-name descname"><span class="pre">ROTATED_MARKER</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'cookies</span> <span class="pre">are</span> <span class="pre">no</span> <span class="pre">longer</span> <span class="pre">valid'</span></span><a class="headerlink" href="#yb.download.probe.ROTATED_MARKER" title="Link to this definition">¶</a></dt>
+<dd><p>yt-dlp’s wording when the cookies it was given stop authenticating.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="yb.download.probe.check_cookies">
+<span class="sig-prename descclassname"><span class="pre">yb.download.probe.</span></span><span class="sig-name descname"><span class="pre">check_cookies</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cookies_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">probe_url</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'https://www.youtube.com/watch?v=jNQXAC9IVRw'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fetch_info</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;function</span> <span class="pre">_probe_info&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/download/probe.html#check_cookies"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.download.probe.check_cookies" title="Link to this definition">¶</a></dt>
+<dd><p>Problems with the cookies downloads would use (empty when they work).</p>
+<p>Checks that the file holds a logged-in session, then reads <code class="docutils literal notranslate"><span class="pre">probe_url</span></code>
+with it (one metadata fetch; yt-dlp works on a copy, so the file is left as
+it was). With no file configured there is nothing to check.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cookies_file</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Literal" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Literal</span></code></a>[<span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#False" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="kc"><span class="pre">False</span></span></code></a></span>], <span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code></a></span>]</span>) – As in <a class="reference internal" href="yb.download.html#yb.download.download_youtube_video" title="yb.download.download_youtube_video"><code class="xref py py-func docutils literal notranslate"><span class="pre">download_youtube_video()</span></code></a>.</p></li>
+<li><p><strong>probe_url</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span>) – A public video every working setup can read.</p></li>
+<li><p><strong>fetch_info</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Callable</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/constants.html#Ellipsis" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">...</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code></a>]</span>) – <code class="docutils literal notranslate"><span class="pre">(url,</span> <span class="pre">*,</span> <span class="pre">cookies_file,</span> <span class="pre">extra_opts)</span></code> metadata fetcher; a
+fake in tests.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>no or a missing file where one was named,
+not a logged-in session, rotated or expired, refused by the bot check,
+or the probe failed for another reason.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="yb.download.probe.check_po_token_server">
+<span class="sig-prename descclassname"><span class="pre">yb.download.probe.</span></span><span class="sig-name descname"><span class="pre">check_po_token_server</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">base_url</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'http://127.0.0.1:4416'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">urlopen</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;function</span> <span class="pre">urlopen&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout_s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/download/probe.html#check_po_token_server"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.download.probe.check_po_token_server" title="Link to this definition">¶</a></dt>
+<dd><p>Problems reaching the PO-token provider’s server (<code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">&lt;base_url&gt;/ping</span></code>).</p>
+<p>The plugin alone does nothing: without its server, yt-dlp warns and carries
+on without tokens.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="yb.download.probe.configured_cookies">
+<span class="sig-prename descclassname"><span class="pre">yb.download.probe.</span></span><span class="sig-name descname"><span class="pre">configured_cookies</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cookies_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/download/probe.html#configured_cookies"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.download.probe.configured_cookies" title="Link to this definition">¶</a></dt>
+<dd><p><code class="docutils literal notranslate"><span class="pre">(file,</span> <span class="pre">problem)</span></code>: the cookies file downloads would use, or why there is none.</p>
+<p><code class="docutils literal notranslate"><span class="pre">cookies_file</span></code> as in <a class="reference internal" href="yb.download.html#yb.download.download_youtube_video" title="yb.download.download_youtube_video"><code class="xref py py-func docutils literal notranslate"><span class="pre">download_youtube_video()</span></code></a>. With
+<code class="docutils literal notranslate"><span class="pre">None</span></code>, a <code class="docutils literal notranslate"><span class="pre">$YB_COOKIES_FILE</span></code> naming a missing file is a problem (downloads
+would silently go anonymous); no file configured at all is not.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a> | <span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code></a></span>, <a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a> | <span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code></a></span>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="yb.download.probe.logged_in_problem">
+<span class="sig-prename descclassname"><span class="pre">yb.download.probe.</span></span><span class="sig-name descname"><span class="pre">logged_in_problem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/download/probe.html#logged_in_problem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.download.probe.logged_in_problem" title="Link to this definition">¶</a></dt>
+<dd><p>Why <code class="docutils literal notranslate"><span class="pre">path</span></code> is not a logged-in YouTube session (unexpired), or <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a> | <span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code></a></span></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="yb.download.ranges.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">yb.download.ranges</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="yb.download.pacing.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">yb.download.pacing</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            Made with 
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">yb.download.probe</a><ul>
+<li><a class="reference internal" href="#yb.download.probe.BOT_WALL_MARKERS"><code class="docutils literal notranslate"><span class="pre">BOT_WALL_MARKERS</span></code></a></li>
+<li><a class="reference internal" href="#yb.download.probe.COOKIE_EXPORT_STEPS"><code class="docutils literal notranslate"><span class="pre">COOKIE_EXPORT_STEPS</span></code></a></li>
+<li><a class="reference internal" href="#yb.download.probe.COOKIE_WIKI_URL"><code class="docutils literal notranslate"><span class="pre">COOKIE_WIKI_URL</span></code></a></li>
+<li><a class="reference internal" href="#yb.download.probe.LOGIN_COOKIE"><code class="docutils literal notranslate"><span class="pre">LOGIN_COOKIE</span></code></a></li>
+<li><a class="reference internal" href="#yb.download.probe.PING_TIMEOUT_S"><code class="docutils literal notranslate"><span class="pre">PING_TIMEOUT_S</span></code></a></li>
+<li><a class="reference internal" href="#yb.download.probe.PROBE_VIDEO_URL"><code class="docutils literal notranslate"><span class="pre">PROBE_VIDEO_URL</span></code></a></li>
+<li><a class="reference internal" href="#yb.download.probe.ROTATED_MARKER"><code class="docutils literal notranslate"><span class="pre">ROTATED_MARKER</span></code></a></li>
+<li><a class="reference internal" href="#yb.download.probe.check_cookies"><code class="docutils literal notranslate"><span class="pre">check_cookies()</span></code></a></li>
+<li><a class="reference internal" href="#yb.download.probe.check_po_token_server"><code class="docutils literal notranslate"><span class="pre">check_po_token_server()</span></code></a></li>
+<li><a class="reference internal" href="#yb.download.probe.configured_cookies"><code class="docutils literal notranslate"><span class="pre">configured_cookies()</span></code></a></li>
+<li><a class="reference internal" href="#yb.download.probe.logged_in_problem"><code class="docutils literal notranslate"><span class="pre">logged_in_problem()</span></code></a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../_static/documentation_options.js?v=a9ed77be"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=fd10adb8"></script>
+    </body>
+</html>

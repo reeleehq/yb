@@ -24,6 +24,8 @@ The destination defaults to `$YB_DOWNLOAD_DIR` when set, else `~/Downloads`.
 | [`ITEM_FOLDER_OUTTMPL`](#yb.download.youtube.ITEM_FOLDER_OUTTMPL)      | `001_<id>/<id>.<ext>`, sidecars beside it.                                                                                                                                                                                                 |
 | [`DEFAULT_AUDIO_FMT`](#yb.download.youtube.DEFAULT_AUDIO_FMT)        | yt-dlp format selector for the best audio-only stream.                                                                                                                                                                                     |
 | [`MAX_SEARCH_LIMIT`](#yb.download.youtube.MAX_SEARCH_LIMIT)         | Cap on `limit` so a typo does not turn into a thousand-result query.                                                                                                                                                                       |
+| [`SEARCH_RESULTS_URL`](#yb.download.youtube.SEARCH_RESULTS_URL)       | YouTube's search results page; yt-dlp extracts it as a playlist of hits.                                                                                                                                                                   |
+| [`CREATIVE_COMMONS_SP`](#yb.download.youtube.CREATIVE_COMMONS_SP)      | YouTube's `sp` search parameter restricting hits to the Creative Commons licence (the decoded value; YouTube's own links show it encoded twice).                                                                                           |
 
 ### Functions
 
@@ -61,6 +63,13 @@ temporary copy of the cookies file instead of the file itself (see
 
 * **Type:**
   Env var
+
+### yb.download.youtube.CREATIVE_COMMONS_SP *= 'EgIwAQ=='*
+
+YouTube’s `sp` search parameter restricting hits to the Creative Commons
+licence (the decoded value; YouTube’s own links show it encoded twice).
+Undocumented; verified empirically (every hit’s full info carried
+`license = "Creative Commons Attribution license (reuse allowed)"`).
 
 ### yb.download.youtube.CookiesFile
 
@@ -158,17 +167,22 @@ same vocabulary as [`OnConvertError`](#yb.download.youtube.OnConvertError).
 
 alias of [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[‘raise’, ‘warn’]
 
+### yb.download.youtube.SEARCH_RESULTS_URL *= 'https://www.youtube.com/results'*
+
+YouTube’s search results page; yt-dlp extracts it as a playlist of hits.
+
 ### yb.download.youtube.SUBTITLE_FAILURE_MARKER *= 'Unable to download video subtitles'*
 
 How yt-dlp’s error starts when a subtitle fetch (not the video) failed.
 
-### *class* yb.download.youtube.SearchHit(id, title, duration, channel, url)
+### *class* yb.download.youtube.SearchHit(id, title, duration, channel, url, view_count=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 One row of [`search_youtube()`](#yb.download.youtube.search_youtube) (flat extraction: no per-video fetch).
 
-`duration` is in seconds and may be `None` (live streams, some results).
+`duration` is in seconds and may be `None` (live streams, some results),
+as may `view_count`.
 
 ### yb.download.youtube.default_cookies_file()
 
@@ -466,7 +480,7 @@ Best-effort resolution of the final media path yt-dlp produced.
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
-### yb.download.youtube.search_youtube(query, , limit=5, extra_opts=None, cookies_file=None)
+### yb.download.youtube.search_youtube(query, , limit=5, creative_commons=False, min_s=None, max_s=None, extra_opts=None, cookies_file=None)
 
 Search YouTube by name; returns up to `limit` hits, best match first.
 
@@ -478,20 +492,44 @@ Hand a hit’s `url` to [`download_youtube_audio()`](#yb.download.youtube.downlo
 >>> download_youtube_audio(hits[0].url)
 ```
 
-Uses yt-dlp’s `ytsearchN:` with flat extraction (one request, no per-video
-fetch), sharing the cookie and JS-runtime handling of the downloads.
+Candidates for a pipeline to screen before fetching anything, e.g. reusable
+clips of a useful length:
+
+```pycon
+>>> search_youtube("house dance footwork", limit=20, creative_commons=True,
+...                min_s=45, max_s=900)
+```
+
+Uses flat extraction (one request, no per-video fetch), sharing the cookie
+and JS-runtime handling of the downloads: yt-dlp’s `ytsearchN:`, or the
+search results page when a YouTube search filter is asked for. Only video
+rows are returned (YouTube’s channel rows are dropped, so fewer than
+`limit` may come back); a Short’s `url` is its `/shorts/` link.
 
 * **Parameters:**
   * **query** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – What to search for (any script).
-  * **limit** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – How many results, 1..:data:`MAX_SEARCH_LIMIT`.
+  * **limit** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – How many results to search, 1..:data:`MAX_SEARCH_LIMIT`.
+  * **creative_commons** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Only videos their uploader licensed as Creative
+    Commons (YouTube’s own search filter). The filter is YouTube’s
+    declaration; check a hit’s full info (`license`) before relying
+    on it.
+  * **min_s** ([`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Keep only hits whose duration is within these bounds
+    (non-negative seconds, inclusive). Applied to the `limit` results, so fewer may
+    come back; a hit with no reported duration is dropped when either
+    bound is set.
+  * **max_s** ([`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Keep only hits whose duration is within these bounds
+    (non-negative seconds, inclusive). Applied to the `limit` results, so fewer may
+    come back; a hit with no reported duration is dropped when either
+    bound is set.
   * **extra_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Additional raw yt-dlp options (merged last).
   * **cookies_file** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[[`False`](https://docs.python.org/3/builtins/constants.html#False)], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – See [`download_youtube_video()`](#yb.download.youtube.download_youtube_video).
 * **Raises:**
-  [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `query` is blank or `limit` is out of range.
+  [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `query` is blank, `limit` is out of range, or
+      `min_s` is above `max_s`.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`SearchHit`](#yb.download.youtube.SearchHit)]
 
-### yb.download.youtube.youtube_dl(base_opts, , extra_opts=None, cookies_file=None, cookies_from_browser=None, ydl_cls=None)
+### yb.download.youtube.youtube_dl(base_opts, , extra_opts=None, cookies_file=None, cookies_from_browser=None, ydl_cls=None, private_cookie_copy=None)
 
 Yield a `YoutubeDL` built the way every yb download builds one.
 
@@ -507,6 +545,9 @@ rewrite is handed over as a private copy (see `_final_opts()`).
     `base_opts` (suppresses the default cookies file).
   * **ydl_cls** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)], [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – What to build instead of `yt_dlp.YoutubeDL` (a subclass, a
     fake in tests); default [`youtube_dl_cls()`](#yb.download.youtube.youtube_dl_cls).
+  * **private_cookie_copy** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `True` hands yt-dlp a copy of the cookies file
+    so it is never rewritten (a read-only check); `None` applies the
+    usual rule (see `_final_opts()`).
 * **Raises:**
   [**ImportError**](https://docs.python.org/3/builtins/exceptions.html#ImportError) – yt-dlp is not installed (with the install command).
 

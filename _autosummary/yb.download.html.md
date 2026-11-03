@@ -46,21 +46,23 @@ how to install it. The first download in a process runs it and warns.
 
 ### Functions
 
-| [`download_youtube_video`](#yb.download.download_youtube_video)(url, \*[, ...])         | Download a YouTube video to `download_dir` (default `~/Downloads`).           |
-|-------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
-| [`download_youtube_audio`](#yb.download.download_youtube_audio)(url, \*[, ...])         | Download only a video's audio (no video stream).                              |
-| [`download_youtube_subtitles`](#yb.download.download_youtube_subtitles)(url, \*[, ...])     | Download only a video's subtitles (no media); returns the files written.      |
-| [`youtube_video_info`](#yb.download.youtube_video_info)(url, \*[, extra_opts, ...]) | Fetch a video's metadata without downloading it.                              |
-| [`download_youtube_playlist`](#yb.download.download_youtube_playlist)(url, \*[, ...])      | Download all (or a selected subset of) a YouTube playlist's videos.           |
-| [`youtube_playlist_info`](#yb.download.youtube_playlist_info)(url, \*[, ...])          | Fetch a playlist's per-video metadata without downloading.                    |
-| [`search_youtube`](#yb.download.search_youtube)(query, \*[, limit, ...])        | Search YouTube by name; returns up to `limit` hits, best match first.         |
-| [`download_audio_bounded`](#yb.download.download_audio_bounded)(url, \*, download_dir)  | Download the audio of one video link as mp3, refusing what exceeds the caps.  |
-| [`require_http_url`](#yb.download.require_http_url)(url)                          | Default target check: an http(s) URL with a host.                             |
-| [`default_download_dir`](#yb.download.default_download_dir)()                         | Resolve the default download directory (`$YB_DOWNLOAD_DIR` or `~/Downloads`). |
-| [`convert_audio`](#yb.download.convert_audio)(src, audio_format, \*[, ...])    | Convert `src` to `audio_format`, returning the resulting path.                |
-| [`check_requirements`](#yb.download.check_requirements)(\*[, warn, which, ...])     | Check what YouTube downloads need, and say how to fix what's missing.         |
-| [`find_js_runtime`](#yb.download.find_js_runtime)(\*[, which, search_dirs])      | Find Deno on `PATH`, else in its standard install location.                   |
-| [`parse_timestamp`](#yb.download.parse_timestamp)(value)                         | Seconds from a number or a `"[[h:]m:]s[.fraction]"` string.                   |
+| [`download_youtube_video`](#yb.download.download_youtube_video)(url, \*[, ...])          | Download a YouTube video to `download_dir` (default `~/Downloads`).           |
+|--------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
+| [`download_youtube_audio`](#yb.download.download_youtube_audio)(url, \*[, ...])          | Download only a video's audio (no video stream).                              |
+| [`download_youtube_subtitles`](#yb.download.download_youtube_subtitles)(url, \*[, ...])      | Download only a video's subtitles (no media); returns the files written.      |
+| [`youtube_video_info`](#yb.download.youtube_video_info)(url, \*[, extra_opts, ...])  | Fetch a video's metadata without downloading it.                              |
+| [`download_youtube_playlist`](#yb.download.download_youtube_playlist)(url, \*[, ...])       | Download all (or a selected subset of) a YouTube playlist's videos.           |
+| [`youtube_playlist_info`](#yb.download.youtube_playlist_info)(url, \*[, ...])           | Fetch a playlist's per-video metadata without downloading.                    |
+| [`search_youtube`](#yb.download.search_youtube)(query, \*[, limit, ...])         | Search YouTube by name; returns up to `limit` hits, best match first.         |
+| [`download_audio_bounded`](#yb.download.download_audio_bounded)(url, \*, download_dir)   | Download the audio of one video link as mp3, refusing what exceeds the caps.  |
+| [`require_http_url`](#yb.download.require_http_url)(url)                           | Default target check: an http(s) URL with a host.                             |
+| [`default_download_dir`](#yb.download.default_download_dir)()                          | Resolve the default download directory (`$YB_DOWNLOAD_DIR` or `~/Downloads`). |
+| [`convert_audio`](#yb.download.convert_audio)(src, audio_format, \*[, ...])     | Convert `src` to `audio_format`, returning the resulting path.                |
+| [`check_requirements`](#yb.download.check_requirements)(\*[, warn, which, ...])      | Check what YouTube downloads need, and say how to fix what's missing.         |
+| [`check_cookies`](#yb.download.check_cookies)([cookies_file, probe_url, ...])   | Problems with the cookies downloads would use (empty when they work).         |
+| [`check_po_token_server`](#yb.download.check_po_token_server)([base_url, urlopen, ...]) | Problems reaching the PO-token provider's server (`GET <base_url>/ping`).     |
+| [`find_js_runtime`](#yb.download.find_js_runtime)(\*[, which, search_dirs])       | Find Deno on `PATH`, else in its standard install location.                   |
+| [`parse_timestamp`](#yb.download.parse_timestamp)(value)                          | Seconds from a number or a `"[[h:]m:]s[.fraction]"` string.                   |
 
 ### Classes
 
@@ -266,13 +268,14 @@ Bases: [`RuntimeError`](https://docs.python.org/3/builtins/exceptions.html#Runti
 
 YouTube refused the request (HTTP 429 or a “confirm you’re not a bot” wall).
 
-### *class* yb.download.SearchHit(id, title, duration, channel, url)
+### *class* yb.download.SearchHit(id, title, duration, channel, url, view_count=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 One row of [`search_youtube()`](#yb.download.search_youtube) (flat extraction: no per-video fetch).
 
-`duration` is in seconds and may be `None` (live streams, some results).
+`duration` is in seconds and may be `None` (live streams, some results),
+as may `view_count`.
 
 ### *class* yb.download.TimeRange(start=0.0, end=None)
 
@@ -302,6 +305,36 @@ Build from user input; `None` when neither bound is given.
   [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – On a bad timestamp, or `end` not after `start`.
 * **Return type:**
   [`TimeRange`](yb.download.ranges.html.md#yb.download.ranges.TimeRange) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+### yb.download.check_cookies(cookies_file=None, \*, probe_url='https://www.youtube.com/watch?v=jNQXAC9IVRw', fetch_info=<function \_probe_info>)
+
+Problems with the cookies downloads would use (empty when they work).
+
+Checks that the file holds a logged-in session, then reads `probe_url`
+with it (one metadata fetch; yt-dlp works on a copy, so the file is left as
+it was). With no file configured there is nothing to check.
+
+* **Parameters:**
+  * **cookies_file** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[[`False`](https://docs.python.org/3/builtins/constants.html#False)], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – As in [`download_youtube_video()`](#yb.download.download_youtube_video).
+  * **probe_url** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – A public video every working setup can read.
+  * **fetch_info** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]) – `(url, *, cookies_file, extra_opts)` metadata fetcher; a
+    fake in tests.
+* **Returns:**
+  no or a missing file where one was named,
+  not a logged-in session, rotated or expired, refused by the bot check,
+  or the probe failed for another reason.
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
+
+### yb.download.check_po_token_server(base_url='http://127.0.0.1:4416', \*, urlopen=<function urlopen>, timeout_s=3)
+
+Problems reaching the PO-token provider’s server (`GET <base_url>/ping`).
+
+The plugin alone does nothing: without its server, yt-dlp warns and carries
+on without tokens.
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
 
 ### yb.download.check_requirements(\*, warn=True, which=<function which>, search_dirs=None, find_spec=<function find_spec>, run=<function run>, import_module=<function import_module>, check_deno_version=True)
 
@@ -701,7 +734,7 @@ link-local and cloud-metadata hosts.
 * **Return type:**
   [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
-### yb.download.search_youtube(query, , limit=5, extra_opts=None, cookies_file=None)
+### yb.download.search_youtube(query, , limit=5, creative_commons=False, min_s=None, max_s=None, extra_opts=None, cookies_file=None)
 
 Search YouTube by name; returns up to `limit` hits, best match first.
 
@@ -713,16 +746,40 @@ Hand a hit’s `url` to [`download_youtube_audio()`](#yb.download.download_youtu
 >>> download_youtube_audio(hits[0].url)
 ```
 
-Uses yt-dlp’s `ytsearchN:` with flat extraction (one request, no per-video
-fetch), sharing the cookie and JS-runtime handling of the downloads.
+Candidates for a pipeline to screen before fetching anything, e.g. reusable
+clips of a useful length:
+
+```pycon
+>>> search_youtube("house dance footwork", limit=20, creative_commons=True,
+...                min_s=45, max_s=900)
+```
+
+Uses flat extraction (one request, no per-video fetch), sharing the cookie
+and JS-runtime handling of the downloads: yt-dlp’s `ytsearchN:`, or the
+search results page when a YouTube search filter is asked for. Only video
+rows are returned (YouTube’s channel rows are dropped, so fewer than
+`limit` may come back); a Short’s `url` is its `/shorts/` link.
 
 * **Parameters:**
   * **query** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – What to search for (any script).
-  * **limit** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – How many results, 1..:data:`MAX_SEARCH_LIMIT`.
+  * **limit** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – How many results to search, 1..:data:`MAX_SEARCH_LIMIT`.
+  * **creative_commons** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Only videos their uploader licensed as Creative
+    Commons (YouTube’s own search filter). The filter is YouTube’s
+    declaration; check a hit’s full info (`license`) before relying
+    on it.
+  * **min_s** ([`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Keep only hits whose duration is within these bounds
+    (non-negative seconds, inclusive). Applied to the `limit` results, so fewer may
+    come back; a hit with no reported duration is dropped when either
+    bound is set.
+  * **max_s** ([`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Keep only hits whose duration is within these bounds
+    (non-negative seconds, inclusive). Applied to the `limit` results, so fewer may
+    come back; a hit with no reported duration is dropped when either
+    bound is set.
   * **extra_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Additional raw yt-dlp options (merged last).
   * **cookies_file** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[[`False`](https://docs.python.org/3/builtins/constants.html#False)], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – See [`download_youtube_video()`](#yb.download.download_youtube_video).
 * **Raises:**
-  [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `query` is blank or `limit` is out of range.
+  [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `query` is blank, `limit` is out of range, or
+      `min_s` is above `max_s`.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`SearchHit`](yb.download.youtube.html.md#yb.download.youtube.SearchHit)]
 
@@ -763,6 +820,7 @@ the title/duration/chapters before deciding to download.
 | [`bounded`](yb.download.bounded.html.md#module-yb.download.bounded)           | Link-to-audio with the safety policy applied once: [`download_audio_bounded()`](#yb.download.download_audio_bounded).   |
 |-----------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
 | [`pacing`](yb.download.pacing.html.md#module-yb.download.pacing)             | Polite pacing for yt-dlp downloads, and a useful message when YouTube pushes back.                                              |
+| [`probe`](yb.download.probe.html.md#module-yb.download.probe)               | Online checks for servers: do the configured cookies still get past YouTube?                                                    |
 | [`ranges`](yb.download.ranges.html.md#module-yb.download.ranges)             | Download just a time range of a video: parse start/end, build yt-dlp's options.                                                 |
 | [`requirements`](yb.download.requirements.html.md#module-yb.download.requirements) | Preflight for downloading: does yt-dlp have what YouTube now demands?                                                           |
 | [`warn`](yb.download.warn.html.md#module-yb.download.warn)                 | Warnings attributed to the caller's code, not to yb's own plumbing.                                                             |

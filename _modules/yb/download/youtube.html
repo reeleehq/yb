@@ -208,6 +208,7 @@
 <li class="toctree-l3 has-children"><a class="reference internal" href="../../../_autosummary/yb.download.html">yb.download</a><input aria-label="Toggle navigation of yb.download" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.bounded.html">yb.download.bounded</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.pacing.html">yb.download.pacing</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.probe.html">yb.download.probe</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.ranges.html">yb.download.ranges</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.requirements.html">yb.download.requirements</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.warn.html">yb.download.warn</a></li>
@@ -284,9 +285,11 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">urllib.parse</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">contextlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">contextmanager</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
@@ -526,8 +529,10 @@
     <span class="k">return</span> <span class="p">{</span><span class="s2">"cookiefile"</span><span class="p">:</span> <span class="n">usable</span><span class="p">}</span> <span class="k">if</span> <span class="n">usable</span> <span class="k">else</span> <span class="p">{}</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_wants_private_cookie_copy</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Whether yt-dlp must not get ``path`` itself: unwritable, or the env asks."""</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_wants_private_cookie_copy</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">private_copy</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Whether yt-dlp must not get ``path`` itself: asked to, unwritable, or the env asks."""</span>
+    <span class="k">if</span> <span class="n">private_copy</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">private_copy</span>
     <span class="n">env</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">COOKIES_PRIVATE_COPY_ENV</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
     <span class="k">return</span> <span class="n">env</span> <span class="ow">in</span> <span class="n">_TRUTHY</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">W_OK</span><span class="p">)</span>
 
@@ -537,6 +542,8 @@
     <span class="n">opts</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
     <span class="n">cookie_opts</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
     <span class="n">extra_opts</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">private_copy</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Yield the merged yt-dlp options (``opts``, cookies, then ``extra_opts``).</span>
 
@@ -547,11 +554,17 @@
 <span class="sd">    default, or ``extra_opts``), in those cases (or when</span>
 <span class="sd">    :data:`COOKIES_PRIVATE_COPY_ENV` is set) yt-dlp gets a 0600 temporary copy,</span>
 <span class="sd">    deleted on exit; the cookies it refreshes are then not persisted back.</span>
+<span class="sd">    ``private_copy`` overrides that rule (``True``: always copy, so the file is</span>
+<span class="sd">    never written; ``False``: never copy).</span>
 <span class="sd">    """</span>
     <span class="n">merged</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">opts</span><span class="p">,</span> <span class="o">**</span><span class="n">cookie_opts</span><span class="p">,</span> <span class="o">**</span><span class="p">(</span><span class="n">extra_opts</span> <span class="ow">or</span> <span class="p">{})}</span>
     <span class="n">source</span> <span class="o">=</span> <span class="n">merged</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"cookiefile"</span><span class="p">)</span>
     <span class="c1"># A missing path is left for yt-dlp to report.</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">source</span> <span class="ow">and</span> <span class="n">Path</span><span class="p">(</span><span class="n">source</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">()</span> <span class="ow">and</span> <span class="n">_wants_private_cookie_copy</span><span class="p">(</span><span class="n">source</span><span class="p">)):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span>
+        <span class="n">source</span>
+        <span class="ow">and</span> <span class="n">Path</span><span class="p">(</span><span class="n">source</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">()</span>
+        <span class="ow">and</span> <span class="n">_wants_private_cookie_copy</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">private_copy</span><span class="o">=</span><span class="n">private_copy</span><span class="p">)</span>
+    <span class="p">):</span>
         <span class="k">yield</span> <span class="n">merged</span>
         <span class="k">return</span>
     <span class="n">fd</span><span class="p">,</span> <span class="n">copy</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkstemp</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s2">"yb-cookies-"</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="s2">".txt"</span><span class="p">)</span>  <span class="c1"># mode 0600</span>
@@ -585,6 +598,7 @@
     <span class="n">cookies_file</span><span class="p">:</span> <span class="n">CookiesFile</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">cookies_from_browser</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">tuple</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">ydl_cls</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">dict</span><span class="p">],</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">private_cookie_copy</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Yield a ``YoutubeDL`` built the way every yb download builds one.</span>
 
@@ -600,6 +614,9 @@
 <span class="sd">            ``base_opts`` (suppresses the default cookies file).</span>
 <span class="sd">        ydl_cls: What to build instead of ``yt_dlp.YoutubeDL`` (a subclass, a</span>
 <span class="sd">            fake in tests); default :func:`youtube_dl_cls`.</span>
+<span class="sd">        private_cookie_copy: ``True`` hands yt-dlp a copy of the cookies file</span>
+<span class="sd">            so it is never rewritten (a read-only check); ``None`` applies the</span>
+<span class="sd">            usual rule (see :func:`_final_opts`).</span>
 
 <span class="sd">    Raises:</span>
 <span class="sd">        ImportError: yt-dlp is not installed (with the install command).</span>
@@ -608,7 +625,9 @@
     <span class="n">cookie_opts</span> <span class="o">=</span> <span class="n">_cookie_opts</span><span class="p">(</span>
         <span class="n">cookies_file</span><span class="p">,</span> <span class="n">cookies_from_browser</span><span class="o">=</span><span class="n">cookies_from_browser</span><span class="p">,</span> <span class="n">extra_opts</span><span class="o">=</span><span class="n">extra_opts</span>
     <span class="p">)</span>
-    <span class="k">with</span> <span class="n">_final_opts</span><span class="p">(</span><span class="n">base_opts</span><span class="p">,</span> <span class="n">cookie_opts</span><span class="p">,</span> <span class="n">extra_opts</span><span class="p">)</span> <span class="k">as</span> <span class="n">opts</span><span class="p">:</span>
+    <span class="k">with</span> <span class="n">_final_opts</span><span class="p">(</span>
+        <span class="n">base_opts</span><span class="p">,</span> <span class="n">cookie_opts</span><span class="p">,</span> <span class="n">extra_opts</span><span class="p">,</span> <span class="n">private_copy</span><span class="o">=</span><span class="n">private_cookie_copy</span>
+    <span class="p">)</span> <span class="k">as</span> <span class="n">opts</span><span class="p">:</span>
         <span class="k">with</span> <span class="bp">cls</span><span class="p">(</span><span class="n">with_runtime_opts</span><span class="p">(</span><span class="n">opts</span><span class="p">))</span> <span class="k">as</span> <span class="n">ydl</span><span class="p">:</span>
             <span class="k">yield</span> <span class="n">ydl</span></div>
 
@@ -1063,19 +1082,33 @@
 <span class="k">class</span><span class="w"> </span><span class="nc">SearchHit</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""One row of :func:`search_youtube` (flat extraction: no per-video fetch).</span>
 
-<span class="sd">    ``duration`` is in seconds and may be ``None`` (live streams, some results).</span>
+<span class="sd">    ``duration`` is in seconds and may be ``None`` (live streams, some results),</span>
+<span class="sd">    as may ``view_count``.</span>
 <span class="sd">    """</span>
 
     <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span>
     <span class="n">title</span><span class="p">:</span> <span class="nb">str</span>
     <span class="n">duration</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>
     <span class="n">channel</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>
-    <span class="n">url</span><span class="p">:</span> <span class="nb">str</span></div>
+    <span class="n">url</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">view_count</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></div>
 
 
 
 <span class="c1">#: Cap on ``limit`` so a typo does not turn into a thousand-result query.</span>
 <span class="n">MAX_SEARCH_LIMIT</span> <span class="o">=</span> <span class="mi">50</span>
+
+<span class="c1">#: YouTube's search results page; yt-dlp extracts it as a playlist of hits.</span>
+<span class="n">SEARCH_RESULTS_URL</span> <span class="o">=</span> <span class="s2">"https://www.youtube.com/results"</span>
+
+<span class="c1">#: YouTube's ``sp`` search parameter restricting hits to the Creative Commons</span>
+<span class="c1">#: licence (the decoded value; YouTube's own links show it encoded twice).</span>
+<span class="c1">#: Undocumented; verified empirically (every hit's full info carried</span>
+<span class="c1">#: ``license = "Creative Commons Attribution license (reuse allowed)"``).</span>
+<span class="n">CREATIVE_COMMONS_SP</span> <span class="o">=</span> <span class="s2">"EgIwAQ=="</span>
+
+<span class="c1">#: yt-dlp's ``ie_key`` of a video row (channel and playlist rows have others).</span>
+<span class="n">_VIDEO_IE_KEY</span> <span class="o">=</span> <span class="s2">"Youtube"</span>
 
 
 <div class="viewcode-block" id="search_youtube">
@@ -1084,6 +1117,9 @@
     <span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
     <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
+    <span class="n">creative_commons</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">min_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">max_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">extra_opts</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">cookies_file</span><span class="p">:</span> <span class="n">CookiesFile</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">SearchHit</span><span class="p">]:</span>
@@ -1095,32 +1131,92 @@
 <span class="sd">        &gt;&gt;&gt; hits = search_youtube("हनुमान चालीसा हरिहरन", limit=6)  # doctest: +SKIP</span>
 <span class="sd">        &gt;&gt;&gt; download_youtube_audio(hits[0].url)  # doctest: +SKIP</span>
 
-<span class="sd">    Uses yt-dlp's ``ytsearchN:`` with flat extraction (one request, no per-video</span>
-<span class="sd">    fetch), sharing the cookie and JS-runtime handling of the downloads.</span>
+<span class="sd">    Candidates for a pipeline to screen before fetching anything, e.g. reusable</span>
+<span class="sd">    clips of a useful length:</span>
+
+<span class="sd">        &gt;&gt;&gt; search_youtube("house dance footwork", limit=20, creative_commons=True,</span>
+<span class="sd">        ...                min_s=45, max_s=900)  # doctest: +SKIP</span>
+
+<span class="sd">    Uses flat extraction (one request, no per-video fetch), sharing the cookie</span>
+<span class="sd">    and JS-runtime handling of the downloads: yt-dlp's ``ytsearchN:``, or the</span>
+<span class="sd">    search results page when a YouTube search filter is asked for. Only video</span>
+<span class="sd">    rows are returned (YouTube's channel rows are dropped, so fewer than</span>
+<span class="sd">    ``limit`` may come back); a Short's ``url`` is its ``/shorts/`` link.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        query: What to search for (any script).</span>
-<span class="sd">        limit: How many results, 1..:data:`MAX_SEARCH_LIMIT`.</span>
+<span class="sd">        limit: How many results to search, 1..:data:`MAX_SEARCH_LIMIT`.</span>
+<span class="sd">        creative_commons: Only videos their uploader licensed as Creative</span>
+<span class="sd">            Commons (YouTube's own search filter). The filter is YouTube's</span>
+<span class="sd">            declaration; check a hit's full info (``license``) before relying</span>
+<span class="sd">            on it.</span>
+<span class="sd">        min_s, max_s: Keep only hits whose duration is within these bounds</span>
+<span class="sd">            (non-negative seconds, inclusive). Applied to the ``limit`` results, so fewer may</span>
+<span class="sd">            come back; a hit with no reported duration is dropped when either</span>
+<span class="sd">            bound is set.</span>
 <span class="sd">        extra_opts: Additional raw yt-dlp options (merged last).</span>
 <span class="sd">        cookies_file: See :func:`download_youtube_video`.</span>
 
 <span class="sd">    Raises:</span>
-<span class="sd">        ValueError: If ``query`` is blank or ``limit`` is out of range.</span>
+<span class="sd">        ValueError: If ``query`` is blank, ``limit`` is out of range, or</span>
+<span class="sd">            ``min_s`` is above ``max_s``.</span>
 <span class="sd">    """</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">query</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"query must not be blank"</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="mi">1</span> <span class="o">&lt;=</span> <span class="n">limit</span> <span class="o">&lt;=</span> <span class="n">MAX_SEARCH_LIMIT</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"limit must be in 1..</span><span class="si">{</span><span class="n">MAX_SEARCH_LIMIT</span><span class="si">}</span><span class="s2">, got </span><span class="si">{</span><span class="n">limit</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">bound</span> <span class="ow">in</span> <span class="p">((</span><span class="s2">"min_s"</span><span class="p">,</span> <span class="n">min_s</span><span class="p">),</span> <span class="p">(</span><span class="s2">"max_s"</span><span class="p">,</span> <span class="n">max_s</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="n">bound</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">_is_seconds</span><span class="p">(</span><span class="n">bound</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> must be a non-negative number, got </span><span class="si">{</span><span class="n">bound</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">min_s</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">max_s</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">min_s</span> <span class="o">&gt;</span> <span class="n">max_s</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"min_s (</span><span class="si">{</span><span class="n">min_s</span><span class="si">}</span><span class="s2">) is above max_s (</span><span class="si">{</span><span class="n">max_s</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
 
-    <span class="n">info</span> <span class="o">=</span> <span class="n">_extract_info</span><span class="p">(</span>
-        <span class="sa">f</span><span class="s2">"ytsearch</span><span class="si">{</span><span class="n">limit</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">query</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
-        <span class="p">{</span><span class="s2">"quiet"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"skip_download"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"extract_flat"</span><span class="p">:</span> <span class="kc">True</span><span class="p">},</span>
-        <span class="n">extra_opts</span><span class="o">=</span><span class="n">extra_opts</span><span class="p">,</span>
-        <span class="n">cookies_file</span><span class="o">=</span><span class="n">cookies_file</span><span class="p">,</span>
-    <span class="p">)</span>
+    <span class="n">opts</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"quiet"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"skip_download"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"extract_flat"</span><span class="p">:</span> <span class="kc">True</span><span class="p">}</span>
+    <span class="k">if</span> <span class="n">creative_commons</span><span class="p">:</span>
+        <span class="n">target</span> <span class="o">=</span> <span class="n">_search_results_url</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">sp</span><span class="o">=</span><span class="n">CREATIVE_COMMONS_SP</span><span class="p">)</span>
+        <span class="n">opts</span><span class="p">[</span><span class="s2">"playlistend"</span><span class="p">]</span> <span class="o">=</span> <span class="n">limit</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">target</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"ytsearch</span><span class="si">{</span><span class="n">limit</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">query</span><span class="si">}</span><span class="s2">"</span>
+    <span class="n">info</span> <span class="o">=</span> <span class="n">_extract_info</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">opts</span><span class="p">,</span> <span class="n">extra_opts</span><span class="o">=</span><span class="n">extra_opts</span><span class="p">,</span> <span class="n">cookies_file</span><span class="o">=</span><span class="n">cookies_file</span><span class="p">)</span>
     <span class="n">entries</span> <span class="o">=</span> <span class="p">(</span><span class="n">info</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"entries"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]</span>
-    <span class="k">return</span> <span class="p">[</span><span class="n">_search_hit</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">entries</span> <span class="k">if</span> <span class="n">e</span> <span class="ow">and</span> <span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">e</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"url"</span><span class="p">))]</span></div>
+    <span class="n">hits</span> <span class="o">=</span> <span class="p">[</span><span class="n">_search_hit</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">entries</span> <span class="k">if</span> <span class="n">_is_video_entry</span><span class="p">(</span><span class="n">e</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">h</span> <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">hits</span><span class="p">[:</span><span class="n">limit</span><span class="p">]</span> <span class="k">if</span> <span class="n">_within</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">duration</span><span class="p">,</span> <span class="n">min_s</span><span class="p">,</span> <span class="n">max_s</span><span class="p">)]</span></div>
 
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_is_video_entry</span><span class="p">(</span><span class="n">entry</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""A search row for a video: not empty, and not a channel or playlist row.</span>
+
+<span class="sd">    YouTube mixes channel rows into results (``ie_key`` ``"YoutubeTab"``); a</span>
+<span class="sd">    caller downloading ``hits[0].url`` must not get a whole channel.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">entry</span> <span class="ow">or</span> <span class="ow">not</span> <span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"url"</span><span class="p">)):</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">return</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"ie_key"</span><span class="p">)</span> <span class="ow">in</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">_VIDEO_IE_KEY</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_is_seconds</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""A finite, non-negative real number (``bool`` is not one)."""</span>
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">))</span>
+        <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span>
+        <span class="ow">and</span> <span class="n">math</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="ow">and</span> <span class="n">value</span> <span class="o">&gt;=</span> <span class="mi">0</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_search_results_url</span><span class="p">(</span><span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">sp</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The results page for ``query`` with YouTube's ``sp`` filter applied."""</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">SEARCH_RESULTS_URL</span><span class="si">}</span><span class="s2">?</span><span class="si">{</span><span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">urlencode</span><span class="p">({</span><span class="s1">'search_query'</span><span class="p">:</span><span class="w"> </span><span class="n">query</span><span class="p">,</span><span class="w"> </span><span class="s1">'sp'</span><span class="p">:</span><span class="w"> </span><span class="n">sp</span><span class="p">})</span><span class="si">}</span><span class="s2">"</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_within</span><span class="p">(</span><span class="n">duration</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">min_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">max_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Whether ``duration`` is within the bounds; unknown passes only with no bound."""</span>
+    <span class="k">if</span> <span class="n">min_s</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">max_s</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">if</span> <span class="n">duration</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">min_s</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">duration</span> <span class="o">&gt;=</span> <span class="n">min_s</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">max_s</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">duration</span> <span class="o">&lt;=</span> <span class="n">max_s</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_entry_url</span><span class="p">(</span><span class="n">entry</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
@@ -1137,6 +1233,7 @@
         <span class="n">duration</span><span class="o">=</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"duration"</span><span class="p">),</span>
         <span class="n">channel</span><span class="o">=</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"channel"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"uploader"</span><span class="p">),</span>
         <span class="n">url</span><span class="o">=</span><span class="n">_entry_url</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span> <span class="ow">or</span> <span class="n">watch_url</span><span class="p">,</span>
+        <span class="n">view_count</span><span class="o">=</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"view_count"</span><span class="p">),</span>
     <span class="p">)</span>
 
 
@@ -1493,7 +1590,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=ee813736"></script>
+</div><script src="../../../_static/documentation_options.js?v=a9ed77be"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

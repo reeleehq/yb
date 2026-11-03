@@ -211,6 +211,7 @@
 <li class="toctree-l3 has-children"><a class="reference internal" href="_autosummary/yb.download.html">yb.download</a><input aria-label="Toggle navigation of yb.download" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l4"><a class="reference internal" href="_autosummary/yb.download.bounded.html">yb.download.bounded</a></li>
 <li class="toctree-l4"><a class="reference internal" href="_autosummary/yb.download.pacing.html">yb.download.pacing</a></li>
+<li class="toctree-l4"><a class="reference internal" href="_autosummary/yb.download.probe.html">yb.download.probe</a></li>
 <li class="toctree-l4"><a class="reference internal" href="_autosummary/yb.download.ranges.html">yb.download.ranges</a></li>
 <li class="toctree-l4"><a class="reference internal" href="_autosummary/yb.download.requirements.html">yb.download.requirements</a></li>
 <li class="toctree-l4"><a class="reference internal" href="_autosummary/yb.download.warn.html">yb.download.warn</a></li>
@@ -348,7 +349,10 @@ one — the error only surfaces when you actually call that feature. You also ne
 <span class="n">youtube_video_info</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>  <span class="c1"># metadata only, no download</span>
 <span class="n">search_youtube</span><span class="p">(</span>
     <span class="s2">"song name"</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="mi">5</span>
-<span class="p">)</span>  <span class="c1"># -&gt; [SearchHit(id, title, duration, channel, url)]</span>
+<span class="p">)</span>  <span class="c1"># -&gt; [SearchHit(id, title, duration, channel, url, view_count)]</span>
+<span class="n">search_youtube</span><span class="p">(</span>
+    <span class="s2">"house dance footwork"</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">creative_commons</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">min_s</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span> <span class="n">max_s</span><span class="o">=</span><span class="mi">900</span>
+<span class="p">)</span>  <span class="c1"># YouTube's Creative Commons filter + a duration window</span>
 <span class="n">download_audio_bounded</span><span class="p">(</span>
     <span class="n">url</span><span class="p">,</span> <span class="n">download_dir</span><span class="o">=</span><span class="n">tmp</span><span class="p">,</span> <span class="n">max_bytes</span><span class="o">=...</span><span class="p">,</span> <span class="n">max_duration_s</span><span class="o">=...</span><span class="p">,</span> <span class="n">validate_target</span><span class="o">=...</span>
 <span class="p">)</span>  <span class="c1"># mp3 + caps + copyright notice, for services (see below)</span>
@@ -384,6 +388,8 @@ file that is not writable (read-only mount) is handed over as a private temporar
 copy automatically; set <code class="docutils literal notranslate"><span class="pre">YB_COOKIES_PRIVATE_COPY=1</span></code> to always do that (parallel
 workers sharing one file; every worker must set it). Refreshed cookies are then
 not saved back.</p>
+<p><strong>When cookies stop working (servers).</strong> YouTube rotates the cookies of a browser session that stays open, and from then on every request gets “Sign in to confirm you’re not a bot”. <code class="docutils literal notranslate"><span class="pre">yb</span> <span class="pre">check</span> <span class="pre">--online</span></code> checks that the cookies file holds a logged-in session, reads one public video with it (on a copy, so the check never rewrites the file), and says when it was rotated or refused. Export cookies that do not rotate: open a private / incognito window, log in to YouTube, go to <code class="docutils literal notranslate"><span class="pre">https://www.youtube.com/robots.txt</span></code> in that same tab, export the youtube.com cookies (Netscape format), then close the private window right away and never reopen that session (yt-dlp’s <a class="reference external" href="https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies">cookie guide</a>).</p>
+<p><strong>HTTP 403 on the video data: PO tokens.</strong> Some servers pass the bot check (metadata loads) but get HTTP 403 on the media, and automatic captions are missing “because a PO token was not provided”. yt-dlp then needs a PO-token provider: <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">'yb[pot]'</span></code> (the <a class="reference external" href="https://github.com/Brainicism/bgutil-ytdlp-pot-provider">bgutil-ytdlp-pot-provider</a> plugin, picked up by yt-dlp automatically) and run its token server, a system dependency: <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">run</span> <span class="pre">-d</span> <span class="pre">-p</span> <span class="pre">127.0.0.1:4416:4416</span> <span class="pre">--init</span> <span class="pre">brainicism/bgutil-ytdlp-pot-provider</span></code> (or its Node script; keep it bound to localhost). <code class="docutils literal notranslate"><span class="pre">yb</span> <span class="pre">check</span></code> says whether the plugin is installed and <code class="docutils literal notranslate"><span class="pre">yb</span> <span class="pre">check</span> <span class="pre">--online</span></code> whether its server answers. While the media is refused, the subtitles alone may still come down: <code class="docutils literal notranslate"><span class="pre">download_youtube_subtitles(url)</span></code>.</p>
 <p><strong>Audio format.</strong> <code class="docutils literal notranslate"><span class="pre">download_youtube_audio</span></code> keeps whatever the source offers by
 default (YouTube’s best audio is normally Opus in a <code class="docutils literal notranslate"><span class="pre">.webm</span></code> container). That
 default needs no ffmpeg and avoids re-encoding one lossy format into another.
@@ -661,7 +667,7 @@ it, and the <code class="docutils literal notranslate"><span class="pre">music</
 </section>
 </section>
 
-<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-11-03 13:58 UTC from <a href="https://github.com/reeleehq/yb/commit/c3d2eb1df9add3d2bb418fad5f3d7559110f2339">c3d2eb1</a> (main) · yb 0.1.29 · <a href="about-this-build.html">about this build</a></p>
+<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-11-03 14:31 UTC from <a href="https://github.com/reeleehq/yb/commit/6fb27296331476cc0fb964cd5950fdb362629e86">6fb2729</a> (main) · yb 0.1.30 · <a href="about-this-build.html">about this build</a></p>
         </article>
       </div>
       <footer>
@@ -731,7 +737,7 @@ it, and the <code class="docutils literal notranslate"><span class="pre">music</
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=ee813736"></script>
+</div><script src="_static/documentation_options.js?v=a9ed77be"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>

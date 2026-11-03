@@ -208,6 +208,7 @@
 <li class="toctree-l3 has-children"><a class="reference internal" href="../../../_autosummary/yb.download.html">yb.download</a><input aria-label="Toggle navigation of yb.download" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.bounded.html">yb.download.bounded</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.pacing.html">yb.download.pacing</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.probe.html">yb.download.probe</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.ranges.html">yb.download.ranges</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.requirements.html">yb.download.requirements</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.warn.html">yb.download.warn</a></li>
@@ -298,6 +299,7 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">importlib.metadata</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">importlib.util</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
@@ -330,6 +332,27 @@
     <span class="s2">"yt-dlp is not installed. Install it with its default extras: "</span>
     <span class="s2">"pip install 'yb[download]' (or pip install 'yt-dlp[default]')."</span>
 <span class="p">)</span>
+
+<span class="c1">#: Distribution of the PO-token provider plugin yt-dlp picks up by itself.</span>
+<span class="n">PO_TOKEN_PROVIDER_DIST</span> <span class="o">=</span> <span class="s2">"bgutil-ytdlp-pot-provider"</span>
+
+<span class="c1">#: The plugin's home: how to run its token server (Docker or Node).</span>
+<span class="n">PO_TOKEN_PROVIDER_URL</span> <span class="o">=</span> <span class="s2">"https://github.com/Brainicism/bgutil-ytdlp-pot-provider"</span>
+
+<span class="c1">#: Shown when no PO-token provider is installed (advice, not a problem: only</span>
+<span class="c1">#: some servers need one).</span>
+<span class="n">PO_TOKEN_HINT</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s2">"No PO-token provider. Only needed where YouTube answers the video data with "</span>
+    <span class="s2">"HTTP 403 or drops automatic captions 'because a PO token was not provided' "</span>
+    <span class="s2">"(typically servers, even with valid cookies). Install the plugin with "</span>
+    <span class="sa">f</span><span class="s2">"pip install 'yb[pot]' and run its token server (</span><span class="si">{</span><span class="n">PO_TOKEN_PROVIDER_URL</span><span class="si">}</span><span class="s2">), "</span>
+    <span class="s2">"e.g. docker run -d -p 127.0.0.1:4416:4416 --init "</span>
+    <span class="s2">"brainicism/bgutil-ytdlp-pot-provider (bound to localhost: the server must "</span>
+    <span class="s2">"not be reachable from other hosts)"</span>
+<span class="p">)</span>
+
+<span class="c1">#: Where the PO-token provider's server listens by default.</span>
+<span class="n">PO_TOKEN_SERVER_URL</span> <span class="o">=</span> <span class="s2">"http://127.0.0.1:4416"</span>
 
 <span class="c1">#: Module that carries yt-dlp's challenge-solver scripts (from ``yt-dlp[default]``).</span>
 <span class="n">EJS_MODULE</span> <span class="o">=</span> <span class="s2">"yt_dlp_ejs"</span>
@@ -494,6 +517,19 @@
 
 
 
+<div class="viewcode-block" id="installed_version">
+<a class="viewcode-back" href="../../../_autosummary/yb.download.requirements.html#yb.download.installed_version">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">installed_version</span><span class="p">(</span>
+    <span class="n">dist</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">version</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">version</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The installed version of distribution ``dist``, or ``None``."""</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">version</span><span class="p">(</span><span class="n">dist</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">importlib</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">PackageNotFoundError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+
+
 <div class="viewcode-block" id="has_ejs_scripts">
 <a class="viewcode-back" href="../../../_autosummary/yb.download.requirements.html#yb.download.has_ejs_scripts">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">has_ejs_scripts</span><span class="p">(</span>
@@ -655,7 +691,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=ee813736"></script>
+</div><script src="../../../_static/documentation_options.js?v=a9ed77be"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

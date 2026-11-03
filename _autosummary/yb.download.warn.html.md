@@ -26,14 +26,14 @@ files instead.
 | [`warn_at_caller`](#yb.download.warn.warn_at_caller)(message[, category, plumbing])   | `warnings.warn` at the first frame whose file does not start with `plumbing`.   |
 |--------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------|
 
-### yb.download.warn.PLUMBING_FILES *: [tuple](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), ...]* *= ('/home/runner/work/yb/yb/yb/download', '/opt/hostedtoolcache/Python/3.12.15/x64/lib/python3.12/contextlib.py')*
+### yb.download.warn.PLUMBING_FILES *: [tuple](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), ...]* *= ('/home/runner/work/yb/yb/yb/download', '/opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/contextlib.py')*
 
 this package and `contextlib`.
 
 * **Type:**
   Files whose frames are never the caller
 
-### yb.download.warn.warn_at_caller(message, category=<class 'UserWarning'>, \*, plumbing=('/home/runner/work/yb/yb/yb/download', '/opt/hostedtoolcache/Python/3.12.15/x64/lib/python3.12/contextlib.py'))
+### yb.download.warn.warn_at_caller(message, category=<class 'UserWarning'>, \*, plumbing=('/home/runner/work/yb/yb/yb/download', '/opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/contextlib.py'))
 
 `warnings.warn` at the first frame whose file does not start with `plumbing`.
 
