@@ -27,17 +27,18 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 import time
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Sequence
 from urllib.parse import parse_qs, urlencode, urlparse
 
+from yb.config import config_dir, resolve_profile
 from yb.youtube.auth import (
     DEFAULT_SCOPES,
     ConsentRequired,
     PathLike,
-    _config_dir,
     _resolve_client_secrets,
 )
 
@@ -79,7 +80,7 @@ class ConsentPending(ConsentRequired):
         self.url = url
         self.redirect_uri = redirect_uri
         self.profile, self.login_hint = profile, login_hint
-        flag = f" --profile {profile}" if profile else ""
+        flag = f" --profile {shlex.quote(profile)}" if profile else ""
         kw = f"profile={profile!r}, " if profile else ""
         sign_in = f" Sign in as {login_hint}." if login_hint else ""
         super().__init__(
@@ -116,22 +117,28 @@ def pending_consent_file(profile: str | None = None) -> Path:
     A named profile keeps its own file, so two consents in flight (one per
     account) cannot overwrite each other.
     """
+    profile = resolve_profile(profile)
     suffix = f".{profile}" if profile else ""
-    return _config_dir() / f"{PENDING_STEM}{suffix}.json"
+    return config_dir() / f"{PENDING_STEM}{suffix}.json"
 
 
 def _pending_profiles() -> dict[str, Path]:
     """Every profile with a pending-consent file, by name (``"default"`` included)."""
     found = {}
-    for path in _config_dir().glob(f"{PENDING_STEM}*.json"):
+    for path in config_dir().glob(f"{PENDING_STEM}*.json"):
         middle = path.name[len(PENDING_STEM) : -len(".json")]
-        found[middle.lstrip(".") or DEFAULT_PROFILE_NAME] = path
+        found[middle.removeprefix(".") or DEFAULT_PROFILE_NAME] = path
     return found
 
 
 def _pasted_state(text: str) -> str | None:
-    """The ``state`` in a pasted redirect or query, ``None`` for a bare code."""
-    query = urlparse(text.strip().strip("<>\"'")).query or text.lstrip("?")
+    """The ``state`` in a pasted redirect or query, ``None`` for a bare code.
+
+    A bare code carries no state, so it cannot be routed to its profile (PKCE
+    still binds it to the request that issued it): paste the whole URL.
+    """
+    text = text.strip().strip("<>\"'").strip()
+    query = urlparse(text).query or text.lstrip("?")
     return (parse_qs(query).get("state") or [None])[0]
 
 
@@ -145,7 +152,7 @@ def _started_elsewhere(text: str, pending: Path) -> str:
         if path != pending and (_load_pending(path) or {}).get("state") == state:
             return (
                 f" This consent was started for profile {name!r}: rerun with "
-                f"yb auth --profile {name} --paste '<that URL>'."
+                f"yb auth --profile {shlex.quote(name)} --paste '<that URL>'."
             )
     return ""
 

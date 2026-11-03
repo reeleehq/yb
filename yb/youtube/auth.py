@@ -17,7 +17,7 @@ import os
 from pathlib import Path
 from typing import Sequence
 
-from yb.config import resolve_profile
+from yb.config import config_dir, resolve_profile
 
 PathLike = str | Path
 
@@ -58,13 +58,6 @@ CONSENT_MODES = ("local", "paste")
 DEFAULT_CONSENT_TIMEOUT_S = 300.0
 
 
-def _config_dir() -> Path:
-    """``yb`` config directory (see :func:`yb.config.config_dir`)."""
-    from yb.config import config_dir
-
-    return config_dir()
-
-
 def default_token_file(profile: str | None = None) -> Path:
     """Cached OAuth token location (``$XDG_CONFIG_HOME`` or ``~/.config``).
 
@@ -73,7 +66,7 @@ def default_token_file(profile: str | None = None) -> Path:
     """
     profile = resolve_profile(profile)
     name = "youtube_token.json" if profile is None else f"youtube_token.{profile}.json"
-    return _config_dir() / name
+    return config_dir() / name
 
 
 class WrongChannel(RuntimeError):
@@ -111,7 +104,7 @@ def default_client_secrets_file() -> Path:
     Used when neither ``client_secrets_file=`` nor the env vars are set, so all
     of ``yb``'s state can live in one directory next to the token.
     """
-    return _config_dir() / "client_secret.json"
+    return config_dir() / "client_secret.json"
 
 
 def _resolve_client_secrets(client_secrets_file: PathLike | None) -> Path:
@@ -213,12 +206,17 @@ def _paste_consent(
 
 
 def _profile_login_hint(profile: str | None) -> str | None:
-    """The ``login_hint`` configured for ``profile``, if any (never raises)."""
+    """The ``login_hint`` configured for ``profile``, if any.
+
+    A profile with no config section has none (consent for a token-only profile
+    must still work); a malformed config file raises, so the hint never
+    silently disappears right after an edit.
+    """
     from yb.config import load_config
 
     try:
         return load_config(profile=profile).login_hint
-    except (KeyError, OSError, ValueError):  # no such profile, unreadable config
+    except KeyError:  # no such profile in the config file
         return None
 
 
@@ -339,7 +337,6 @@ def get_credentials(
             )
         if login_hint is None:
             login_hint = _profile_login_hint(profile)
-        hint = {"login_hint": login_hint} if login_hint else {}
         if consent == "paste":
             creds = _paste_consent(
                 authorization_response,
@@ -357,7 +354,8 @@ def get_credentials(
                     port=port,
                     open_browser=open_browser,
                     timeout_seconds=timeout_seconds,
-                    **hint,  # passed on to the authorization URL
+                    # passed on to the authorization URL; none when unset
+                    **({"login_hint": login_hint} if login_hint else {}),
                 )
             except _WSGITimeoutError as timed_out:
                 # Nobody answered. Whatever the caller thought it was doing, the

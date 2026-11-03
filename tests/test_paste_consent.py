@@ -37,6 +37,7 @@ REDIRECT = "http://localhost:8080/"
 def env(tmp_path, monkeypatch):
     """Throwaway client secrets + files; ``XDG_CONFIG_HOME`` kept off the real one."""
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg"))
+    monkeypatch.delenv("YB_PROFILE", raising=False)
     for name in ("YOUTUBE_CLIENT_SECRETS_FILE", "GOOGLE_CLIENT_SECRETS_FILE"):
         monkeypatch.delenv(name, raising=False)
     secrets = tmp_path / "client_secret.json"
@@ -366,14 +367,36 @@ class TestProfiles:
         clone = pickle.loads(pickle.dumps(got.value))
         assert (clone.profile, str(clone)) == ("reelee", str(got.value))
 
-    def test_paste_without_the_profile_says_which_profile_started_it(self, env):
+    @pytest.mark.parametrize(
+        "shape",
+        [
+            lambda r: r,
+            lambda r: f"  '<{r}>'  ",
+            lambda r: r.split("?", 1)[1],  # the bare query
+            lambda r: f"  {r.split('?', 1)[1]}",
+            lambda r: f'"{r.split("?", 1)[1]}"',
+        ],
+    )
+    def test_paste_without_the_profile_says_which_profile_started_it(self, env, shape):
         with pytest.raises(ConsentPending) as got:
             get_credentials(**self._kw(env, profile="reelee"))
+        pasted = shape(self._redirect(got.value.url))
         with pytest.raises(ConsentRequired, match="--profile reelee") as wrong:
-            get_credentials(
-                **self._kw(env), authorization_response=self._redirect(got.value.url)
-            )
+            get_credentials(**self._kw(env), authorization_response=pasted)
         assert "started for profile 'reelee'" in str(wrong.value)
+
+    def test_pending_file_of_the_default_profile_has_one_name(self, env):
+        assert paste_consent.pending_consent_file("default") == (
+            paste_consent.pending_consent_file(None)
+        )
+
+    def test_a_malformed_config_is_not_silently_ignored(self, env):
+        from yb.config import default_config_file
+
+        default_config_file().parent.mkdir(parents=True, exist_ok=True)
+        default_config_file().write_text('{"profiles": {"reelee": {},}}')
+        with pytest.raises(ValueError):
+            get_credentials(**self._kw(env, profile="reelee"))
 
     def test_a_state_mismatch_names_the_other_profile(self, env):
         with pytest.raises(ConsentPending):
@@ -410,7 +433,9 @@ class TestProfiles:
         assert "login_hint" not in parse_qs(urlparse(_start(env)).query)
 
     def test_the_profile_config_supplies_the_login_hint(self, env, tmp_path):
-        config = tmp_path / "xdg" / "yb" / "config.json"
+        from yb.config import default_config_file
+
+        config = default_config_file()
         config.parent.mkdir(parents=True, exist_ok=True)
         config.write_text(
             json.dumps({"profiles": {"reelee": {"login_hint": "reelee@example.com"}}})
