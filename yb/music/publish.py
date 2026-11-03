@@ -386,7 +386,7 @@ def publish_folder(
     *,
     cycle: Sequence[str] = DEFAULT_VISUAL_CYCLE,
     limit: int | None = None,
-    privacy_status: str | None = "unlisted",
+    privacy_status: str | None = None,
     playlist=None,
     prepared: Sequence[MusicVideo] | None = None,
     progress: bool = True,
@@ -408,7 +408,8 @@ def publish_folder(
         folder: Directory of songs and covers.
         cycle: Visual rotation.
         limit: Publish only the first ``limit`` songs.
-        privacy_status: ``"unlisted"`` (default), ``"private"``, or ``"public"``.
+        privacy_status: ``"unlisted"``, ``"private"`` or ``"public"``; ``None``
+            (default) uses the profile's config (built-in default ``"unlisted"``).
         playlist: Playlist title to collect the album into (``None`` = none).
         prepared: Already-rendered :class:`MusicVideo` objects to upload as-is
             (skip rendering — e.g. the return of :func:`prepare_folder`).

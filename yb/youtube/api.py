@@ -117,9 +117,6 @@ def update_video_fields(
     return update_video(video_id, writable, service=service)
 
 
-#: Privacy values ``videos.update(part="status")`` accepts, least visible first.
-
-
 class VisibilityDropWarning(UserWarning):
     """:func:`supersede` leaves the re-cut less visible than the original was.
 

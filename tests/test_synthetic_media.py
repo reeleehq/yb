@@ -149,3 +149,10 @@ def test_music_publish_forwards_the_flag(monkeypatch, tmp_path):
         [], prepared=[video], contains_synthetic_media=False, progress=False
     )
     assert got[0]["contains_synthetic_media"] is False
+
+
+def test_null_in_the_config_file_means_the_default(tmp_path):
+    path = tmp_path / "config.json"
+    path.write_text('{"privacy_status": null, "contains_synthetic_media": null}')
+    cfg = load_config(path)
+    assert (cfg.privacy_status, cfg.contains_synthetic_media) == ("unlisted", None)

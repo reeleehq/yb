@@ -176,8 +176,10 @@ def _maybe_add_to_playlist(
 def _resolve_config(config: YbConfig | None, profile: str | None, **call) -> YbConfig:
     """The profile's config (or ``config``), with every non-``None`` call value on top.
 
-    One precedence rule for every setting: the call, then the config, then the
-    built-in default. (Before this, ``privacy_status`` passed alongside
+    The precedence rule the publish paths use for these settings: the call, then
+    the config, then the built-in default (``playlist`` keeps its own sentinel,
+    since its ``None`` means "no playlist"). ``load_config(**overrides)`` applies
+    the same rule for callers that build a config themselves. (Before this, ``privacy_status`` passed alongside
     ``config=`` was ignored, so a call asking for ``"private"`` could upload
     with the config's ``"public"``.)
     """

@@ -61,7 +61,8 @@ DEFAULT_PRIVACY_STATUS = "unlisted"
 #: only you see it — ideal for a personal "find my uploads" playlist.
 DEFAULT_PLAYLIST_PRIVACY_STATUS = "private"
 
-#: The privacy values YouTube accepts.
+#: The privacy values YouTube accepts, least visible first (``supersede``'s
+#: visibility check ranks by this order).
 PRIVACY_STATUSES = ("private", "unlisted", "public")
 
 
@@ -137,10 +138,10 @@ class YbConfig:
 
     @classmethod
     def from_mapping(cls, mapping: dict | None) -> "YbConfig":
-        """Build a config from a mapping, ignoring unknown keys."""
+        """Build a config from a mapping, ignoring unknown keys; ``null`` = the default."""
         mapping = mapping or {}
         known = {f.name for f in fields(cls)}
-        return cls(**{k: v for k, v in mapping.items() if k in known})
+        return cls(**{k: v for k, v in mapping.items() if k in known and v is not None})
 
 
 def load_config(
