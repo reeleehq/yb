@@ -225,7 +225,7 @@ def test_fractional_range_names_keep_their_sidecars(monkeypatch, fake_yt_dlp, tm
     for name in (media.name, "T (abc) [7.9-8.75].info.json", "T (abc) [7.9-8.75].jpg",
                  "T (abc) [7.9-8.75].description"):
         (tmp_path / name).write_text("x")
-    monkeypatch.setattr(ytdl, "_resolve_output_path", lambda *a, **k: media)
+    monkeypatch.setattr(ytdl, "resolve_output_path", lambda *a, **k: media)
     result = download_youtube_video(
         "u", download_dir=tmp_path, start="0:07.9", end=8.75,
         write_info_json=True, write_thumbnail=True, write_description=True,
