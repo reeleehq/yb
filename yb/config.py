@@ -105,6 +105,9 @@ class YbConfig:
         channel_id: Channel the token must belong to (``None`` = don't check).
         login_hint: Email of the Google account to consent with; the consent
             page preselects it (``None`` = whatever the browser is signed in as).
+        contains_synthetic_media: Default for YouTube's altered-or-synthetic
+            content disclosure on uploads (``None`` = leave it unset). A
+            channel that publishes realistic AI-made videos can set ``true``.
     """
 
     privacy_status: str = DEFAULT_PRIVACY_STATUS
@@ -113,6 +116,7 @@ class YbConfig:
     playlist_privacy_status: str = DEFAULT_PLAYLIST_PRIVACY_STATUS
     channel_id: str | None = None
     login_hint: str | None = None
+    contains_synthetic_media: bool | None = None
 
     @classmethod
     def from_mapping(cls, mapping: dict | None) -> "YbConfig":

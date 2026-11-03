@@ -12,6 +12,7 @@ Two entry points:
 from __future__ import annotations
 
 from collections import Counter
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
@@ -172,6 +173,11 @@ def _maybe_add_to_playlist(
     )
 
 
+def _synthetic(explicit: bool | None, cfg: YbConfig) -> bool | None:
+    """The call's synthetic-media flag, else the config's (``None`` = unset)."""
+    return explicit if explicit is not None else cfg.contains_synthetic_media
+
+
 def publish_content(
     content: PublicationContent,
     *,
@@ -179,6 +185,7 @@ def publish_content(
     playlist=_USE_CONFIG,
     category_id: str = CATEGORY_SCIENCE_TECH,
     with_chapters: bool = True,
+    contains_synthetic_media: bool | None = None,
     attach_caption: bool = True,
     set_thumb: bool = True,
     config: YbConfig | None = None,
@@ -202,6 +209,11 @@ def publish_content(
     to ``unlisted`` and the video joins your configured playlist. Pass
     ``playlist=None`` to skip the playlist for one call, or ``playlist="Name"``
     to override the target.
+
+    ``contains_synthetic_media`` sets YouTube's altered-or-synthetic content
+    disclosure (see :class:`~yb.youtube.metadata.VideoMetadata`); ``None``
+    uses the config's ``contains_synthetic_media``, else leaves it unset. The
+    Data API accepts the flag but never returns it (only Studio shows it).
 
     ``profile`` publishes as a named account/channel (own token and config
     section; see :mod:`yb.config`); ``None`` uses ``$YB_PROFILE`` or the default.
@@ -232,7 +244,10 @@ def publish_content(
     if cfg.channel_id:  # refuse to upload to the wrong account's channel
         check_channel(service, cfg.channel_id)
     meta = VideoMetadata.from_content(
-        content, category_id=category_id, with_chapters=with_chapters
+        content,
+        category_id=category_id,
+        with_chapters=with_chapters,
+        contains_synthetic_media=_synthetic(contains_synthetic_media, cfg),
     )
     body = meta.insert_body(privacy_status=privacy_status)
 
@@ -300,6 +315,7 @@ def prepare_and_publish(
     privacy_status: str | None = None,
     playlist=_USE_CONFIG,
     category_id: str = CATEGORY_SCIENCE_TECH,
+    contains_synthetic_media: bool | None = None,
     config: YbConfig | None = None,
     client_secrets_file: PathLike | None = None,
     token_file: PathLike | None = None,
@@ -312,8 +328,8 @@ def prepare_and_publish(
     Transcribes (persisting the SRT next to the media) if needed, writes
     LLM metadata, detects chapters, renders a thumbnail, then uploads with
     captions + thumbnail + chapters and adds the video to the configured
-    playlist. ``privacy_status`` and ``playlist`` default to your ``yb`` config
-    (see :func:`publish_content`).
+    playlist. ``privacy_status``, ``playlist`` and ``contains_synthetic_media``
+    default to your ``yb`` config (see :func:`publish_content`).
 
     ``profile`` publishes as a named account/channel (own token and config
     section; see :mod:`yb.config`); ``None`` uses ``$YB_PROFILE`` or the default.
@@ -337,6 +353,7 @@ def prepare_and_publish(
         playlist=playlist,
         category_id=category_id,
         with_chapters=with_chapters,
+        contains_synthetic_media=contains_synthetic_media,
         config=config,
         client_secrets_file=client_secrets_file,
         token_file=token_file,
@@ -366,7 +383,8 @@ def publish_video(
     """Lower-level upload: explicit :class:`VideoMetadata` + caption tracks.
 
     ``privacy_status`` and ``playlist`` default to your ``yb`` config (see
-    :func:`publish_content`).
+    :func:`publish_content`), as does ``metadata.contains_synthetic_media`` when
+    it is ``None``.
 
     If a step after the upload fails, :class:`PartialPublish` is raised with
     the new video's id and what was done so far (``err.result``). Pass
@@ -388,6 +406,10 @@ def publish_video(
     )
     if cfg.channel_id:  # refuse to upload to the wrong account's channel
         check_channel(service, cfg.channel_id)
+    metadata = replace(
+        metadata,
+        contains_synthetic_media=_synthetic(metadata.contains_synthetic_media, cfg),
+    )
     body = metadata.insert_body(privacy_status=privacy_status)
 
     def upload():
