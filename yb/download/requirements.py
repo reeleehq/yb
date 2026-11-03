@@ -24,6 +24,7 @@ the command that fixes them.
 
 from __future__ import annotations
 
+import importlib.metadata
 import importlib.util
 import os
 import re
@@ -56,6 +57,27 @@ YT_DLP_INSTALL_HINT = (
     "yt-dlp is not installed. Install it with its default extras: "
     "pip install 'yb[download]' (or pip install 'yt-dlp[default]')."
 )
+
+#: Distribution of the PO-token provider plugin yt-dlp picks up by itself.
+PO_TOKEN_PROVIDER_DIST = "bgutil-ytdlp-pot-provider"
+
+#: The plugin's home: how to run its token server (Docker or Node).
+PO_TOKEN_PROVIDER_URL = "https://github.com/Brainicism/bgutil-ytdlp-pot-provider"
+
+#: Shown when no PO-token provider is installed (advice, not a problem: only
+#: some servers need one).
+PO_TOKEN_HINT = (
+    "No PO-token provider. Only needed where YouTube answers the video data with "
+    "HTTP 403 or drops automatic captions 'because a PO token was not provided' "
+    "(typically servers, even with valid cookies). Install the plugin with "
+    f"pip install 'yb[pot]' and run its token server ({PO_TOKEN_PROVIDER_URL}), "
+    "e.g. docker run -d -p 127.0.0.1:4416:4416 --init "
+    "brainicism/bgutil-ytdlp-pot-provider (bound to localhost: the server must "
+    "not be reachable from other hosts)"
+)
+
+#: Where the PO-token provider's server listens by default.
+PO_TOKEN_SERVER_URL = "http://127.0.0.1:4416"
 
 #: Module that carries yt-dlp's challenge-solver scripts (from ``yt-dlp[default]``).
 EJS_MODULE = "yt_dlp_ejs"
@@ -197,6 +219,16 @@ def has_module(
         return find_spec(name) is not None
     except (ImportError, ValueError):
         return name in sys.modules
+
+
+def installed_version(
+    dist: str, *, version: Callable[[str], str] = importlib.metadata.version
+) -> str | None:
+    """The installed version of distribution ``dist``, or ``None``."""
+    try:
+        return version(dist)
+    except importlib.metadata.PackageNotFoundError:
+        return None
 
 
 def has_ejs_scripts(

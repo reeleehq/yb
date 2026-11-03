@@ -15,9 +15,13 @@ publishing; never uploads)::
     yb whoami --profile reelee
 
 ``check``: are YouTube downloads ready (JS runtime, solver scripts)? Prints what
-is missing and how to install it; exit status 1 if anything is::
+is missing and how to install it; exit status 1 if anything is. ``--online``
+also checks the cookies file holds a logged-in session and reads one public
+video with it (one metadata fetch, on a copy of the file; catches rotated
+cookies before a real download does), and pings the PO-token server::
 
     yb check
+    yb check --online
 """
 
 from __future__ import annotations
@@ -92,14 +96,39 @@ def _whoami(args: argparse.Namespace) -> int:
 
 
 def _check(args: argparse.Namespace) -> int:
-    from yb.download.requirements import check_requirements, find_js_runtime
+    from yb.download import requirements as req
 
-    problems = check_requirements(warn=False)
+    problems = req.check_requirements(warn=False)
+    notes = []
+    if runtime := req.find_js_runtime():
+        where = "on PATH" if runtime.on_path else "off PATH; yb passes yt-dlp its path"
+        notes.append(f"JS runtime: {runtime.name} at {runtime.path} ({where})")
+    pot = req.installed_version(req.PO_TOKEN_PROVIDER_DIST)
+    if pot:
+        notes.append(f"PO-token provider: {req.PO_TOKEN_PROVIDER_DIST} {pot}")
+    elif args.online:
+        notes.append(f"Note: {req.PO_TOKEN_HINT}")
+    else:
+        notes.append(
+            "PO-token provider: none (needed only where YouTube answers the media "
+            "with HTTP 403; yb check --online says more)"
+        )
+    if args.online and req.has_module(req.YT_DLP_MODULE):
+        from yb.download import probe
+
+        path, _ = probe.configured_cookies()
+        cookie_problems = probe.check_cookies()
+        problems += cookie_problems
+        if path is None and not cookie_problems:
+            notes.append("Cookies: none configured; nothing probed.")
+        elif not cookie_problems:
+            notes.append(f"Cookies: {path} is a logged-in session YouTube accepts.")
+        if pot:
+            problems += probe.check_po_token_server()
     for p in problems:
         print(f"- {p}", file=sys.stderr)
-    if runtime := find_js_runtime():
-        where = "on PATH" if runtime.on_path else "off PATH; yb passes yt-dlp its path"
-        print(f"JS runtime: {runtime.name} at {runtime.path} ({where})")
+    for note in notes:
+        print(note)
     if not problems:
         print("Downloads ready.")
     return 1 if problems else 0
@@ -140,6 +169,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     whoami.set_defaults(run=_whoami)
     check = commands.add_parser(
         "check", help="are YouTube downloads ready? (JS runtime, solver scripts)"
+    )
+    check.add_argument(
+        "--online",
+        action="store_true",
+        help="also test the cookies file on a public video, and the PO-token server",
     )
     check.set_defaults(run=_check)
     args = parser.parse_args(argv)
