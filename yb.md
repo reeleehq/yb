@@ -1,4 +1,4 @@
-> built 2026-11-03 14:31 UTC from 6fb2729 (main) · yb 0.1.30. Details: build_info.json
+> built 2026-11-03 14:49 UTC from 6fb2729 (main) · yb 0.1.30. Details: build_info.json
 
 # index.html.md
 
@@ -2576,14 +2576,14 @@ files instead.
 | [`warn_at_caller`](_autosummary/yb.download.warn.html.md#yb.download.warn.warn_at_caller)(message[, category, plumbing])   | `warnings.warn` at the first frame whose file does not start with `plumbing`.   |
 |--------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------|
 
-### yb.download.warn.PLUMBING_FILES *: [tuple](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), ...]* *= ('/home/runner/work/yb/yb/yb/download', '/opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/contextlib.py')*
+### yb.download.warn.PLUMBING_FILES *: [tuple](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), ...]* *= ('/home/runner/work/yb/yb/yb/download', '/opt/hostedtoolcache/Python/3.12.15/x64/lib/python3.12/contextlib.py')*
 
 this package and `contextlib`.
 
 * **Type:**
   Files whose frames are never the caller
 
-### yb.download.warn.warn_at_caller(message, category=<class 'UserWarning'>, \*, plumbing=('/home/runner/work/yb/yb/yb/download', '/opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/contextlib.py'))
+### yb.download.warn.warn_at_caller(message, category=<class 'UserWarning'>, \*, plumbing=('/home/runner/work/yb/yb/yb/download', '/opt/hostedtoolcache/Python/3.12.15/x64/lib/python3.12/contextlib.py'))
 
 `warnings.warn` at the first frame whose file does not start with `plumbing`.
 
@@ -6140,7 +6140,7 @@ Fetch a video’s live metadata & engagement numbers.
 
 # About this build
 
-This documentation was built on **2026-11-03 14:31 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/6fb27296331476cc0fb964cd5950fdb362629e86"><code>6fb2729</code></a> on branch <code>main</code>, for **yb 0.1.30** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-03 14:49 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/6fb27296331476cc0fb964cd5950fdb362629e86"><code>6fb2729</code></a> on branch <code>main</code>, for **yb 0.1.30** (from <code>pyproject.toml</code>).
 
 #### NOTE
 Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
@@ -6160,9 +6160,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/yb</code>                                                                   |
-| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/41649878901">41649878901</a>          |
+| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/41652789970">41652789970</a>          |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>66aabbe59b41f282dbc035c7454eccb86a934fa4</code> (in the history of the built commit) |
+| Event commit | <code>6056303b07e01b0b202a84c0d25d0d4795205889</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -6171,7 +6171,7 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 | epythet  | 0.2.22  |
 | Sphinx   | 9.1.1   |
 | docutils | 0.22.4  |
-| Python   | 3.12.16 |
+| Python   | 3.12.15 |
 
 ## Configuration as resolved
 
