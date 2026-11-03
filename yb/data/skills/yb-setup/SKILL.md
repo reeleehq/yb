@@ -141,10 +141,10 @@ One yb install can publish to more than one YouTube channel. Each **profile** ha
 
 ```json
 {"privacy_status": "unlisted", "playlist": "TW Uploads",
- "profiles": {"reelee": {"privacy_status": "unlisted", "channel_id": "UC..."}}}
+ "profiles": {"reelee": {"privacy_status": "unlisted", "channel_id": "UC...", "login_hint": "account@example.com"}}}
 ```
 
-A profile does **not** inherit the top-level keys (a second channel must not silently get the first one's playlist); set what it needs. `channel_id` is optional but recommended: it is checked against the token before every upload.
+A profile does **not** inherit the top-level keys (a second channel must not silently get the first one's playlist); set what it needs. `channel_id` is optional but recommended: it is checked against the token before every upload. `login_hint` (optional, the account's email) makes the consent page preselect that Google account, so the wrong one is not picked in the first place; the printed instructions say `Sign in as ...`.
 
 Select with `profile="reelee"` on any `yb.youtube` call, `--profile reelee` on the CLI, or `export YB_PROFILE=reelee`.
 
@@ -152,7 +152,7 @@ One-time consent per profile (browser signed in as *that* Google account; add th
 
 ```bash
 yb auth --profile reelee                      # prints a URL; open it signed in as the target account
-yb auth --profile reelee --paste '<redirected URL>'
+yb auth --profile reelee --paste '<redirected URL>'   # forgot --profile? yb names the profile the URL was started for
 yb whoami --profile reelee                    # which channel does this token upload to? (read-only)
 ```
 
