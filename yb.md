@@ -1,4 +1,4 @@
-> built 2026-11-04 03:50 UTC from b2b3095 (main) · yb 0.1.34. Details: build_info.json
+> built 2026-11-10 13:15 UTC from 7886abe (main) · yb 0.1.35. Details: build_info.json
 
 # index.html.md
 
@@ -2007,9 +2007,11 @@ unchanged. A raw yt-dlp option in `extra_opts` still wins over a pace.
 | [`RateLimitedError`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.RateLimitedError)   | YouTube refused the request (HTTP 429 or a "confirm you're not a bot" wall).   |
 |---------------------------------------------------------------------|--------------------------------------------------------------------------------|
 
-### yb.download.pacing.BLOCK_PATTERNS *= re.compile('HTTP Error 429|Too Many Requests|confirm you.re not a bot|Sign in to confirm', re.IGNORECASE)*
+### yb.download.pacing.BLOCK_PATTERNS *= re.compile('HTTP Error 429|Too Many Requests|confirm you.re not a bot', re.IGNORECASE)*
 
-What yt-dlp says when YouTube blocks or bot-checks the client.
+What yt-dlp says when YouTube blocks or bot-checks the client. Not a bare
+“Sign in to confirm”: “Sign in to confirm your age” is an age-restricted
+video, a property of that one video, and backing off never fixes it.
 
 ### yb.download.pacing.PACE_PRESETS *: [dict](https://docs.python.org/3/builtins/stdtypes.html#dict)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [Pace](_autosummary/yb.download.pacing.html.md#yb.download.pacing.Pace)]* *= {'polite': Pace(sleep_interval=20, max_sleep_interval=60, sleep_requests=1, limit_rate='4M')}*
 
@@ -2668,14 +2670,14 @@ files instead.
 | [`warn_at_caller`](_autosummary/yb.download.warn.html.md#yb.download.warn.warn_at_caller)(message[, category, plumbing])   | `warnings.warn` at the first frame whose file does not start with `plumbing`.   |
 |--------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------|
 
-### yb.download.warn.PLUMBING_FILES *: [tuple](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), ...]* *= ('/home/runner/work/yb/yb/yb/download', '/opt/hostedtoolcache/Python/3.12.15/x64/lib/python3.12/contextlib.py')*
+### yb.download.warn.PLUMBING_FILES *: [tuple](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), ...]* *= ('/home/runner/work/yb/yb/yb/download', '/opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/contextlib.py')*
 
 this package and `contextlib`.
 
 * **Type:**
   Files whose frames are never the caller
 
-### yb.download.warn.warn_at_caller(message, category=<class 'UserWarning'>, \*, plumbing=('/home/runner/work/yb/yb/yb/download', '/opt/hostedtoolcache/Python/3.12.15/x64/lib/python3.12/contextlib.py'))
+### yb.download.warn.warn_at_caller(message, category=<class 'UserWarning'>, \*, plumbing=('/home/runner/work/yb/yb/yb/download', '/opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/contextlib.py'))
 
 `warnings.warn` at the first frame whose file does not start with `plumbing`.
 
@@ -6349,16 +6351,18 @@ Fetch a video’s live metadata & engagement numbers.
 
 # About this build
 
-This documentation was built on **2026-11-04 03:50 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/b2b3095fabec3ee999dec983cacfb2a4b9faeb1d"><code>b2b3095</code></a> on branch <code>main</code>, for **yb 0.1.34** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-10 13:15 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/7886abe7d1989340fec27be4fbe54ddc70ebf2a0"><code>7886abe</code></a> on branch <code>main</code>, for **yb 0.1.35** (from <code>pyproject.toml</code>).
 
-#### NOTE
-Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
+#### WARNING
+The documentation and the package may be misaligned:
+
+- The documented version (0.1.35) is behind the latest release on PyPI (0.1.36): `pip install yb` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                    |
 |---------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/yb/commit/b2b3095fabec3ee999dec983cacfb2a4b9faeb1d"><code>b2b3095fabec3ee999dec983cacfb2a4b9faeb1d</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/yb/commit/7886abe7d1989340fec27be4fbe54ddc70ebf2a0"><code>7886abe7d1989340fec27be4fbe54ddc70ebf2a0</code></a> |
 | Branch              | <code>main</code>                                                                                                                                  |
 | Tags at this commit | none                                                                                                                                               |
 | Working tree        | clean                                                                                                                                              |
@@ -6369,9 +6373,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/yb</code>                                                                   |
-| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/41769326713">41769326713</a>          |
+| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/42822619491">42822619491</a>          |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>b2b3095fabec3ee999dec983cacfb2a4b9faeb1d</code> (in the history of the built commit) |
+| Event commit | <code>7886abe7d1989340fec27be4fbe54ddc70ebf2a0</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -6380,7 +6384,7 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 | epythet  | 0.2.22  |
 | Sphinx   | 9.1.1   |
 | docutils | 0.22.4  |
-| Python   | 3.12.15 |
+| Python   | 3.12.16 |
 
 ## Configuration as resolved
 
@@ -6396,13 +6400,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/yb/0.1.34/">0.1.34</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/yb/0.1.36/">0.1.36</a>, newer than the documented version (0.1.35).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/yb && cd yb
-git checkout b2b3095fabec3ee999dec983cacfb2a4b9faeb1d
+git checkout 7886abe7d1989340fec27be4fbe54ddc70ebf2a0
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

@@ -394,9 +394,11 @@
     <span class="s2">"(playlist_items='1-20') also helps."</span>
 <span class="p">)</span>
 
-<span class="c1">#: What yt-dlp says when YouTube blocks or bot-checks the client.</span>
+<span class="c1">#: What yt-dlp says when YouTube blocks or bot-checks the client. Not a bare</span>
+<span class="c1">#: "Sign in to confirm": "Sign in to confirm your age" is an age-restricted</span>
+<span class="c1">#: video, a property of that one video, and backing off never fixes it.</span>
 <span class="n">BLOCK_PATTERNS</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
-    <span class="sa">r</span><span class="s2">"HTTP Error 429|Too Many Requests|confirm you.re not a bot|Sign in to confirm"</span><span class="p">,</span>
+    <span class="sa">r</span><span class="s2">"HTTP Error 429|Too Many Requests|confirm you.re not a bot"</span><span class="p">,</span>
     <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">,</span>
 <span class="p">)</span>
 
@@ -443,7 +445,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=617face5"></script>
+</div><script src="../../../_static/documentation_options.js?v=c83fd883"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

@@ -38,9 +38,11 @@ unchanged. A raw yt-dlp option in `extra_opts` still wins over a pace.
 | [`RateLimitedError`](#yb.download.pacing.RateLimitedError)   | YouTube refused the request (HTTP 429 or a "confirm you're not a bot" wall).   |
 |---------------------------------------------------------------------|--------------------------------------------------------------------------------|
 
-### yb.download.pacing.BLOCK_PATTERNS *= re.compile('HTTP Error 429|Too Many Requests|confirm you.re not a bot|Sign in to confirm', re.IGNORECASE)*
+### yb.download.pacing.BLOCK_PATTERNS *= re.compile('HTTP Error 429|Too Many Requests|confirm you.re not a bot', re.IGNORECASE)*
 
-What yt-dlp says when YouTube blocks or bot-checks the client.
+What yt-dlp says when YouTube blocks or bot-checks the client. Not a bare
+“Sign in to confirm”: “Sign in to confirm your age” is an age-restricted
+video, a property of that one video, and backing off never fixes it.
 
 ### yb.download.pacing.PACE_PRESETS *: [dict](https://docs.python.org/3/builtins/stdtypes.html#dict)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [Pace](#yb.download.pacing.Pace)]* *= {'polite': Pace(sleep_interval=20, max_sleep_interval=60, sleep_requests=1, limit_rate='4M')}*
 

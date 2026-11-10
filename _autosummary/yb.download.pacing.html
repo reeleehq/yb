@@ -348,8 +348,10 @@ unchanged. A raw yt-dlp option in <code class="docutils literal notranslate"><sp
 </div>
 <dl class="py data">
 <dt class="sig sig-object py" id="yb.download.pacing.BLOCK_PATTERNS">
-<span class="sig-prename descclassname"><span class="pre">yb.download.pacing.</span></span><span class="sig-name descname"><span class="pre">BLOCK_PATTERNS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">re.compile('HTTP</span> <span class="pre">Error</span> <span class="pre">429|Too</span> <span class="pre">Many</span> <span class="pre">Requests|confirm</span> <span class="pre">you.re</span> <span class="pre">not</span> <span class="pre">a</span> <span class="pre">bot|Sign</span> <span class="pre">in</span> <span class="pre">to</span> <span class="pre">confirm',</span> <span class="pre">re.IGNORECASE)</span></span><a class="headerlink" href="#yb.download.pacing.BLOCK_PATTERNS" title="Link to this definition">¶</a></dt>
-<dd><p>What yt-dlp says when YouTube blocks or bot-checks the client.</p>
+<span class="sig-prename descclassname"><span class="pre">yb.download.pacing.</span></span><span class="sig-name descname"><span class="pre">BLOCK_PATTERNS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">re.compile('HTTP</span> <span class="pre">Error</span> <span class="pre">429|Too</span> <span class="pre">Many</span> <span class="pre">Requests|confirm</span> <span class="pre">you.re</span> <span class="pre">not</span> <span class="pre">a</span> <span class="pre">bot',</span> <span class="pre">re.IGNORECASE)</span></span><a class="headerlink" href="#yb.download.pacing.BLOCK_PATTERNS" title="Link to this definition">¶</a></dt>
+<dd><p>What yt-dlp says when YouTube blocks or bot-checks the client. Not a bare
+“Sign in to confirm”: “Sign in to confirm your age” is an age-restricted
+video, a property of that one video, and backing off never fixes it.</p>
 </dd></dl>
 
 <dl class="py data">
@@ -548,7 +550,7 @@ between is used.</p>
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=617face5"></script>
+</div><script src="../_static/documentation_options.js?v=c83fd883"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
