@@ -104,9 +104,11 @@ BACKOFF_HINT = (
     "(playlist_items='1-20') also helps."
 )
 
-#: What yt-dlp says when YouTube blocks or bot-checks the client.
+#: What yt-dlp says when YouTube blocks or bot-checks the client. Not a bare
+#: "Sign in to confirm": "Sign in to confirm your age" is an age-restricted
+#: video, a property of that one video, and backing off never fixes it.
 BLOCK_PATTERNS = re.compile(
-    r"HTTP Error 429|Too Many Requests|confirm you.re not a bot|Sign in to confirm",
+    r"HTTP Error 429|Too Many Requests|confirm you.re not a bot",
     re.IGNORECASE,
 )
 

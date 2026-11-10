@@ -130,8 +130,12 @@ def test_block_becomes_rate_limited_error(ydl, tmp_path, message):
         download_youtube_video("u", download_dir=tmp_path)
 
 
-def test_other_errors_pass_through(ydl, tmp_path):
-    ydl.error = RuntimeError("Video unavailable")
-    with pytest.raises(RuntimeError, match="unavailable") as ei:
+@pytest.mark.parametrize(
+    "message",
+    ["Video unavailable", "Sign in to confirm your age. Use --cookies-from-browser"],
+)
+def test_other_errors_pass_through(ydl, tmp_path, message):
+    ydl.error = RuntimeError(message)
+    with pytest.raises(RuntimeError, match=message.split(".")[0]) as ei:
         download_youtube_video("u", download_dir=tmp_path)
     assert not isinstance(ei.value, RateLimitedError)
