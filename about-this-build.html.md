@@ -2,18 +2,18 @@
 
 # About this build
 
-This documentation was built on **2026-11-10 13:15 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/7886abe7d1989340fec27be4fbe54ddc70ebf2a0"><code>7886abe</code></a> on branch <code>main</code>, for **yb 0.1.35** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-17 13:04 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/b731d8fef217affa59be228cdd58463877bfa426"><code>b731d8f</code></a> on branch <code>main</code>, for **yb 0.1.36** (from <code>pyproject.toml</code>).
 
 #### WARNING
 The documentation and the package may be misaligned:
 
-- The documented version (0.1.35) is behind the latest release on PyPI (0.1.36): `pip install yb` gives newer code than these docs describe.
+- The documented version (0.1.36) is behind the latest release on PyPI (0.1.37): `pip install yb` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                    |
 |---------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/yb/commit/7886abe7d1989340fec27be4fbe54ddc70ebf2a0"><code>7886abe7d1989340fec27be4fbe54ddc70ebf2a0</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/yb/commit/b731d8fef217affa59be228cdd58463877bfa426"><code>b731d8fef217affa59be228cdd58463877bfa426</code></a> |
 | Branch              | <code>main</code>                                                                                                                                  |
 | Tags at this commit | none                                                                                                                                               |
 | Working tree        | clean                                                                                                                                              |
@@ -24,9 +24,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/yb</code>                                                                   |
-| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/42822619491">42822619491</a>          |
+| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/44088875249">44088875249</a>          |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>7886abe7d1989340fec27be4fbe54ddc70ebf2a0</code> (in the history of the built commit) |
+| Event commit | <code>b731d8fef217affa59be228cdd58463877bfa426</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -51,13 +51,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/yb/0.1.36/">0.1.36</a>, newer than the documented version (0.1.35).
+Latest release: <a href="https://pypi.org/project/yb/0.1.37/">0.1.37</a>, newer than the documented version (0.1.36).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/yb && cd yb
-git checkout 7886abe7d1989340fec27be4fbe54ddc70ebf2a0
+git checkout b731d8fef217affa59be228cdd58463877bfa426
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

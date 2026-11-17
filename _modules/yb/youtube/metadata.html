@@ -314,6 +314,10 @@
 <span class="sd">        category_id: YouTube category id (default Science &amp; Technology).</span>
 <span class="sd">        default_language: BCP-47 language of the metadata text.</span>
 <span class="sd">        default_audio_language: BCP-47 language of the audio.</span>
+<span class="sd">        truncate_description: A description over YouTube's 5000-character</span>
+<span class="sd">            limit raises (``False``, the default): its tail is usually the</span>
+<span class="sd">            chapters block or the licence credits, and losing either silently</span>
+<span class="sd">            breaks the chapters or the CC BY condition. ``True`` cuts it.</span>
 <span class="sd">        contains_synthetic_media: Declare that the video contains realistic</span>
 <span class="sd">            altered or synthetic content. YouTube's disclosure rule turns on</span>
 <span class="sd">            *realism*, not on whether AI was involved: it applies when a viewer</span>
@@ -328,11 +332,20 @@
     <span class="n">default_language</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">default_audio_language</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">contains_synthetic_media</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">truncate_description</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="c1"># rstrip after the cut, so cleaning twice (``dataclasses.replace``) is a no-op</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">title</span><span class="o">.</span><span class="n">strip</span><span class="p">()[:</span><span class="n">_TITLE_MAX</span><span class="p">]</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="o">.</span><span class="n">strip</span><span class="p">()[:</span><span class="n">_DESC_MAX</span><span class="p">]</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span>
+        <span class="n">description</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">description</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">_DESC_MAX</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">truncate_description</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"description is </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">description</span><span class="p">)</span><span class="si">}</span><span class="s2"> characters; YouTube keeps </span><span class="si">{</span><span class="n">_DESC_MAX</span><span class="si">}</span><span class="s2">. "</span>
+                <span class="sa">f</span><span class="s2">"The last </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">description</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">_DESC_MAX</span><span class="si">}</span><span class="s2"> would be lost, and that is where "</span>
+                <span class="s2">"chapters and credits usually sit. Shorten it (group public-domain credits, "</span>
+                <span class="s2">"point to an end-card roll), or pass truncate_description=True."</span>
+            <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="n">description</span><span class="p">[:</span><span class="n">_DESC_MAX</span><span class="p">]</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">tags</span> <span class="o">=</span> <span class="n">_cap_tags</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tags</span><span class="p">,</span> <span class="n">_TAGS_TOTAL_MAX</span><span class="p">)</span>
 
 <div class="viewcode-block" id="VideoMetadata.from_content">
@@ -447,7 +460,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=c83fd883"></script>
+</div><script src="../../../_static/documentation_options.js?v=e88e4268"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

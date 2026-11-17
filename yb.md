@@ -1,4 +1,4 @@
-> built 2026-11-10 13:15 UTC from 7886abe (main) · yb 0.1.35. Details: build_info.json
+> built 2026-11-17 13:04 UTC from b731d8f (main) · yb 0.1.36. Details: build_info.json
 
 # index.html.md
 
@@ -4914,7 +4914,7 @@ remaining steps target the saved `video_id`.
 `result` is plain JSON-able data, and the exception pickles (so a worker
 process can hand it back); `__cause__` does not survive pickling.
 
-### *class* yb.youtube.VideoMetadata(title, description, tags=list(), category_id='28', default_language=None, default_audio_language=None, contains_synthetic_media=None)
+### *class* yb.youtube.VideoMetadata(title, description, tags=list(), category_id='28', default_language=None, default_audio_language=None, contains_synthetic_media=None, truncate_description=False)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -4961,6 +4961,16 @@ BCP-47 language of the audio.
 
 * **Type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+#### truncate_description
+
+A description over YouTube’s 5000-character
+limit raises (`False`, the default): its tail is usually the
+chapters block or the licence credits, and losing either silently
+breaks the chapters or the CC BY condition. `True` cuts it.
+
+* **Type:**
+  [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
 
 #### contains_synthetic_media
 
@@ -5624,7 +5634,7 @@ timestamps when the first is `0:00`).
 
 A useful subset of YouTube video category ids.
 
-### *class* yb.youtube.metadata.VideoMetadata(title, description, tags=list(), category_id='28', default_language=None, default_audio_language=None, contains_synthetic_media=None)
+### *class* yb.youtube.metadata.VideoMetadata(title, description, tags=list(), category_id='28', default_language=None, default_audio_language=None, contains_synthetic_media=None, truncate_description=False)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -5671,6 +5681,16 @@ BCP-47 language of the audio.
 
 * **Type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+#### truncate_description
+
+A description over YouTube’s 5000-character
+limit raises (`False`, the default): its tail is usually the
+chapters block or the licence credits, and losing either silently
+breaks the chapters or the CC BY condition. `True` cuts it.
+
+* **Type:**
+  [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
 
 #### contains_synthetic_media
 
@@ -6351,18 +6371,18 @@ Fetch a video’s live metadata & engagement numbers.
 
 # About this build
 
-This documentation was built on **2026-11-10 13:15 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/7886abe7d1989340fec27be4fbe54ddc70ebf2a0"><code>7886abe</code></a> on branch <code>main</code>, for **yb 0.1.35** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-17 13:04 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/b731d8fef217affa59be228cdd58463877bfa426"><code>b731d8f</code></a> on branch <code>main</code>, for **yb 0.1.36** (from <code>pyproject.toml</code>).
 
 #### WARNING
 The documentation and the package may be misaligned:
 
-- The documented version (0.1.35) is behind the latest release on PyPI (0.1.36): `pip install yb` gives newer code than these docs describe.
+- The documented version (0.1.36) is behind the latest release on PyPI (0.1.37): `pip install yb` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                    |
 |---------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/yb/commit/7886abe7d1989340fec27be4fbe54ddc70ebf2a0"><code>7886abe7d1989340fec27be4fbe54ddc70ebf2a0</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/yb/commit/b731d8fef217affa59be228cdd58463877bfa426"><code>b731d8fef217affa59be228cdd58463877bfa426</code></a> |
 | Branch              | <code>main</code>                                                                                                                                  |
 | Tags at this commit | none                                                                                                                                               |
 | Working tree        | clean                                                                                                                                              |
@@ -6373,9 +6393,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/yb</code>                                                                   |
-| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/42822619491">42822619491</a>          |
+| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/44088875249">44088875249</a>          |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>7886abe7d1989340fec27be4fbe54ddc70ebf2a0</code> (in the history of the built commit) |
+| Event commit | <code>b731d8fef217affa59be228cdd58463877bfa426</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -6400,13 +6420,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/yb/0.1.36/">0.1.36</a>, newer than the documented version (0.1.35).
+Latest release: <a href="https://pypi.org/project/yb/0.1.37/">0.1.37</a>, newer than the documented version (0.1.36).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/yb && cd yb
-git checkout 7886abe7d1989340fec27be4fbe54ddc70ebf2a0
+git checkout b731d8fef217affa59be228cdd58463877bfa426
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

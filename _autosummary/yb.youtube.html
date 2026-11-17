@@ -592,7 +592,7 @@ process can hand it back); <code class="docutils literal notranslate"><span clas
 
 <dl class="py class">
 <dt class="sig sig-object py" id="yb.youtube.VideoMetadata">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">yb.youtube.</span></span><span class="sig-name descname"><span class="pre">VideoMetadata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">title</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">description</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tags</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">list()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">category_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'28'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default_language</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default_audio_language</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">contains_synthetic_media</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/youtube/metadata.html#VideoMetadata"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.youtube.VideoMetadata" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">yb.youtube.</span></span><span class="sig-name descname"><span class="pre">VideoMetadata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">title</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">description</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tags</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">list()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">category_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'28'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default_language</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default_audio_language</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">contains_synthetic_media</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">truncate_description</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/youtube/metadata.html#VideoMetadata"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.youtube.VideoMetadata" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#object" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <p>YouTube-specific video metadata.</p>
 <dl class="field-list simple">
@@ -659,6 +659,20 @@ process can hand it back); <code class="docutils literal notranslate"><span clas
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a> | <span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code></a></span></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="yb.youtube.VideoMetadata.truncate_description">
+<span class="sig-name descname"><span class="pre">truncate_description</span></span><a class="headerlink" href="#yb.youtube.VideoMetadata.truncate_description" title="Link to this definition">¶</a></dt>
+<dd><p>A description over YouTube’s 5000-character
+limit raises (<code class="docutils literal notranslate"><span class="pre">False</span></code>, the default): its tail is usually the
+chapters block or the licence credits, and losing either silently
+breaks the chapters or the CC BY condition. <code class="docutils literal notranslate"><span class="pre">True</span></code> cuts it.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -1555,6 +1569,7 @@ table <code class="docutils literal notranslate"><span class="pre">str</span></c
 <li><a class="reference internal" href="#yb.youtube.VideoMetadata.category_id"><code class="docutils literal notranslate"><span class="pre">VideoMetadata.category_id</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.VideoMetadata.default_language"><code class="docutils literal notranslate"><span class="pre">VideoMetadata.default_language</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.VideoMetadata.default_audio_language"><code class="docutils literal notranslate"><span class="pre">VideoMetadata.default_audio_language</span></code></a></li>
+<li><a class="reference internal" href="#yb.youtube.VideoMetadata.truncate_description"><code class="docutils literal notranslate"><span class="pre">VideoMetadata.truncate_description</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.VideoMetadata.contains_synthetic_media"><code class="docutils literal notranslate"><span class="pre">VideoMetadata.contains_synthetic_media</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.VideoMetadata.from_content"><code class="docutils literal notranslate"><span class="pre">VideoMetadata.from_content()</span></code></a></li>
 <li><a class="reference internal" href="#yb.youtube.VideoMetadata.insert_body"><code class="docutils literal notranslate"><span class="pre">VideoMetadata.insert_body()</span></code></a></li>
@@ -1620,7 +1635,7 @@ table <code class="docutils literal notranslate"><span class="pre">str</span></c
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=c83fd883"></script>
+</div><script src="../_static/documentation_options.js?v=e88e4268"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>

@@ -22,7 +22,7 @@ timestamps when the first is `0:00`).
 
 A useful subset of YouTube video category ids.
 
-### *class* yb.youtube.metadata.VideoMetadata(title, description, tags=list(), category_id='28', default_language=None, default_audio_language=None, contains_synthetic_media=None)
+### *class* yb.youtube.metadata.VideoMetadata(title, description, tags=list(), category_id='28', default_language=None, default_audio_language=None, contains_synthetic_media=None, truncate_description=False)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -69,6 +69,16 @@ BCP-47 language of the audio.
 
 * **Type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+#### truncate_description
+
+A description over YouTube’s 5000-character
+limit raises (`False`, the default): its tail is usually the
+chapters block or the licence credits, and losing either silently
+breaks the chapters or the CC BY condition. `True` cuts it.
+
+* **Type:**
+  [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
 
 #### contains_synthetic_media
 
