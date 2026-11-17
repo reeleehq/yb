@@ -112,6 +112,10 @@ renders interactive chapters. The rules (enforced in code, do not hand-roll):
 Very short clips (e.g. a 60 s ad) get **no** chapters automatically — that's
 expected, not a bug. Pass `with_chapters=False` to skip them.
 
+## Description: 5000 characters, and the tail is what matters
+
+`VideoMetadata` raises on a description over YouTube's 5000-character limit (pass `truncate_description=True` to cut it instead): the tail is where the chapters block and the licence credits sit, and a silent cut loses them. A commentary video that credits 70 images and 50 sources will not fit naively. What fits: the gist, the chapters, sources as a compact list (with "all linked in the article" when they are), CC BY / BY-SA credits as `Author (licence)` (that attribution is the licence condition), and public-domain or CC0 images grouped into one sentence; the full roll goes on the video's end card. Measured on a 25-minute essay: 12,222 characters naive, 4,431 after compaction.
+
 ## Edit an already-published video
 
 ```python

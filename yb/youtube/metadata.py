@@ -37,6 +37,10 @@ class VideoMetadata:
         category_id: YouTube category id (default Science & Technology).
         default_language: BCP-47 language of the metadata text.
         default_audio_language: BCP-47 language of the audio.
+        truncate_description: A description over YouTube's 5000-character
+            limit raises (``False``, the default): its tail is usually the
+            chapters block or the licence credits, and losing either silently
+            breaks the chapters or the CC BY condition. ``True`` cuts it.
         contains_synthetic_media: Declare that the video contains realistic
             altered or synthetic content. YouTube's disclosure rule turns on
             *realism*, not on whether AI was involved: it applies when a viewer
@@ -51,11 +55,20 @@ class VideoMetadata:
     default_language: str | None = None
     default_audio_language: str | None = None
     contains_synthetic_media: bool | None = None
+    truncate_description: bool = False
 
     def __post_init__(self):
         # rstrip after the cut, so cleaning twice (``dataclasses.replace``) is a no-op
         self.title = self.title.strip()[:_TITLE_MAX].rstrip()
-        self.description = self.description.strip()[:_DESC_MAX].rstrip()
+        description = self.description.strip()
+        if len(description) > _DESC_MAX and not self.truncate_description:
+            raise ValueError(
+                f"description is {len(description)} characters; YouTube keeps {_DESC_MAX}. "
+                f"The last {len(description) - _DESC_MAX} would be lost, and that is where "
+                "chapters and credits usually sit. Shorten it (group public-domain credits, "
+                "point to an end-card roll), or pass truncate_description=True."
+            )
+        self.description = description[:_DESC_MAX].rstrip()
         self.tags = _cap_tags(self.tags, _TAGS_TOTAL_MAX)
 
     @classmethod

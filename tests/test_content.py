@@ -60,3 +60,15 @@ def test_description_with_chapters_helper():
     c = _content()
     out = c.description_with_chapters()
     assert out.startswith("D") and "0:00 Intro" in out
+
+
+def test_an_overlong_description_raises_instead_of_losing_its_tail():
+    """The tail of a description is usually the chapters or the licence credits."""
+    import pytest
+
+    long = "intro\n" + "credit line; " * 500
+    with pytest.raises(ValueError, match="truncate_description=True"):
+        VideoMetadata(title="t", description=long)
+    m = VideoMetadata(title="t", description=long, truncate_description=True)
+    assert len(m.description) <= 5000
+    assert VideoMetadata(title="t", description="x" * 5000).description == "x" * 5000
