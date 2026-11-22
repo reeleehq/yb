@@ -1265,9 +1265,9 @@ def install_subtitle_fallback(
     in a playlist marks both rows). On a failure of the subtitle fetch only:
 
     - ``"warn"``: warn, then process the item again: first with the subtitle
-      languages already written (yt-dlp finds their files and moves them with the
-      video, also out of a ``paths: {"temp": ...}`` dir), then, if that fails too,
-      with subtitles off. What ``process_info`` did once already for the item
+      languages already written (their text handed to yt-dlp, which writes them
+      again with no fetch and moves them with the video, also out of a
+      ``paths: {"temp": ...}`` dir), then, if that fails too, with subtitles off. What ``process_info`` did once already for the item
       (its ``"video"`` pre-processors, such as ``parse_metadata``, and the
       ``--print``-style printings) is not done again;
     - ``"raise"``: re-raise (a 429 as :class:`~yb.download.RateLimitedError`
@@ -1284,6 +1284,7 @@ def install_subtitle_fallback(
         return error
 
     def with_fallback(info_dict):
+        downloads = getattr(ydl, "_num_downloads", None)
         try:
             return process_info(info_dict)
         except Exception as exc:
@@ -1296,35 +1297,51 @@ def install_subtitle_fallback(
                         "on_subtitle_error='warn' downloads the video without them."
                     ) from exc
                 raise
+        requested = info_dict.get("requested_subtitles") or {}
+        written = _written_subtitles(requested)
+        kept = f"only the subtitles {sorted(written)}" if written else "without subtitles"
         try:  # a warning filter set to "error" must not drop the video
             warn_at_caller(
-                f"Downloading without subtitles: {error}",
-                plumbing=_plumbing_with_ytdlp(),
+                f"Downloading {kept}: {error}", plumbing=_plumbing_with_ytdlp()
             )
         except UserWarning:
             pass
-        requested = info_dict.get("requested_subtitles") or {}
-        written = {k: v for k, v in requested.items() if (v or {}).get("filepath")}
+
+        def again():  # the same item, as the same download (autonumber, max_downloads)
+            if isinstance(downloads, int):
+                ydl._num_downloads = downloads
+            return process_info(info_dict)
+
         with _quiet_retry(ydl):
-            if written:  # keep (and move) the languages already on disk
+            if written:  # rewritten from memory: no fetch, under any `overwrites`
                 info_dict["requested_subtitles"] = written
                 try:
-                    return _process_again(ydl, process_info, info_dict)
-                except Exception as again:
-                    subtitle_error(again)
-                info_dict["requested_subtitles"] = requested
+                    return again()
+                except Exception as exc:
+                    subtitle_error(exc)
+                info_dict["requested_subtitles"] = {
+                    lang: {k: v for k, v in sub.items() if k != "filepath"}
+                    if sub and sub.get("filepath") and not os.path.isfile(sub["filepath"])
+                    else sub
+                    for lang, sub in requested.items()
+                }
             with _subtitles_off(ydl):
-                return _process_again(ydl, process_info, info_dict)
+                return again()
 
     ydl.process_info = with_fallback
     return failures
 
 
-def _process_again(ydl: Any, process_info: Callable, info_dict: dict):
-    """Run ``process_info`` again on the same item, as the same download (autonumber)."""
-    if isinstance(getattr(ydl, "_num_downloads", None), int):
-        ydl._num_downloads -= 1
-    return process_info(info_dict)
+def _written_subtitles(requested: dict) -> dict:
+    """The ``requested_subtitles`` entries already on disk, each carrying its text as
+    ``data``, so yt-dlp writes it again from memory (and records its move) instead of
+    fetching it: by default it deletes a file it finds (``overwrites``) and refetches."""
+    written = {}
+    for lang, sub in requested.items():
+        path = (sub or {}).get("filepath")
+        if path and os.path.isfile(path):
+            written[lang] = {**sub, "data": Path(path).read_text(encoding="utf-8")}
+    return written
 
 
 @contextmanager
