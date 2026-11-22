@@ -297,7 +297,8 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Literal</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">lru_cache</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">Optional</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">yb.download.ranges</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">INFO_RANGE_KEY</span><span class="p">,</span>
@@ -1414,9 +1415,10 @@
 <span class="sd">        on_subtitle_error: When only an item's subtitle fetch fails (yt-dlp</span>
 <span class="sd">            would otherwise drop the item): ``"warn"`` (default) warns and</span>
 <span class="sd">            downloads that item without subtitles, in place (its result carries</span>
-<span class="sd">            ``subtitles_error``); ``"raise"`` skips it and raises</span>
-<span class="sd">            :class:`PlaylistSubtitleError` after the run, carrying the items</span>
-<span class="sd">            that did download.</span>
+<span class="sd">            ``subtitles_error``); ``"raise"`` stops the run at the first</span>
+<span class="sd">            such item (no further item is fetched) and raises</span>
+<span class="sd">            :class:`PlaylistSubtitleError`, carrying the items that did</span>
+<span class="sd">            download before it.</span>
 
 <span class="sd">    Audio only: pass ``fmt="bestaudio/best", merge_to=None`` (keeps the source</span>
 <span class="sd">    stream, e.g. ``.m4a``, without re-encoding).</span>
@@ -1425,7 +1427,8 @@
 <span class="sd">        RateLimitedError: On HTTP 429 or a "confirm you're not a bot" wall, with</span>
 <span class="sd">            a backoff hint. (Per-item failures under ``ignoreerrors`` are skipped.)</span>
 <span class="sd">        PlaylistSubtitleError: Some items' subtitles failed and</span>
-<span class="sd">            ``on_subtitle_error="raise"``. When a failure was a 429 / bot check it</span>
+<span class="sd">            ``on_subtitle_error="raise"`` (the run stops at the first such item, so</span>
+<span class="sd">            ``failures`` has one entry). When a failure was a 429 / bot check it</span>
 <span class="sd">            is the subclass :class:`PlaylistRateLimitedError`, which is also a</span>
 <span class="sd">            ``RateLimitedError`` (so ``except RateLimitedError`` catches it).</span>
 
@@ -1488,8 +1491,18 @@
             <span class="n">cookies_from_browser</span><span class="o">=</span><span class="n">cookies_from_browser</span><span class="p">,</span>
         <span class="p">)</span> <span class="k">as</span> <span class="n">ydl</span><span class="p">,</span>
     <span class="p">):</span>
-        <span class="n">failures</span> <span class="o">=</span> <span class="n">install_subtitle_fallback</span><span class="p">(</span><span class="n">ydl</span><span class="p">,</span> <span class="n">on_subtitle_error</span><span class="o">=</span><span class="n">on_subtitle_error</span><span class="p">)</span>
-        <span class="n">info</span> <span class="o">=</span> <span class="n">ydl</span><span class="o">.</span><span class="n">extract_info</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">processed</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">failures</span> <span class="o">=</span> <span class="n">install_subtitle_fallback</span><span class="p">(</span>
+            <span class="n">ydl</span><span class="p">,</span>
+            <span class="n">on_subtitle_error</span><span class="o">=</span><span class="n">on_subtitle_error</span><span class="p">,</span>
+            <span class="n">stop_at_first</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">processed</span><span class="o">=</span><span class="n">processed</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">stop</span> <span class="o">=</span> <span class="n">_stop_exception</span><span class="p">()</span> <span class="k">if</span> <span class="n">on_subtitle_error</span> <span class="o">==</span> <span class="s2">"raise"</span> <span class="k">else</span> <span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">info</span> <span class="o">=</span> <span class="n">ydl</span><span class="o">.</span><span class="n">extract_info</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">stop</span><span class="p">:</span>  <span class="c1"># raise-policy: no more items, no more budget spent</span>
+            <span class="n">info</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"entries"</span><span class="p">:</span> <span class="n">processed</span><span class="p">}</span>
 
     <span class="n">errors</span> <span class="o">=</span> <span class="p">{</span><span class="n">f</span><span class="o">.</span><span class="n">video_id</span><span class="p">:</span> <span class="n">f</span><span class="o">.</span><span class="n">error</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">failures</span><span class="p">}</span>
     <span class="n">results</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">DownloadResult</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
@@ -1530,6 +1543,18 @@
     <span class="n">video_id</span><span class="p">:</span> <span class="nb">str</span>
     <span class="n">error</span><span class="p">:</span> <span class="nb">str</span></div>
 
+
+
+<span class="nd">@lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_stop_exception</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">type</span><span class="p">[</span><span class="ne">Exception</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""The exception that ends a playlist run at the first subtitle failure.</span>
+
+<span class="sd">    A ``yt_dlp.utils.DownloadCancelled`` is the one kind yt-dlp re-raises even</span>
+<span class="sd">    under ``ignoreerrors``. Built on first use: yt-dlp is imported lazily.</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">yt_dlp.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">DownloadCancelled</span>
+
+    <span class="k">return</span> <span class="nb">type</span><span class="p">(</span><span class="s2">"SubtitleFailureStop"</span><span class="p">,</span> <span class="p">(</span><span class="n">DownloadCancelled</span><span class="p">,),</span> <span class="p">{})</span>
 
 
 <div class="viewcode-block" id="PlaylistSubtitleError">
@@ -1580,7 +1605,11 @@
 <div class="viewcode-block" id="install_subtitle_fallback">
 <a class="viewcode-back" href="../../../_autosummary/yb.download.youtube.html#yb.install_subtitle_fallback">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">install_subtitle_fallback</span><span class="p">(</span>
-    <span class="n">ydl</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">on_subtitle_error</span><span class="p">:</span> <span class="n">OnSubtitleError</span>
+    <span class="n">ydl</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">on_subtitle_error</span><span class="p">:</span> <span class="n">OnSubtitleError</span><span class="p">,</span>
+    <span class="n">stop_at_first</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">processed</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">SubtitleFailure</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""Make ``ydl`` survive a failed subtitle fetch; returns the failures as they happen.</span>
 
@@ -1597,7 +1626,10 @@
 <span class="sd">      ``--print``-style printings) is not done again;</span>
 <span class="sd">    - ``"raise"``: re-raise (a 429 as :class:`~yb.download.RateLimitedError`</span>
 <span class="sd">      saying only the subtitles were refused). Under ``ignoreerrors`` yt-dlp</span>
-<span class="sd">      then skips the item, which the recorded failure still names.</span>
+<span class="sd">      then skips the item, which the recorded failure still names. With</span>
+<span class="sd">      ``stop_at_first`` the run ends there instead (:func:`_stop_exception`,</span>
+<span class="sd">      which the caller catches), and every item processed before it is appended</span>
+<span class="sd">      to ``processed``.</span>
 <span class="sd">    """</span>
     <span class="n">failures</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">SubtitleFailure</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">process_info</span> <span class="o">=</span> <span class="n">ydl</span><span class="o">.</span><span class="n">process_info</span>
@@ -1611,11 +1643,16 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">with_fallback</span><span class="p">(</span><span class="n">info_dict</span><span class="p">):</span>
         <span class="n">downloads</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">ydl</span><span class="p">,</span> <span class="s2">"_num_downloads"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">process_info</span><span class="p">(</span><span class="n">info_dict</span><span class="p">)</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">process_info</span><span class="p">(</span><span class="n">info_dict</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">processed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">processed</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">info_dict</span><span class="p">))</span>  <span class="c1"># yt-dlp clears it afterwards</span>
+            <span class="k">return</span> <span class="n">result</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
             <span class="n">error</span> <span class="o">=</span> <span class="n">subtitle_error</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
             <span class="n">failures</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">SubtitleFailure</span><span class="p">(</span><span class="n">info_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span>
             <span class="k">if</span> <span class="n">on_subtitle_error</span> <span class="o">==</span> <span class="s2">"raise"</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">stop_at_first</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">_stop_exception</span><span class="p">()(</span><span class="n">error</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
                 <span class="k">if</span> <span class="n">BLOCK_PATTERNS</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">error</span><span class="p">):</span>
                     <span class="k">raise</span> <span class="n">RateLimitedError</span><span class="p">(</span>
                         <span class="sa">f</span><span class="s2">"Only the subtitles were refused (</span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">); "</span>
@@ -1831,7 +1868,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=42d57d98"></script>
+</div><script src="../../../_static/documentation_options.js?v=aaf63c28"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

@@ -1,4 +1,4 @@
-> built 2026-11-22 11:55 UTC from 2061288 (main) · yb 0.1.43. Details: build_info.json
+> built 2026-11-22 18:49 UTC from 1efc56b (main) · yb 0.1.44. Details: build_info.json
 
 # index.html.md
 
@@ -1146,7 +1146,7 @@ how to install it. The first download in a process runs it and warns.
 | [`search_youtube`](_autosummary/yb.download.html.md#yb.download.search_youtube)(query, \*[, limit, sp, ...])     | Search YouTube by name; returns up to `limit` hits, best match first.            |
 | [`download_audio_bounded`](_autosummary/yb.download.html.md#yb.download.download_audio_bounded)(url, \*, download_dir)   | Download the audio of one video link as mp3, refusing what exceeds the caps.     |
 | [`require_http_url`](_autosummary/yb.download.html.md#yb.download.require_http_url)(url)                           | Default target check: an http(s) URL with a host.                                |
-| [`install_subtitle_fallback`](_autosummary/yb.download.html.md#yb.download.install_subtitle_fallback)(ydl, \*, ...)         | Make `ydl` survive a failed subtitle fetch; returns the failures as they happen. |
+| [`install_subtitle_fallback`](_autosummary/yb.download.html.md#yb.download.install_subtitle_fallback)(ydl, \*, ...[, ...])  | Make `ydl` survive a failed subtitle fetch; returns the failures as they happen. |
 | [`default_download_dir`](_autosummary/yb.download.html.md#yb.download.default_download_dir)()                          | Resolve the default download directory (`$YB_DOWNLOAD_DIR` or `~/Downloads`).    |
 | [`convert_audio`](_autosummary/yb.download.html.md#yb.download.convert_audio)(src, audio_format, \*[, ...])     | Convert `src` to `audio_format`, returning the resulting path.                   |
 | [`check_requirements`](_autosummary/yb.download.html.md#yb.download.check_requirements)(\*[, warn, which, ...])      | Check what YouTube downloads need, and say how to fix what's missing.            |
@@ -1706,9 +1706,10 @@ Selecting a subset (yt-dlp `--playlist-items` is **1-based**):
   * **on_subtitle_error** ([`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`'raise'`, `'warn'`]) – When only an item’s subtitle fetch fails (yt-dlp
     would otherwise drop the item): `"warn"` (default) warns and
     downloads that item without subtitles, in place (its result carries
-    `subtitles_error`); `"raise"` skips it and raises
-    [`PlaylistSubtitleError`](_autosummary/yb.download.html.md#yb.download.PlaylistSubtitleError) after the run, carrying the items
-    that did download.
+    `subtitles_error`); `"raise"` stops the run at the first
+    such item (no further item is fetched) and raises
+    [`PlaylistSubtitleError`](_autosummary/yb.download.html.md#yb.download.PlaylistSubtitleError), carrying the items that did
+    download before it.
 * **Return type:**
   [*list*](https://docs.python.org/3/builtins/stdtypes.html#list)[[*DownloadResult*](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DownloadResult)]
 
@@ -1719,7 +1720,8 @@ stream, e.g. `.m4a`, without re-encoding).
   * [**RateLimitedError**](_autosummary/yb.download.html.md#yb.download.RateLimitedError) – On HTTP 429 or a “confirm you’re not a bot” wall, with
         a backoff hint. (Per-item failures under `ignoreerrors` are skipped.)
   * [**PlaylistSubtitleError**](_autosummary/yb.download.html.md#yb.download.PlaylistSubtitleError) – Some items’ subtitles failed and
-        `on_subtitle_error="raise"`. When a failure was a 429 / bot check it
+        `on_subtitle_error="raise"` (the run stops at the first such item, so
+        `failures` has one entry). When a failure was a 429 / bot check it
         is the subclass [`PlaylistRateLimitedError`](_autosummary/yb.download.html.md#yb.download.PlaylistRateLimitedError), which is also a
         `RateLimitedError` (so `except RateLimitedError` catches it).
 * **Return type:**
@@ -1854,7 +1856,7 @@ Find Deno on `PATH`, else in its standard install location.
 * **Returns:**
   The runtime found, or `None`.
 
-### yb.download.install_subtitle_fallback(ydl, , on_subtitle_error)
+### yb.download.install_subtitle_fallback(ydl, , on_subtitle_error, stop_at_first=False, processed=None)
 
 Make `ydl` survive a failed subtitle fetch; returns the failures as they happen.
 
@@ -1871,7 +1873,10 @@ in a playlist marks both rows). On a failure of the subtitle fetch only:
   `--print`-style printings) is not done again;
 - `"raise"`: re-raise (a 429 as [`RateLimitedError`](_autosummary/yb.download.html.md#yb.download.RateLimitedError)
   saying only the subtitles were refused). Under `ignoreerrors` yt-dlp
-  then skips the item, which the recorded failure still names.
+  then skips the item, which the recorded failure still names. With
+  `stop_at_first` the run ends there instead (`_stop_exception()`,
+  which the caller catches), and every item processed before it is appended
+  to `processed`.
 
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`SubtitleFailure`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.SubtitleFailure)]
@@ -2764,7 +2769,7 @@ The destination defaults to `$YB_DOWNLOAD_DIR` when set, else `~/Downloads`.
 | [`download_youtube_subtitles`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_subtitles)(url, \*[, ...])        | Download only a video's subtitles (no media); returns the files written.         |
 | [`download_youtube_video`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_video)(url, \*[, ...])            | Download a YouTube video to `download_dir` (default `~/Downloads`).              |
 | [`glob_escape`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.glob_escape)(name)                                 | Escape glob metacharacters in a literal filename stem.                           |
-| [`install_subtitle_fallback`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.install_subtitle_fallback)(ydl, \*, ...)           | Make `ydl` survive a failed subtitle fetch; returns the failures as they happen. |
+| [`install_subtitle_fallback`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.install_subtitle_fallback)(ydl, \*, ...[, ...])    | Make `ydl` survive a failed subtitle fetch; returns the failures as they happen. |
 | [`resolve_output_path`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.resolve_output_path)(info, ydl, out_dir, merge_to) | Best-effort resolution of the final media path yt-dlp produced.                  |
 | [`search_youtube`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.search_youtube)(query, \*[, limit, sp, ...])       | Search YouTube by name; returns up to `limit` hits, best match first.            |
 | `trim_info`(info)                                                                                  |                                                                                  |
@@ -3120,9 +3125,10 @@ Selecting a subset (yt-dlp `--playlist-items` is **1-based**):
   * **on_subtitle_error** ([`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`'raise'`, `'warn'`]) – When only an item’s subtitle fetch fails (yt-dlp
     would otherwise drop the item): `"warn"` (default) warns and
     downloads that item without subtitles, in place (its result carries
-    `subtitles_error`); `"raise"` skips it and raises
-    [`PlaylistSubtitleError`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.PlaylistSubtitleError) after the run, carrying the items
-    that did download.
+    `subtitles_error`); `"raise"` stops the run at the first
+    such item (no further item is fetched) and raises
+    [`PlaylistSubtitleError`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.PlaylistSubtitleError), carrying the items that did
+    download before it.
 * **Return type:**
   [*list*](https://docs.python.org/3/builtins/stdtypes.html#list)[[*DownloadResult*](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DownloadResult)]
 
@@ -3133,7 +3139,8 @@ stream, e.g. `.m4a`, without re-encoding).
   * [**RateLimitedError**](_autosummary/yb.download.html.md#yb.download.RateLimitedError) – On HTTP 429 or a “confirm you’re not a bot” wall, with
         a backoff hint. (Per-item failures under `ignoreerrors` are skipped.)
   * [**PlaylistSubtitleError**](_autosummary/yb.download.youtube.html.md#yb.download.youtube.PlaylistSubtitleError) – Some items’ subtitles failed and
-        `on_subtitle_error="raise"`. When a failure was a 429 / bot check it
+        `on_subtitle_error="raise"` (the run stops at the first such item, so
+        `failures` has one entry). When a failure was a 429 / bot check it
         is the subclass [`PlaylistRateLimitedError`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.PlaylistRateLimitedError), which is also a
         `RateLimitedError` (so `except RateLimitedError` catches it).
 * **Return type:**
@@ -3262,7 +3269,7 @@ Escape glob metacharacters in a literal filename stem.
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
-### yb.download.youtube.install_subtitle_fallback(ydl, , on_subtitle_error)
+### yb.download.youtube.install_subtitle_fallback(ydl, , on_subtitle_error, stop_at_first=False, processed=None)
 
 Make `ydl` survive a failed subtitle fetch; returns the failures as they happen.
 
@@ -3279,7 +3286,10 @@ in a playlist marks both rows). On a failure of the subtitle fetch only:
   `--print`-style printings) is not done again;
 - `"raise"`: re-raise (a 429 as [`RateLimitedError`](_autosummary/yb.download.html.md#yb.download.RateLimitedError)
   saying only the subtitles were refused). Under `ignoreerrors` yt-dlp
-  then skips the item, which the recorded failure still names.
+  then skips the item, which the recorded failure still names. With
+  `stop_at_first` the run ends there instead (`_stop_exception()`,
+  which the caller catches), and every item processed before it is appended
+  to `processed`.
 
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`SubtitleFailure`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.SubtitleFailure)]
@@ -6443,18 +6453,16 @@ Fetch a video’s live metadata & engagement numbers.
 
 # About this build
 
-This documentation was built on **2026-11-22 11:55 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/206128818c03f47038e4d5bc26bff7304c8f39a3"><code>2061288</code></a> on branch <code>main</code>, for **yb 0.1.43** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-22 18:49 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/1efc56baad6293ffcf0eb0331112884583c2f142"><code>1efc56b</code></a> on branch <code>main</code>, for **yb 0.1.44** (from <code>pyproject.toml</code>).
 
-#### WARNING
-The documentation and the package may be misaligned:
-
-- The documented version (0.1.43) is behind the latest release on PyPI (0.1.44): `pip install yb` gives newer code than these docs describe.
+#### NOTE
+Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
 
 ## Source
 
 |                     |                                                                                                                                                    |
 |---------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/yb/commit/206128818c03f47038e4d5bc26bff7304c8f39a3"><code>206128818c03f47038e4d5bc26bff7304c8f39a3</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/yb/commit/1efc56baad6293ffcf0eb0331112884583c2f142"><code>1efc56baad6293ffcf0eb0331112884583c2f142</code></a> |
 | Branch              | <code>main</code>                                                                                                                                  |
 | Tags at this commit | none                                                                                                                                               |
 | Working tree        | clean                                                                                                                                              |
@@ -6465,9 +6473,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/yb</code>                                                                   |
-| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/45019553709">45019553709</a>          |
+| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/45057083744">45057083744</a>          |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>206128818c03f47038e4d5bc26bff7304c8f39a3</code> (in the history of the built commit) |
+| Event commit | <code>1efc56baad6293ffcf0eb0331112884583c2f142</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -6492,13 +6500,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/yb/0.1.44/">0.1.44</a>, newer than the documented version (0.1.43).
+Latest release: <a href="https://pypi.org/project/yb/0.1.44/">0.1.44</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/yb && cd yb
-git checkout 206128818c03f47038e4d5bc26bff7304c8f39a3
+git checkout 1efc56baad6293ffcf0eb0331112884583c2f142
 pip install "epythet==0.2.23"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

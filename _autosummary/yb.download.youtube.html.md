@@ -38,7 +38,7 @@ The destination defaults to `$YB_DOWNLOAD_DIR` when set, else `~/Downloads`.
 | [`download_youtube_subtitles`](#yb.download.youtube.download_youtube_subtitles)(url, \*[, ...])        | Download only a video's subtitles (no media); returns the files written.         |
 | [`download_youtube_video`](#yb.download.youtube.download_youtube_video)(url, \*[, ...])            | Download a YouTube video to `download_dir` (default `~/Downloads`).              |
 | [`glob_escape`](#yb.download.youtube.glob_escape)(name)                                 | Escape glob metacharacters in a literal filename stem.                           |
-| [`install_subtitle_fallback`](#yb.download.youtube.install_subtitle_fallback)(ydl, \*, ...)           | Make `ydl` survive a failed subtitle fetch; returns the failures as they happen. |
+| [`install_subtitle_fallback`](#yb.download.youtube.install_subtitle_fallback)(ydl, \*, ...[, ...])    | Make `ydl` survive a failed subtitle fetch; returns the failures as they happen. |
 | [`resolve_output_path`](#yb.download.youtube.resolve_output_path)(info, ydl, out_dir, merge_to) | Best-effort resolution of the final media path yt-dlp produced.                  |
 | [`search_youtube`](#yb.download.youtube.search_youtube)(query, \*[, limit, sp, ...])       | Search YouTube by name; returns up to `limit` hits, best match first.            |
 | `trim_info`(info)                                                                                  |                                                                                  |
@@ -394,9 +394,10 @@ Selecting a subset (yt-dlp `--playlist-items` is **1-based**):
   * **on_subtitle_error** ([`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`'raise'`, `'warn'`]) – When only an item’s subtitle fetch fails (yt-dlp
     would otherwise drop the item): `"warn"` (default) warns and
     downloads that item without subtitles, in place (its result carries
-    `subtitles_error`); `"raise"` skips it and raises
-    [`PlaylistSubtitleError`](#yb.download.youtube.PlaylistSubtitleError) after the run, carrying the items
-    that did download.
+    `subtitles_error`); `"raise"` stops the run at the first
+    such item (no further item is fetched) and raises
+    [`PlaylistSubtitleError`](#yb.download.youtube.PlaylistSubtitleError), carrying the items that did
+    download before it.
 * **Return type:**
   [*list*](https://docs.python.org/3/builtins/stdtypes.html#list)[[*DownloadResult*](#yb.download.youtube.DownloadResult)]
 
@@ -407,7 +408,8 @@ stream, e.g. `.m4a`, without re-encoding).
   * [**RateLimitedError**](yb.download.html.md#yb.download.RateLimitedError) – On HTTP 429 or a “confirm you’re not a bot” wall, with
         a backoff hint. (Per-item failures under `ignoreerrors` are skipped.)
   * [**PlaylistSubtitleError**](#yb.download.youtube.PlaylistSubtitleError) – Some items’ subtitles failed and
-        `on_subtitle_error="raise"`. When a failure was a 429 / bot check it
+        `on_subtitle_error="raise"` (the run stops at the first such item, so
+        `failures` has one entry). When a failure was a 429 / bot check it
         is the subclass [`PlaylistRateLimitedError`](#yb.download.youtube.PlaylistRateLimitedError), which is also a
         `RateLimitedError` (so `except RateLimitedError` catches it).
 * **Return type:**
@@ -536,7 +538,7 @@ Escape glob metacharacters in a literal filename stem.
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
-### yb.download.youtube.install_subtitle_fallback(ydl, , on_subtitle_error)
+### yb.download.youtube.install_subtitle_fallback(ydl, , on_subtitle_error, stop_at_first=False, processed=None)
 
 Make `ydl` survive a failed subtitle fetch; returns the failures as they happen.
 
@@ -553,7 +555,10 @@ in a playlist marks both rows). On a failure of the subtitle fetch only:
   `--print`-style printings) is not done again;
 - `"raise"`: re-raise (a 429 as [`RateLimitedError`](yb.download.html.md#yb.download.RateLimitedError)
   saying only the subtitles were refused). Under `ignoreerrors` yt-dlp
-  then skips the item, which the recorded failure still names.
+  then skips the item, which the recorded failure still names. With
+  `stop_at_first` the run ends there instead (`_stop_exception()`,
+  which the caller catches), and every item processed before it is appended
+  to `processed`.
 
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`SubtitleFailure`](#yb.download.youtube.SubtitleFailure)]

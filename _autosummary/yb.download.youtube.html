@@ -366,7 +366,7 @@ also save) is overridable, and any raw yt-dlp option can be passed through.</p>
 <tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.youtube.glob_escape" title="yb.download.youtube.glob_escape"><code class="xref py py-obj docutils literal notranslate"><span class="pre">glob_escape</span></code></a>(name)</p></td>
 <td><p>Escape glob metacharacters in a literal filename stem.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#yb.download.youtube.install_subtitle_fallback" title="yb.download.youtube.install_subtitle_fallback"><code class="xref py py-obj docutils literal notranslate"><span class="pre">install_subtitle_fallback</span></code></a>(ydl, *, ...)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#yb.download.youtube.install_subtitle_fallback" title="yb.download.youtube.install_subtitle_fallback"><code class="xref py py-obj docutils literal notranslate"><span class="pre">install_subtitle_fallback</span></code></a>(ydl, *, ...[, ...])</p></td>
 <td><p>Make <code class="docutils literal notranslate"><span class="pre">ydl</span></code> survive a failed subtitle fetch; returns the failures as they happen.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.youtube.resolve_output_path" title="yb.download.youtube.resolve_output_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">resolve_output_path</span></code></a>(info, ydl, out_dir, merge_to)</p></td>
@@ -847,9 +847,10 @@ Incompatible with a custom <code class="docutils literal notranslate"><span clas
 <li><p><strong>on_subtitle_error</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Literal" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Literal</span></code></a>[<span class="highlight sphinx_autodoc_typehints-value"><code class="docutils literal notranslate"><span class="s1"><span class="pre">'raise'</span></span></code></span>, <span class="highlight sphinx_autodoc_typehints-value"><code class="docutils literal notranslate"><span class="s1"><span class="pre">'warn'</span></span></code></span>]</span>) – When only an item’s subtitle fetch fails (yt-dlp
 would otherwise drop the item): <code class="docutils literal notranslate"><span class="pre">&quot;warn&quot;</span></code> (default) warns and
 downloads that item without subtitles, in place (its result carries
-<code class="docutils literal notranslate"><span class="pre">subtitles_error</span></code>); <code class="docutils literal notranslate"><span class="pre">&quot;raise&quot;</span></code> skips it and raises
-<a class="reference internal" href="#yb.download.youtube.PlaylistSubtitleError" title="yb.download.youtube.PlaylistSubtitleError"><code class="xref py py-class docutils literal notranslate"><span class="pre">PlaylistSubtitleError</span></code></a> after the run, carrying the items
-that did download.</p></li>
+<code class="docutils literal notranslate"><span class="pre">subtitles_error</span></code>); <code class="docutils literal notranslate"><span class="pre">&quot;raise&quot;</span></code> stops the run at the first
+such item (no further item is fetched) and raises
+<a class="reference internal" href="#yb.download.youtube.PlaylistSubtitleError" title="yb.download.youtube.PlaylistSubtitleError"><code class="xref py py-class docutils literal notranslate"><span class="pre">PlaylistSubtitleError</span></code></a>, carrying the items that did
+download before it.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
@@ -864,7 +865,8 @@ stream, e.g. <code class="docutils literal notranslate"><span class="pre">.m4a</
 <li><p><a class="reference internal" href="yb.download.html#yb.download.RateLimitedError" title="yb.download.RateLimitedError"><strong>RateLimitedError</strong></a> – On HTTP 429 or a “confirm you’re not a bot” wall, with
     a backoff hint. (Per-item failures under <code class="docutils literal notranslate"><span class="pre">ignoreerrors</span></code> are skipped.)</p></li>
 <li><p><a class="reference internal" href="#yb.download.youtube.PlaylistSubtitleError" title="yb.download.youtube.PlaylistSubtitleError"><strong>PlaylistSubtitleError</strong></a> – Some items’ subtitles failed and
-    <code class="docutils literal notranslate"><span class="pre">on_subtitle_error=&quot;raise&quot;</span></code>. When a failure was a 429 / bot check it
+    <code class="docutils literal notranslate"><span class="pre">on_subtitle_error=&quot;raise&quot;</span></code> (the run stops at the first such item, so
+    <code class="docutils literal notranslate"><span class="pre">failures</span></code> has one entry). When a failure was a 429 / bot check it
     is the subclass <a class="reference internal" href="#yb.download.youtube.PlaylistRateLimitedError" title="yb.download.youtube.PlaylistRateLimitedError"><code class="xref py py-class docutils literal notranslate"><span class="pre">PlaylistRateLimitedError</span></code></a>, which is also a
     <code class="docutils literal notranslate"><span class="pre">RateLimitedError</span></code> (so <code class="docutils literal notranslate"><span class="pre">except</span> <span class="pre">RateLimitedError</span></code> catches it).</p></li>
 </ul>
@@ -1022,7 +1024,7 @@ subtitles were refused). See <a class="reference internal" href="#yb.download.yo
 
 <dl class="py function">
 <dt class="sig sig-object py" id="yb.download.youtube.install_subtitle_fallback">
-<span class="sig-prename descclassname"><span class="pre">yb.download.youtube.</span></span><span class="sig-name descname"><span class="pre">install_subtitle_fallback</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ydl</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_subtitle_error</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/download/youtube.html#install_subtitle_fallback"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.download.youtube.install_subtitle_fallback" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">yb.download.youtube.</span></span><span class="sig-name descname"><span class="pre">install_subtitle_fallback</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ydl</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_subtitle_error</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stop_at_first</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">processed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/download/youtube.html#install_subtitle_fallback"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.download.youtube.install_subtitle_fallback" title="Link to this definition">¶</a></dt>
 <dd><p>Make <code class="docutils literal notranslate"><span class="pre">ydl</span></code> survive a failed subtitle fetch; returns the failures as they happen.</p>
 <p>Wraps <code class="docutils literal notranslate"><span class="pre">ydl.process_info</span></code> (called once per video, with the formats already
 chosen), so the retry happens in place: same item, same filename and order,
@@ -1037,7 +1039,10 @@ again with no fetch and moves them with the video, also out of a
 <code class="docutils literal notranslate"><span class="pre">--print</span></code>-style printings) is not done again;</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">&quot;raise&quot;</span></code>: re-raise (a 429 as <a class="reference internal" href="yb.download.html#yb.download.RateLimitedError" title="yb.download.RateLimitedError"><code class="xref py py-class docutils literal notranslate"><span class="pre">RateLimitedError</span></code></a>
 saying only the subtitles were refused). Under <code class="docutils literal notranslate"><span class="pre">ignoreerrors</span></code> yt-dlp
-then skips the item, which the recorded failure still names.</p></li>
+then skips the item, which the recorded failure still names. With
+<code class="docutils literal notranslate"><span class="pre">stop_at_first</span></code> the run ends there instead (<code class="xref py py-func docutils literal notranslate"><span class="pre">_stop_exception()</span></code>,
+which the caller catches), and every item processed before it is appended
+to <code class="docutils literal notranslate"><span class="pre">processed</span></code>.</p></li>
 </ul>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
@@ -1302,7 +1307,7 @@ the title/duration/chapters before deciding to download.</p>
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=42d57d98"></script>
+</div><script src="../_static/documentation_options.js?v=aaf63c28"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
