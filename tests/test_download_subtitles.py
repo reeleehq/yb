@@ -209,8 +209,8 @@ def test_download_subtitles_can_skip_auto(ydl, tmp_path):
 class _RetryYDL:
     """A YoutubeDL-shaped fake whose process_info records what each call would do."""
 
-    def __init__(self, outcomes, *, params=None, folder=None):
-        self.folder = Path(folder or ".")
+    def __init__(self, outcomes, *, folder, params=None):
+        self.folder = Path(folder)  # where "en" is written (a test's tmp_path)
         self.params = {"writesubtitles": True, "writeautomaticsub": False, **(params or {})}
         self._pps = {"video": ["parse_metadata"], "post_process": ["ffmpeg"]}
         self.outcomes, self.calls, self._num_downloads = list(outcomes), [], 0
@@ -239,11 +239,12 @@ def _two_langs():
     return {"id": "v", "requested_subtitles": {"en": {"ext": "vtt"}, "fr": {"ext": "vtt"}}}
 
 
-def test_the_retry_does_not_rerun_pre_processors_or_printings():
+def test_the_retry_does_not_rerun_pre_processors_or_printings(tmp_path):
     from yb.download.youtube import install_subtitle_fallback
 
     fake = _RetryYDL(
         [Exception(SUBS_429), None],
+        folder=tmp_path,
         params={"forcetitle": True, "forceprint": {"video": ["%(id)s"], "after_move": ["x"]}},
     )
     install_subtitle_fallback(fake, on_subtitle_error="warn")
@@ -280,10 +281,13 @@ def test_if_the_written_languages_fail_again_subtitles_go_off(tmp_path):
     assert fake.params["writesubtitles"] is True and fake._pps["video"] == ["parse_metadata"]
 
 
-def test_a_video_error_on_the_retry_propagates():
+def test_a_video_error_on_the_retry_propagates(tmp_path):
     from yb.download.youtube import install_subtitle_fallback
 
-    fake = _RetryYDL([Exception(SUBS_429), Exception("ERROR: unable to download video data")])
+    fake = _RetryYDL(
+        [Exception(SUBS_429), Exception("ERROR: unable to download video data")],
+        folder=tmp_path,
+    )
     install_subtitle_fallback(fake, on_subtitle_error="warn")
     with pytest.warns(UserWarning), pytest.raises(Exception, match="video data"):
         fake.process_info(_two_langs())
