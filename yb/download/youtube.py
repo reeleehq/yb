@@ -1047,7 +1047,9 @@ def download_youtube_playlist(
         RateLimitedError: On HTTP 429 or a "confirm you're not a bot" wall, with
             a backoff hint. (Per-item failures under ``ignoreerrors`` are skipped.)
         PlaylistSubtitleError: Some items' subtitles failed and
-            ``on_subtitle_error="raise"``.
+            ``on_subtitle_error="raise"``. When a failure was a 429 / bot check it
+            is the subclass :class:`PlaylistRateLimitedError`, which is also a
+            ``RateLimitedError`` (so ``except RateLimitedError`` catches it).
 
     Returns:
         A list of :class:`DownloadResult`, one per successfully-downloaded entry,
@@ -1133,7 +1135,10 @@ def download_youtube_playlist(
         )
         results.append(result)
     if failures and on_subtitle_error == "raise":
-        raise PlaylistSubtitleError(results, failures)
+        blocked = any(BLOCK_PATTERNS.search(f.error) for f in failures)
+        raise (PlaylistRateLimitedError if blocked else PlaylistSubtitleError)(
+            results, failures
+        )
     return results
 
 
@@ -1159,6 +1164,14 @@ class PlaylistSubtitleError(RuntimeError):
             f"subtitles failed for {len(failures)} item(s): "
             + _describe_failures(failures)
         )
+
+
+class PlaylistRateLimitedError(PlaylistSubtitleError, RateLimitedError):
+    """A :class:`PlaylistSubtitleError` where YouTube refused (429 / bot check) the captions.
+
+    Caught by ``except RateLimitedError`` (back off) as well as by
+    ``except PlaylistSubtitleError`` (the partial ``results`` and ``failures``).
+    """
 
 
 def _describe_failures(failures: list[SubtitleFailure]) -> str:

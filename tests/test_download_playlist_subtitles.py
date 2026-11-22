@@ -130,6 +130,17 @@ def test_raise_reports_the_failed_items_and_keeps_the_rest(page, tmp_path):
     assert not (tmp_path / "P (1) (page-1).mp4").exists()
 
 
+def test_a_captions_429_is_also_a_rate_limited_error(page, tmp_path):
+    """#68: ``except RateLimitedError`` must catch it, with the partial results attached."""
+    from yb.download import PlaylistRateLimitedError, RateLimitedError
+
+    with pytest.raises(RateLimitedError) as got:
+        get(page, tmp_path, on_subtitle_error="raise")
+    assert isinstance(got.value, PlaylistRateLimitedError)
+    assert isinstance(got.value, PlaylistSubtitleError)
+    assert [r.video_id for r in got.value.results] == ["page-2"]
+
+
 def test_no_failure_no_subtitles_error(page, tmp_path, monkeypatch):
     monkeypatch.setattr(_Captions429, "refused", "/none")
     results = get(page, tmp_path)
