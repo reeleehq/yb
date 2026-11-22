@@ -947,7 +947,9 @@ def _not_older_than(max_age_days: float | None) -> Callable[[str | None], bool]:
         return lambda date: True
     from datetime import datetime, timedelta, timezone
 
-    cutoff = (datetime.now(timezone.utc) - timedelta(days=max_age_days)).date().isoformat()
+    cutoff = (
+        (datetime.now(timezone.utc) - timedelta(days=max_age_days)).date().isoformat()
+    )
     return lambda date: date is not None and date >= cutoff
 
 
