@@ -1299,7 +1299,9 @@ def install_subtitle_fallback(
                 raise
         requested = info_dict.get("requested_subtitles") or {}
         written = _written_subtitles(requested)
-        kept = f"only the subtitles {sorted(written)}" if written else "without subtitles"
+        kept = (
+            f"only the subtitles {sorted(written)}" if written else "without subtitles"
+        )
         try:  # a warning filter set to "error" must not drop the video
             warn_at_caller(
                 f"Downloading {kept}: {error}", plumbing=_plumbing_with_ytdlp()
@@ -1321,7 +1323,9 @@ def install_subtitle_fallback(
                     subtitle_error(exc)
                 info_dict["requested_subtitles"] = {
                     lang: {k: v for k, v in sub.items() if k != "filepath"}
-                    if sub and sub.get("filepath") and not os.path.isfile(sub["filepath"])
+                    if sub
+                    and sub.get("filepath")
+                    and not os.path.isfile(sub["filepath"])
                     else sub
                     for lang, sub in requested.items()
                 }
@@ -1361,7 +1365,9 @@ def _quiet_retry(ydl: Any):
     pre-processors and the forced printings (restored after)."""
     params = ydl.params
     flags = {k: params[k] for k in _FORCED_PRINT_FLAGS if k in params}
-    templates = {k: params[k] for k in _PRINT_TEMPLATE_KEYS if isinstance(params.get(k), dict)}
+    templates = {
+        k: params[k] for k in _PRINT_TEMPLATE_KEYS if isinstance(params.get(k), dict)
+    }
     pps = getattr(ydl, "_pps", None)
     video_pps = pps.get("video") if isinstance(pps, dict) else None
     params.update(dict.fromkeys(flags, False))
