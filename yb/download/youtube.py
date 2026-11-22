@@ -799,6 +799,7 @@ def search_youtube(
     creative_commons: bool = False,
     min_s: float | None = None,
     max_s: float | None = None,
+    max_age_days: float | None = None,
     keep: Callable[[SearchHit], bool] | None = None,
     scan: int = MAX_SEARCH_LIMIT,
     extra_opts: dict | None = None,
@@ -822,7 +823,7 @@ def search_youtube(
     sharing the cookie and JS-runtime handling of the downloads. Only video rows
     are returned (YouTube's channel rows are dropped); a Short's ``url`` is its
     ``/shorts/`` link. Rows are read until ``limit`` hits pass (``min_s``,
-    ``max_s``, ``keep``), up to ``scan`` rows.
+    ``max_s``, ``max_age_days``, ``keep``), up to ``scan`` rows.
 
     Args:
         query: What to search for (any script).
@@ -839,6 +840,11 @@ def search_youtube(
         min_s, max_s: Keep only hits whose duration is within these bounds
             (non-negative seconds, inclusive); a hit with no reported duration is
             dropped when either bound is set.
+        max_age_days: Keep only hits uploaded at most this many days ago (inclusive,
+            by :attr:`SearchHit.upload_date`, UTC). A hit with no date is dropped
+            (as with ``min_s`` and a hit with no duration), and the flat listing
+            often carries none: expect few or no hits, then screen with
+            ``youtube_video_info`` or YouTube's own date filter through ``sp``.
         keep: Keep only hits for which this returns true (after the bounds).
         scan: How many result rows to read at most, ``limit``..
             :data:`MAX_SEARCH_LIMIT`. Rows are read lazily: result pages (about 20
@@ -849,7 +855,8 @@ def search_youtube(
 
     Raises:
         ValueError: If ``query`` is blank, ``limit`` or ``scan`` is out of range,
-            ``min_s`` is above ``max_s``, or ``sp`` and ``creative_commons`` are
+            ``min_s`` is above ``max_s``, ``max_age_days`` is negative or not a
+            number, or ``sp`` and ``creative_commons`` are
             both given.
     """
     if not query.strip():
@@ -864,6 +871,10 @@ def search_youtube(
             raise ValueError(f"{name} must be a non-negative number, got {bound!r}")
     if min_s is not None and max_s is not None and min_s > max_s:
         raise ValueError(f"min_s ({min_s}) is above max_s ({max_s})")
+    if max_age_days is not None and not _is_seconds(max_age_days):
+        raise ValueError(
+            f"max_age_days must be a non-negative number, got {max_age_days!r}"
+        )
     if sp is not None and creative_commons:
         raise ValueError("pass sp or creative_commons=True, not both")
     if not limit <= scan <= MAX_SEARCH_LIMIT:
@@ -883,10 +894,13 @@ def search_youtube(
         info = ydl.extract_info(target, download=False, process=False)
         entries = itertools.islice((info or {}).get("entries") or (), scan)
         hits = (_search_hit(e) for e in entries if _is_video_entry(e))
+        recent = _not_older_than(max_age_days)
         passing = (
             h
             for h in hits
-            if _within(h.duration, min_s, max_s) and (keep is None or keep(h))
+            if _within(h.duration, min_s, max_s)
+            and recent(h.upload_date)
+            and (keep is None or keep(h))
         )
         return list(itertools.islice(passing, limit))
 
@@ -925,6 +939,16 @@ def _within(duration: float | None, min_s: float | None, max_s: float | None) ->
     if duration is None:
         return False
     return (min_s is None or duration >= min_s) and (max_s is None or duration <= max_s)
+
+
+def _not_older_than(max_age_days: float | None) -> Callable[[str | None], bool]:
+    """A test on an ISO upload date: not older than ``max_age_days``; unknown fails when set."""
+    if max_age_days is None:
+        return lambda date: True
+    from datetime import datetime, timedelta, timezone
+
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=max_age_days)).date().isoformat()
+    return lambda date: date is not None and date >= cutoff
 
 
 def _entry_url(entry: dict) -> str | None:

@@ -224,6 +224,34 @@ def test_upload_date_is_iso_or_none(fake_ydl):
     ]
 
 
+def _days_ago(n: int) -> str:
+    from datetime import datetime, timedelta, timezone
+
+    d = datetime.now(timezone.utc) - timedelta(days=n)
+    return d.strftime("%Y%m%d")
+
+
+def test_max_age_days_keeps_recent_dated_hits_only(fake_ydl):
+    """#78: by upload date; a hit with no date is dropped, like no duration under min_s."""
+    fake_ydl["result"] = {
+        "entries": [
+            {"id": "old", "title": "O", "upload_date": _days_ago(40)},
+            {"id": "undated", "title": "U"},
+            {"id": "new", "title": "N", "upload_date": _days_ago(3)},
+            {"id": "edge", "title": "E", "upload_date": _days_ago(30)},
+        ]
+    }
+    assert [h.id for h in search_youtube("x", max_age_days=30)] == ["new", "edge"]
+    assert len(search_youtube("x")) == 4  # no bound, no filtering
+
+
+@pytest.mark.parametrize("bad", [-1, float("nan"), "30", True])
+def test_bad_max_age_days_fails_before_any_request(fake_ydl, bad):
+    with pytest.raises(ValueError, match="max_age_days"):
+        search_youtube("x", max_age_days=bad)
+    assert "query" not in fake_ydl
+
+
 def test_a_filter_reads_past_limit_until_limit_hits_pass(fake_ydl):
     fake_ydl["result"] = _hits(10, 20, 60, 30, 70, 80, 90)
     hits = search_youtube("x", limit=2, min_s=45)
