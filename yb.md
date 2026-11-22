@@ -1,4 +1,4 @@
-> built 2026-11-22 08:50 UTC from 5494184 (main) · yb 0.1.39. Details: build_info.json
+> built 2026-11-22 08:52 UTC from 2b563e9 (main) · yb 0.1.40. Details: build_info.json
 
 # index.html.md
 
@@ -1382,7 +1382,7 @@ Bases: [`RuntimeError`](https://docs.python.org/3/builtins/exceptions.html#Runti
 
 YouTube refused the request (HTTP 429 or a “confirm you’re not a bot” wall).
 
-### *class* yb.download.SearchHit(id, title, duration, channel, url, view_count=None)
+### *class* yb.download.SearchHit(id, title, duration, channel, url, view_count=None, upload_date=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -1390,6 +1390,12 @@ One row of [`search_youtube()`](_autosummary/yb.download.html.md#yb.download.sea
 
 `duration` is in seconds and may be `None` (live streams, some results),
 as may `view_count`.
+
+`upload_date` is an ISO date (`"2026-11-13"`) when yt-dlp’s flat listing
+carries `upload_date` or a `timestamp`/`release_timestamp`, else `None`.
+YouTube’s results page usually shows only “3 weeks ago”, which yt-dlp does
+not turn into a date, so expect `None` often; `youtube_video_info` has
+the exact date.
 
 ### *class* yb.download.SubtitleFailure(video_id, error)
 
@@ -2911,7 +2917,7 @@ YouTube’s search results page; yt-dlp extracts it as a playlist of hits.
 
 How yt-dlp’s error starts when a subtitle fetch (not the video) failed.
 
-### *class* yb.download.youtube.SearchHit(id, title, duration, channel, url, view_count=None)
+### *class* yb.download.youtube.SearchHit(id, title, duration, channel, url, view_count=None, upload_date=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -2919,6 +2925,12 @@ One row of [`search_youtube()`](_autosummary/yb.download.youtube.html.md#yb.down
 
 `duration` is in seconds and may be `None` (live streams, some results),
 as may `view_count`.
+
+`upload_date` is an ISO date (`"2026-11-13"`) when yt-dlp’s flat listing
+carries `upload_date` or a `timestamp`/`release_timestamp`, else `None`.
+YouTube’s results page usually shows only “3 weeks ago”, which yt-dlp does
+not turn into a date, so expect `None` often; `youtube_video_info` has
+the exact date.
 
 ### *class* yb.download.youtube.SubtitleFailure(video_id, error)
 
@@ -6395,7 +6407,7 @@ Fetch a video’s live metadata & engagement numbers.
 
 # About this build
 
-This documentation was built on **2026-11-22 08:50 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/549418432f1d767e283ad7849842c9e6debdbc54"><code>5494184</code></a> on branch <code>main</code>, for **yb 0.1.39** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-22 08:52 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/2b563e95397fdf7c12b4648ed70599e7cfe05db2"><code>2b563e9</code></a> on branch <code>main</code>, for **yb 0.1.40** (from <code>pyproject.toml</code>).
 
 #### NOTE
 Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
@@ -6404,7 +6416,7 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 |                     |                                                                                                                                                    |
 |---------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/yb/commit/549418432f1d767e283ad7849842c9e6debdbc54"><code>549418432f1d767e283ad7849842c9e6debdbc54</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/yb/commit/2b563e95397fdf7c12b4648ed70599e7cfe05db2"><code>2b563e95397fdf7c12b4648ed70599e7cfe05db2</code></a> |
 | Branch              | <code>main</code>                                                                                                                                  |
 | Tags at this commit | none                                                                                                                                               |
 | Working tree        | clean                                                                                                                                              |
@@ -6415,9 +6427,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/yb</code>                                                                   |
-| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/45004507530">45004507530</a>          |
+| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/45004721193">45004721193</a>          |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>549418432f1d767e283ad7849842c9e6debdbc54</code> (in the history of the built commit) |
+| Event commit | <code>2b563e95397fdf7c12b4648ed70599e7cfe05db2</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -6442,13 +6454,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/yb/0.1.39/">0.1.39</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/yb/0.1.40/">0.1.40</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/yb && cd yb
-git checkout 549418432f1d767e283ad7849842c9e6debdbc54
+git checkout 2b563e95397fdf7c12b4648ed70599e7cfe05db2
 pip install "epythet==0.2.23"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

@@ -295,7 +295,7 @@ Bases: [`RuntimeError`](https://docs.python.org/3/builtins/exceptions.html#Runti
 
 YouTube refused the request (HTTP 429 or a “confirm you’re not a bot” wall).
 
-### *class* yb.download.SearchHit(id, title, duration, channel, url, view_count=None)
+### *class* yb.download.SearchHit(id, title, duration, channel, url, view_count=None, upload_date=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -303,6 +303,12 @@ One row of [`search_youtube()`](#yb.download.search_youtube) (flat extraction: n
 
 `duration` is in seconds and may be `None` (live streams, some results),
 as may `view_count`.
+
+`upload_date` is an ISO date (`"2026-11-13"`) when yt-dlp’s flat listing
+carries `upload_date` or a `timestamp`/`release_timestamp`, else `None`.
+YouTube’s results page usually shows only “3 weeks ago”, which yt-dlp does
+not turn into a date, so expect `None` often; `youtube_video_info` has
+the exact date.
 
 ### *class* yb.download.SubtitleFailure(video_id, error)
 

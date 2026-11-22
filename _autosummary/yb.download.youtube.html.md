@@ -206,7 +206,7 @@ YouTube’s search results page; yt-dlp extracts it as a playlist of hits.
 
 How yt-dlp’s error starts when a subtitle fetch (not the video) failed.
 
-### *class* yb.download.youtube.SearchHit(id, title, duration, channel, url, view_count=None)
+### *class* yb.download.youtube.SearchHit(id, title, duration, channel, url, view_count=None, upload_date=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -214,6 +214,12 @@ One row of [`search_youtube()`](#yb.download.youtube.search_youtube) (flat extra
 
 `duration` is in seconds and may be `None` (live streams, some results),
 as may `view_count`.
+
+`upload_date` is an ISO date (`"2026-11-13"`) when yt-dlp’s flat listing
+carries `upload_date` or a `timestamp`/`release_timestamp`, else `None`.
+YouTube’s results page usually shows only “3 weeks ago”, which yt-dlp does
+not turn into a date, so expect `None` often; `youtube_video_info` has
+the exact date.
 
 ### *class* yb.download.youtube.SubtitleFailure(video_id, error)
 
