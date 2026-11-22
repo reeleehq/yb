@@ -744,6 +744,12 @@ class SearchHit:
 
     ``duration`` is in seconds and may be ``None`` (live streams, some results),
     as may ``view_count``.
+
+    ``upload_date`` is an ISO date (``"2026-11-13"``) when yt-dlp's flat listing
+    carries ``upload_date`` or a ``timestamp``/``release_timestamp``, else ``None``.
+    YouTube's results page usually shows only "3 weeks ago", which yt-dlp does
+    not turn into a date, so expect ``None`` often; ``youtube_video_info`` has
+    the exact date.
     """
 
     id: str
@@ -752,6 +758,7 @@ class SearchHit:
     channel: str | None
     url: str
     view_count: int | None = None
+    upload_date: str | None = None
 
 
 #: Cap on ``limit`` so a typo does not turn into a thousand-result query.
@@ -880,6 +887,19 @@ def _entry_url(entry: dict) -> str | None:
     return entry.get("url") or entry.get("webpage_url") or None
 
 
+def _iso_date(entry: dict) -> str | None:
+    """An ISO ``YYYY-MM-DD`` from a flat entry's ``upload_date`` / timestamps, else ``None``."""
+    raw = str(entry.get("upload_date") or "")
+    if len(raw) == 8 and raw.isdigit():
+        return f"{raw[:4]}-{raw[4:6]}-{raw[6:]}"
+    ts = entry.get("timestamp") or entry.get("release_timestamp")
+    if isinstance(ts, (int, float)):
+        from datetime import datetime, timezone
+
+        return datetime.fromtimestamp(ts, tz=timezone.utc).date().isoformat()
+    return None
+
+
 def _search_hit(entry: dict) -> SearchHit:
     video_id = entry.get("id") or ""
     watch_url = f"https://www.youtube.com/watch?v={video_id}" if video_id else ""
@@ -890,6 +910,7 @@ def _search_hit(entry: dict) -> SearchHit:
         channel=entry.get("channel") or entry.get("uploader"),
         url=_entry_url(entry) or watch_url,
         view_count=entry.get("view_count"),
+        upload_date=_iso_date(entry),
     )
 
 

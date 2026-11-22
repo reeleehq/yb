@@ -183,3 +183,19 @@ def test_bad_bounds_fail_before_any_request(fake_ydl, bound):
     with pytest.raises(ValueError, match="non-negative number"):
         search_youtube("x", max_s=bound)
     assert "query" not in fake_ydl
+
+
+def test_upload_date_is_iso_or_none(fake_ydl):
+    """#78: from ``upload_date`` or a timestamp; ``None`` when the flat entry has neither."""
+    fake_ydl["result"] = {
+        "entries": [
+            {"id": "a", "title": "A", "upload_date": "20261113"},
+            {"id": "b", "title": "B", "timestamp": 1794000000},
+            {"id": "c", "title": "C"},
+        ]
+    }
+    assert [h.upload_date for h in search_youtube("x")] == [
+        "2026-11-13",
+        "2026-11-06",
+        None,
+    ]
