@@ -1,4 +1,4 @@
-> built 2026-11-22 08:37 UTC from 8d7dc16 (main) · yb 0.1.38. Details: build_info.json
+> built 2026-11-22 08:50 UTC from 5494184 (main) · yb 0.1.39. Details: build_info.json
 
 # index.html.md
 
@@ -1165,14 +1165,15 @@ how to install it. The first download in a process runs it and warns.
 
 ### Exceptions
 
-| [`AudioLimitError`](_autosummary/yb.download.html.md#yb.download.AudioLimitError)                          | The source exceeds a cap (duration, size or time); nothing is left on disk.   |
-|-------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
-| [`AudioSourceError`](_autosummary/yb.download.html.md#yb.download.AudioSourceError)                         | yt-dlp could not get audio from the link (unsupported, unavailable, ...).     |
-| [`AudioTargetError`](_autosummary/yb.download.html.md#yb.download.AudioTargetError)                         | `validate_target` refused a URL: the link, or one yt-dlp was about to fetch.  |
-| [`PlaylistSubtitleError`](_autosummary/yb.download.html.md#yb.download.PlaylistSubtitleError)(results, failures) | Some playlist items' subtitles failed (`on_subtitle_error="raise"`).          |
-| [`AudioConversionError`](_autosummary/yb.download.html.md#yb.download.AudioConversionError)                     | Raised when audio could not be converted to the requested format.             |
-| [`DownloadRequirementWarning`](_autosummary/yb.download.html.md#yb.download.DownloadRequirementWarning)               | A download prerequisite (JS runtime, solver scripts) looks missing.           |
-| [`RateLimitedError`](_autosummary/yb.download.html.md#yb.download.RateLimitedError)                         | YouTube refused the request (HTTP 429 or a "confirm you're not a bot" wall).  |
+| [`AudioLimitError`](_autosummary/yb.download.html.md#yb.download.AudioLimitError)                             | The source exceeds a cap (duration, size or time); nothing is left on disk.                                                    |
+|----------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------|
+| [`AudioSourceError`](_autosummary/yb.download.html.md#yb.download.AudioSourceError)                            | yt-dlp could not get audio from the link (unsupported, unavailable, ...).                                                      |
+| [`AudioTargetError`](_autosummary/yb.download.html.md#yb.download.AudioTargetError)                            | `validate_target` refused a URL: the link, or one yt-dlp was about to fetch.                                                   |
+| [`PlaylistSubtitleError`](_autosummary/yb.download.html.md#yb.download.PlaylistSubtitleError)(results, failures)    | Some playlist items' subtitles failed (`on_subtitle_error="raise"`).                                                           |
+| [`PlaylistRateLimitedError`](_autosummary/yb.download.html.md#yb.download.PlaylistRateLimitedError)(results, failures) | A [`PlaylistSubtitleError`](_autosummary/yb.download.html.md#yb.download.PlaylistSubtitleError) where YouTube refused (429 / bot check) the captions. |
+| [`AudioConversionError`](_autosummary/yb.download.html.md#yb.download.AudioConversionError)                        | Raised when audio could not be converted to the requested format.                                                              |
+| [`DownloadRequirementWarning`](_autosummary/yb.download.html.md#yb.download.DownloadRequirementWarning)                  | A download prerequisite (JS runtime, solver scripts) looks missing.                                                            |
+| [`RateLimitedError`](_autosummary/yb.download.html.md#yb.download.RateLimitedError)                            | YouTube refused the request (HTTP 429 or a "confirm you're not a bot" wall).                                                   |
 
 ### *exception* yb.download.AudioConversionError
 
@@ -1351,6 +1352,15 @@ Maximum download rate, e.g. `"4M"` or `"500K"` (bytes/s).
 
 * **Type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+### *exception* yb.download.PlaylistRateLimitedError(results, failures)
+
+Bases: [`PlaylistSubtitleError`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.PlaylistSubtitleError), [`RateLimitedError`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.RateLimitedError)
+
+A [`PlaylistSubtitleError`](_autosummary/yb.download.html.md#yb.download.PlaylistSubtitleError) where YouTube refused (429 / bot check) the captions.
+
+Caught by `except RateLimitedError` (back off) as well as by
+`except PlaylistSubtitleError` (the partial `results` and `failures`).
 
 ### *exception* yb.download.PlaylistSubtitleError(results, failures)
 
@@ -1700,7 +1710,9 @@ stream, e.g. `.m4a`, without re-encoding).
   * [**RateLimitedError**](_autosummary/yb.download.html.md#yb.download.RateLimitedError) – On HTTP 429 or a “confirm you’re not a bot” wall, with
         a backoff hint. (Per-item failures under `ignoreerrors` are skipped.)
   * [**PlaylistSubtitleError**](_autosummary/yb.download.html.md#yb.download.PlaylistSubtitleError) – Some items’ subtitles failed and
-        `on_subtitle_error="raise"`.
+        `on_subtitle_error="raise"`. When a failure was a 429 / bot check it
+        is the subclass [`PlaylistRateLimitedError`](_autosummary/yb.download.html.md#yb.download.PlaylistRateLimitedError), which is also a
+        `RateLimitedError` (so `except RateLimitedError` catches it).
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`DownloadResult`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DownloadResult)]
 * **Returns:**
@@ -2748,8 +2760,9 @@ The destination defaults to `$YB_DOWNLOAD_DIR` when set, else `~/Downloads`.
 
 ### Exceptions
 
-| [`PlaylistSubtitleError`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.PlaylistSubtitleError)(results, failures)   | Some playlist items' subtitles failed (`on_subtitle_error="raise"`).   |
-|---------------------------------------------------------------------------------------------|------------------------------------------------------------------------|
+| [`PlaylistRateLimitedError`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.PlaylistRateLimitedError)(results, failures)   | A [`PlaylistSubtitleError`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.PlaylistSubtitleError) where YouTube refused (429 / bot check) the captions.   |
+|------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------|
+| [`PlaylistSubtitleError`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.PlaylistSubtitleError)(results, failures)      | Some playlist items' subtitles failed (`on_subtitle_error="raise"`).                                                             |
 
 ### yb.download.youtube.COOKIES_FILE_ENV *= 'YB_COOKIES_FILE'*
 
@@ -2866,6 +2879,15 @@ What [`download_youtube_video()`](_autosummary/yb.download.youtube.html.md#yb.do
 same vocabulary as [`OnConvertError`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.OnConvertError).
 
 alias of [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[‘raise’, ‘warn’]
+
+### *exception* yb.download.youtube.PlaylistRateLimitedError(results, failures)
+
+Bases: [`PlaylistSubtitleError`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.PlaylistSubtitleError), [`RateLimitedError`](_autosummary/yb.download.pacing.html.md#yb.download.pacing.RateLimitedError)
+
+A [`PlaylistSubtitleError`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.PlaylistSubtitleError) where YouTube refused (429 / bot check) the captions.
+
+Caught by `except RateLimitedError` (back off) as well as by
+`except PlaylistSubtitleError` (the partial `results` and `failures`).
 
 ### *exception* yb.download.youtube.PlaylistSubtitleError(results, failures)
 
@@ -3075,7 +3097,9 @@ stream, e.g. `.m4a`, without re-encoding).
   * [**RateLimitedError**](_autosummary/yb.download.html.md#yb.download.RateLimitedError) – On HTTP 429 or a “confirm you’re not a bot” wall, with
         a backoff hint. (Per-item failures under `ignoreerrors` are skipped.)
   * [**PlaylistSubtitleError**](_autosummary/yb.download.youtube.html.md#yb.download.youtube.PlaylistSubtitleError) – Some items’ subtitles failed and
-        `on_subtitle_error="raise"`.
+        `on_subtitle_error="raise"`. When a failure was a 429 / bot check it
+        is the subclass [`PlaylistRateLimitedError`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.PlaylistRateLimitedError), which is also a
+        `RateLimitedError` (so `except RateLimitedError` catches it).
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`DownloadResult`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.DownloadResult)]
 * **Returns:**
@@ -6371,18 +6395,16 @@ Fetch a video’s live metadata & engagement numbers.
 
 # About this build
 
-This documentation was built on **2026-11-22 08:37 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/8d7dc16011a3bd709ffd7e3c10a64dc0d20d17e6"><code>8d7dc16</code></a> on branch <code>main</code>, for **yb 0.1.38** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-22 08:50 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/549418432f1d767e283ad7849842c9e6debdbc54"><code>5494184</code></a> on branch <code>main</code>, for **yb 0.1.39** (from <code>pyproject.toml</code>).
 
-#### WARNING
-The documentation and the package may be misaligned:
-
-- The documented version (0.1.38) is behind the latest release on PyPI (0.1.39): `pip install yb` gives newer code than these docs describe.
+#### NOTE
+Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
 
 ## Source
 
 |                     |                                                                                                                                                    |
 |---------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/yb/commit/8d7dc16011a3bd709ffd7e3c10a64dc0d20d17e6"><code>8d7dc16011a3bd709ffd7e3c10a64dc0d20d17e6</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/yb/commit/549418432f1d767e283ad7849842c9e6debdbc54"><code>549418432f1d767e283ad7849842c9e6debdbc54</code></a> |
 | Branch              | <code>main</code>                                                                                                                                  |
 | Tags at this commit | none                                                                                                                                               |
 | Working tree        | clean                                                                                                                                              |
@@ -6393,9 +6415,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/yb</code>                                                                   |
-| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/45003522872">45003522872</a>          |
+| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/45004507530">45004507530</a>          |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>8d7dc16011a3bd709ffd7e3c10a64dc0d20d17e6</code> (in the history of the built commit) |
+| Event commit | <code>549418432f1d767e283ad7849842c9e6debdbc54</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -6420,13 +6442,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/yb/0.1.39/">0.1.39</a>, newer than the documented version (0.1.38).
+Latest release: <a href="https://pypi.org/project/yb/0.1.39/">0.1.39</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/yb && cd yb
-git checkout 8d7dc16011a3bd709ffd7e3c10a64dc0d20d17e6
+git checkout 549418432f1d767e283ad7849842c9e6debdbc54
 pip install "epythet==0.2.23"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

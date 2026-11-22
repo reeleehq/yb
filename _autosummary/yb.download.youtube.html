@@ -410,7 +410,10 @@ also save) is overridable, and any raw yt-dlp option can be passed through.</p>
 <div class="table-wrapper autosummary longtable docutils container">
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.youtube.PlaylistSubtitleError" title="yb.download.youtube.PlaylistSubtitleError"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PlaylistSubtitleError</span></code></a>(results, failures)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.youtube.PlaylistRateLimitedError" title="yb.download.youtube.PlaylistRateLimitedError"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PlaylistRateLimitedError</span></code></a>(results, failures)</p></td>
+<td><p>A <a class="reference internal" href="#yb.download.youtube.PlaylistSubtitleError" title="yb.download.youtube.PlaylistSubtitleError"><code class="xref py py-class docutils literal notranslate"><span class="pre">PlaylistSubtitleError</span></code></a> where YouTube refused (429 / bot check) the captions.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#yb.download.youtube.PlaylistSubtitleError" title="yb.download.youtube.PlaylistSubtitleError"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PlaylistSubtitleError</span></code></a>(results, failures)</p></td>
 <td><p>Some playlist items' subtitles failed (<code class="docutils literal notranslate"><span class="pre">on_subtitle_error=&quot;raise&quot;</span></code>).</p></td>
 </tr>
 </tbody>
@@ -580,6 +583,17 @@ when the video was downloaded without them
 (<code class="docutils literal notranslate"><span class="pre">result.subtitles_error</span></code> says why), <code class="docutils literal notranslate"><span class="pre">&quot;raise&quot;</span></code> propagates the error. The
 same vocabulary as <a class="reference internal" href="#yb.download.youtube.OnConvertError" title="yb.download.youtube.OnConvertError"><code class="xref py py-data docutils literal notranslate"><span class="pre">OnConvertError</span></code></a>.</p>
 <p>alias of <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Literal" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Literal</span></code></a>[‘raise’, ‘warn’]</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="yb.download.youtube.PlaylistRateLimitedError">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">yb.download.youtube.</span></span><span class="sig-name descname"><span class="pre">PlaylistRateLimitedError</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">results</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">failures</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/download/youtube.html#PlaylistRateLimitedError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.download.youtube.PlaylistRateLimitedError" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#yb.download.youtube.PlaylistSubtitleError" title="yb.download.youtube.PlaylistSubtitleError"><code class="xref py py-class docutils literal notranslate"><span class="pre">PlaylistSubtitleError</span></code></a>, <a class="reference internal" href="yb.download.pacing.html#yb.download.pacing.RateLimitedError" title="yb.download.pacing.RateLimitedError"><code class="xref py py-class docutils literal notranslate"><span class="pre">RateLimitedError</span></code></a></p>
+<p>A <a class="reference internal" href="#yb.download.youtube.PlaylistSubtitleError" title="yb.download.youtube.PlaylistSubtitleError"><code class="xref py py-class docutils literal notranslate"><span class="pre">PlaylistSubtitleError</span></code></a> where YouTube refused (429 / bot check) the captions.</p>
+<p>Caught by <code class="docutils literal notranslate"><span class="pre">except</span> <span class="pre">RateLimitedError</span></code> (back off) as well as by
+<code class="docutils literal notranslate"><span class="pre">except</span> <span class="pre">PlaylistSubtitleError</span></code> (the partial <code class="docutils literal notranslate"><span class="pre">results</span></code> and <code class="docutils literal notranslate"><span class="pre">failures</span></code>).</p>
+<dl class="field-list simple">
+</dl>
 </dd></dl>
 
 <dl class="py exception">
@@ -830,7 +844,9 @@ stream, e.g. <code class="docutils literal notranslate"><span class="pre">.m4a</
 <li><p><a class="reference internal" href="yb.download.html#yb.download.RateLimitedError" title="yb.download.RateLimitedError"><strong>RateLimitedError</strong></a> – On HTTP 429 or a “confirm you’re not a bot” wall, with
     a backoff hint. (Per-item failures under <code class="docutils literal notranslate"><span class="pre">ignoreerrors</span></code> are skipped.)</p></li>
 <li><p><a class="reference internal" href="#yb.download.youtube.PlaylistSubtitleError" title="yb.download.youtube.PlaylistSubtitleError"><strong>PlaylistSubtitleError</strong></a> – Some items’ subtitles failed and
-    <code class="docutils literal notranslate"><span class="pre">on_subtitle_error=&quot;raise&quot;</span></code>.</p></li>
+    <code class="docutils literal notranslate"><span class="pre">on_subtitle_error=&quot;raise&quot;</span></code>. When a failure was a 429 / bot check it
+    is the subclass <a class="reference internal" href="#yb.download.youtube.PlaylistRateLimitedError" title="yb.download.youtube.PlaylistRateLimitedError"><code class="xref py py-class docutils literal notranslate"><span class="pre">PlaylistRateLimitedError</span></code></a>, which is also a
+    <code class="docutils literal notranslate"><span class="pre">RateLimitedError</span></code> (so <code class="docutils literal notranslate"><span class="pre">except</span> <span class="pre">RateLimitedError</span></code> catches it).</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
@@ -1218,6 +1234,7 @@ the title/duration/chapters before deciding to download.</p>
 <li><a class="reference internal" href="#yb.download.youtube.MAX_SEARCH_LIMIT"><code class="docutils literal notranslate"><span class="pre">MAX_SEARCH_LIMIT</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.youtube.OnConvertError"><code class="docutils literal notranslate"><span class="pre">OnConvertError</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.youtube.OnSubtitleError"><code class="docutils literal notranslate"><span class="pre">OnSubtitleError</span></code></a></li>
+<li><a class="reference internal" href="#yb.download.youtube.PlaylistRateLimitedError"><code class="docutils literal notranslate"><span class="pre">PlaylistRateLimitedError</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.youtube.PlaylistSubtitleError"><code class="docutils literal notranslate"><span class="pre">PlaylistSubtitleError</span></code></a><ul>
 <li><a class="reference internal" href="#yb.download.youtube.PlaylistSubtitleError.results"><code class="docutils literal notranslate"><span class="pre">PlaylistSubtitleError.results</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.youtube.PlaylistSubtitleError.failures"><code class="docutils literal notranslate"><span class="pre">PlaylistSubtitleError.failures</span></code></a></li>
@@ -1252,7 +1269,7 @@ the title/duration/chapters before deciding to download.</p>
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=e3b9c749"></script>
+</div><script src="../_static/documentation_options.js?v=4af9b32f"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>

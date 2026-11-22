@@ -78,14 +78,15 @@ how to install it. The first download in a process runs it and warns.
 
 ### Exceptions
 
-| [`AudioLimitError`](#yb.download.AudioLimitError)                          | The source exceeds a cap (duration, size or time); nothing is left on disk.   |
-|-------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
-| [`AudioSourceError`](#yb.download.AudioSourceError)                         | yt-dlp could not get audio from the link (unsupported, unavailable, ...).     |
-| [`AudioTargetError`](#yb.download.AudioTargetError)                         | `validate_target` refused a URL: the link, or one yt-dlp was about to fetch.  |
-| [`PlaylistSubtitleError`](#yb.download.PlaylistSubtitleError)(results, failures) | Some playlist items' subtitles failed (`on_subtitle_error="raise"`).          |
-| [`AudioConversionError`](#yb.download.AudioConversionError)                     | Raised when audio could not be converted to the requested format.             |
-| [`DownloadRequirementWarning`](#yb.download.DownloadRequirementWarning)               | A download prerequisite (JS runtime, solver scripts) looks missing.           |
-| [`RateLimitedError`](#yb.download.RateLimitedError)                         | YouTube refused the request (HTTP 429 or a "confirm you're not a bot" wall).  |
+| [`AudioLimitError`](#yb.download.AudioLimitError)                             | The source exceeds a cap (duration, size or time); nothing is left on disk.                                                    |
+|----------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------|
+| [`AudioSourceError`](#yb.download.AudioSourceError)                            | yt-dlp could not get audio from the link (unsupported, unavailable, ...).                                                      |
+| [`AudioTargetError`](#yb.download.AudioTargetError)                            | `validate_target` refused a URL: the link, or one yt-dlp was about to fetch.                                                   |
+| [`PlaylistSubtitleError`](#yb.download.PlaylistSubtitleError)(results, failures)    | Some playlist items' subtitles failed (`on_subtitle_error="raise"`).                                                           |
+| [`PlaylistRateLimitedError`](#yb.download.PlaylistRateLimitedError)(results, failures) | A [`PlaylistSubtitleError`](#yb.download.PlaylistSubtitleError) where YouTube refused (429 / bot check) the captions. |
+| [`AudioConversionError`](#yb.download.AudioConversionError)                        | Raised when audio could not be converted to the requested format.                                                              |
+| [`DownloadRequirementWarning`](#yb.download.DownloadRequirementWarning)                  | A download prerequisite (JS runtime, solver scripts) looks missing.                                                            |
+| [`RateLimitedError`](#yb.download.RateLimitedError)                            | YouTube refused the request (HTTP 429 or a "confirm you're not a bot" wall).                                                   |
 
 ### *exception* yb.download.AudioConversionError
 
@@ -264,6 +265,15 @@ Maximum download rate, e.g. `"4M"` or `"500K"` (bytes/s).
 
 * **Type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+### *exception* yb.download.PlaylistRateLimitedError(results, failures)
+
+Bases: [`PlaylistSubtitleError`](yb.download.youtube.html.md#yb.download.youtube.PlaylistSubtitleError), [`RateLimitedError`](yb.download.pacing.html.md#yb.download.pacing.RateLimitedError)
+
+A [`PlaylistSubtitleError`](#yb.download.PlaylistSubtitleError) where YouTube refused (429 / bot check) the captions.
+
+Caught by `except RateLimitedError` (back off) as well as by
+`except PlaylistSubtitleError` (the partial `results` and `failures`).
 
 ### *exception* yb.download.PlaylistSubtitleError(results, failures)
 
@@ -613,7 +623,9 @@ stream, e.g. `.m4a`, without re-encoding).
   * [**RateLimitedError**](#yb.download.RateLimitedError) – On HTTP 429 or a “confirm you’re not a bot” wall, with
         a backoff hint. (Per-item failures under `ignoreerrors` are skipped.)
   * [**PlaylistSubtitleError**](#yb.download.PlaylistSubtitleError) – Some items’ subtitles failed and
-        `on_subtitle_error="raise"`.
+        `on_subtitle_error="raise"`. When a failure was a 429 / bot check it
+        is the subclass [`PlaylistRateLimitedError`](#yb.download.PlaylistRateLimitedError), which is also a
+        `RateLimitedError` (so `except RateLimitedError` catches it).
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`DownloadResult`](yb.download.youtube.html.md#yb.download.youtube.DownloadResult)]
 * **Returns:**

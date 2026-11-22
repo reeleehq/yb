@@ -55,5 +55,6 @@ yb.download.youtube
 
    .. autosummary::
    
+      PlaylistRateLimitedError
       PlaylistSubtitleError
    

@@ -55,8 +55,9 @@ The destination defaults to `$YB_DOWNLOAD_DIR` when set, else `~/Downloads`.
 
 ### Exceptions
 
-| [`PlaylistSubtitleError`](#yb.download.youtube.PlaylistSubtitleError)(results, failures)   | Some playlist items' subtitles failed (`on_subtitle_error="raise"`).   |
-|---------------------------------------------------------------------------------------------|------------------------------------------------------------------------|
+| [`PlaylistRateLimitedError`](#yb.download.youtube.PlaylistRateLimitedError)(results, failures)   | A [`PlaylistSubtitleError`](#yb.download.youtube.PlaylistSubtitleError) where YouTube refused (429 / bot check) the captions.   |
+|------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------|
+| [`PlaylistSubtitleError`](#yb.download.youtube.PlaylistSubtitleError)(results, failures)      | Some playlist items' subtitles failed (`on_subtitle_error="raise"`).                                                             |
 
 ### yb.download.youtube.COOKIES_FILE_ENV *= 'YB_COOKIES_FILE'*
 
@@ -173,6 +174,15 @@ What [`download_youtube_video()`](#yb.download.youtube.download_youtube_video) d
 same vocabulary as [`OnConvertError`](#yb.download.youtube.OnConvertError).
 
 alias of [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[‘raise’, ‘warn’]
+
+### *exception* yb.download.youtube.PlaylistRateLimitedError(results, failures)
+
+Bases: [`PlaylistSubtitleError`](#yb.download.youtube.PlaylistSubtitleError), [`RateLimitedError`](yb.download.pacing.html.md#yb.download.pacing.RateLimitedError)
+
+A [`PlaylistSubtitleError`](#yb.download.youtube.PlaylistSubtitleError) where YouTube refused (429 / bot check) the captions.
+
+Caught by `except RateLimitedError` (back off) as well as by
+`except PlaylistSubtitleError` (the partial `results` and `failures`).
 
 ### *exception* yb.download.youtube.PlaylistSubtitleError(results, failures)
 
@@ -382,7 +392,9 @@ stream, e.g. `.m4a`, without re-encoding).
   * [**RateLimitedError**](yb.download.html.md#yb.download.RateLimitedError) – On HTTP 429 or a “confirm you’re not a bot” wall, with
         a backoff hint. (Per-item failures under `ignoreerrors` are skipped.)
   * [**PlaylistSubtitleError**](#yb.download.youtube.PlaylistSubtitleError) – Some items’ subtitles failed and
-        `on_subtitle_error="raise"`.
+        `on_subtitle_error="raise"`. When a failure was a 429 / bot check it
+        is the subclass [`PlaylistRateLimitedError`](#yb.download.youtube.PlaylistRateLimitedError), which is also a
+        `RateLimitedError` (so `except RateLimitedError` catches it).
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`DownloadResult`](#yb.download.youtube.DownloadResult)]
 * **Returns:**

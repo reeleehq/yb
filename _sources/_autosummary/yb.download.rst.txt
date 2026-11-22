@@ -46,6 +46,7 @@ yb.download
       AudioSourceError
       AudioTargetError
       PlaylistSubtitleError
+      PlaylistRateLimitedError
       AudioConversionError
       DownloadRequirementWarning
       RateLimitedError
