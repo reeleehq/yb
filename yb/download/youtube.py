@@ -812,16 +812,18 @@ def search_youtube(
     Uses flat extraction of YouTube's search results page (no per-video fetch),
     sharing the cookie and JS-runtime handling of the downloads. Only video rows
     are returned (YouTube's channel rows are dropped); a Short's ``url`` is its
-    ``/shorts/`` link. With a filter (``min_s``, ``max_s``, ``keep``), up to
-    ``scan`` rows are read so that ``limit`` hits pass, when that many exist.
+    ``/shorts/`` link. Rows are read until ``limit`` hits pass (``min_s``,
+    ``max_s``, ``keep``), up to ``scan`` rows.
 
     Args:
         query: What to search for (any script).
         limit: How many hits to return at most, 1..:data:`MAX_SEARCH_LIMIT`.
         sp: YouTube's own search filter, the results page's ``sp`` parameter (upload
             date, duration buckets, features, ... as YouTube's filter menu encodes
-            them in its links). Default :data:`VIDEOS_SP`, videos only: the search
-            yt-dlp's ``ytsearchN:`` makes.
+            them in its links; the links' percent-encoded form is decoded here).
+            Default :data:`VIDEOS_SP`, videos only: the search yt-dlp's
+            ``ytsearchN:`` makes. ``""``: no filter (channel and playlist rows are
+            still dropped).
         creative_commons: Shorthand for ``sp=CREATIVE_COMMONS_SP``: only videos
             their uploader licensed as Creative Commons. The filter is YouTube's
             declaration; check a hit's full info (``license``) before relying on it.
@@ -829,8 +831,10 @@ def search_youtube(
             (non-negative seconds, inclusive); a hit with no reported duration is
             dropped when either bound is set.
         keep: Keep only hits for which this returns true (after the bounds).
-        scan: With a filter, how many result rows to read at most, ``limit``..
-            :data:`MAX_SEARCH_LIMIT` (more rows, more result pages fetched).
+        scan: How many result rows to read at most, ``limit``..
+            :data:`MAX_SEARCH_LIMIT`. Rows are read lazily: result pages (about 20
+            rows each) are fetched only until ``limit`` hits pass, so with no
+            filter that is about ``limit`` rows.
         extra_opts: Additional raw yt-dlp options (merged last).
         cookies_file: See :func:`download_youtube_video`.
 
@@ -841,6 +845,9 @@ def search_youtube(
     """
     if not query.strip():
         raise ValueError("query must not be blank")
+    for name, count in (("limit", limit), ("scan", scan)):
+        if not isinstance(count, int) or isinstance(count, bool):
+            raise TypeError(f"{name} must be an int, got {count!r}")
     if not 1 <= limit <= MAX_SEARCH_LIMIT:
         raise ValueError(f"limit must be in 1..{MAX_SEARCH_LIMIT}, got {limit}")
     for name, bound in (("min_s", min_s), ("max_s", max_s)):
@@ -850,27 +857,29 @@ def search_youtube(
         raise ValueError(f"min_s ({min_s}) is above max_s ({max_s})")
     if sp is not None and creative_commons:
         raise ValueError("pass sp or creative_commons=True, not both")
-    filtered = min_s is not None or max_s is not None or keep is not None
-    if filtered and not limit <= scan <= MAX_SEARCH_LIMIT:
+    if not limit <= scan <= MAX_SEARCH_LIMIT:
         raise ValueError(f"scan must be in {limit}..{MAX_SEARCH_LIMIT}, got {scan}")
 
-    sp = CREATIVE_COMMONS_SP if creative_commons else (sp or VIDEOS_SP)
-    opts: dict[str, Any] = {
-        "quiet": True,
-        "skip_download": True,
-        "extract_flat": True,
-        "playlistend": scan if filtered else limit,
-    }
+    if creative_commons:
+        sp = CREATIVE_COMMONS_SP
+    elif sp is None:
+        sp = VIDEOS_SP
+    while "%" in sp:  # a filter-menu link's sp is percent-encoded (twice)
+        sp = urllib.parse.unquote(sp)
+    opts: dict[str, Any] = {"quiet": True, "skip_download": True, "extract_flat": True}
     target = _search_results_url(query, sp=sp)
-    info = _extract_info(target, opts, extra_opts=extra_opts, cookies_file=cookies_file)
-    entries = (info or {}).get("entries") or []
-    hits = (_search_hit(e) for e in entries if _is_video_entry(e))
-    passing = (
-        h
-        for h in hits
-        if _within(h.duration, min_s, max_s) and (keep is None or keep(h))
-    )
-    return list(itertools.islice(passing, limit))
+    with youtube_dl(opts, extra_opts=extra_opts, cookies_file=cookies_file) as ydl:
+        # unprocessed: the entries stay a lazy generator, so pages are fetched only
+        # as rows are read (a processed playlist resolves every row up front)
+        info = ydl.extract_info(target, download=False, process=False)
+        entries = itertools.islice((info or {}).get("entries") or (), scan)
+        hits = (_search_hit(e) for e in entries if _is_video_entry(e))
+        passing = (
+            h
+            for h in hits
+            if _within(h.duration, min_s, max_s) and (keep is None or keep(h))
+        )
+        return list(itertools.islice(passing, limit))
 
 
 def _is_video_entry(entry: dict | None) -> bool:
@@ -896,7 +905,8 @@ def _is_seconds(value: Any) -> bool:
 
 def _search_results_url(query: str, *, sp: str) -> str:
     """The results page for ``query`` with YouTube's ``sp`` filter applied."""
-    return f"{SEARCH_RESULTS_URL}?{urllib.parse.urlencode({'search_query': query, 'sp': sp})}"
+    params = {"search_query": query, **({"sp": sp} if sp else {})}
+    return f"{SEARCH_RESULTS_URL}?{urllib.parse.urlencode(params)}"
 
 
 def _within(duration: float | None, min_s: float | None, max_s: float | None) -> bool:
