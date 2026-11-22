@@ -36,7 +36,15 @@ def fake_ydl(monkeypatch):
     return calls
 
 
-def test_returns_rows_and_builds_ytsearch_query(fake_ydl):
+def _page(query):
+    """``(base url, query string dict)`` of a results-page search."""
+    from urllib.parse import parse_qs, urlparse
+
+    url = urlparse(query)
+    return f"{url.scheme}://{url.netloc}{url.path}", parse_qs(url.query)
+
+
+def test_returns_rows_and_searches_the_videos_only_results_page(fake_ydl):
     fake_ydl["result"] = {
         "entries": [
             {
@@ -52,7 +60,12 @@ def test_returns_rows_and_builds_ytsearch_query(fake_ydl):
         ]
     }
     hits = search_youtube("हनुमान चालीसा", limit=2)
-    assert fake_ydl["query"] == "ytsearch2:हनुमान चालीसा"
+    # the search ytsearch2: makes: the results page, videos only, two rows
+    assert _page(fake_ydl["query"]) == (
+        ytdl.SEARCH_RESULTS_URL,
+        {"search_query": ["हनुमान चालीसा"], "sp": [ytdl.VIDEOS_SP]},
+    )
+    assert fake_ydl["opts"]["playlistend"] == 2
     assert fake_ydl["download"] is False
     assert fake_ydl["opts"]["extract_flat"] is True
     assert fake_ydl["opts"]["_rt"] is True  # went through the JS-runtime step
@@ -136,7 +149,7 @@ def test_duration_bounds_are_inclusive_and_drop_unknown(fake_ydl):
     fake_ydl["result"] = _hits(44, 45, 900, 901, None)
     hits = search_youtube("x", limit=5, min_s=45, max_s=900)
     assert [h.duration for h in hits] == [45, 900]
-    assert fake_ydl["query"] == "ytsearch5:x"  # no YouTube filter: plain search
+    assert _page(fake_ydl["query"])[1]["sp"] == [ytdl.VIDEOS_SP]
 
 
 def test_one_bound_alone(fake_ydl):
@@ -199,3 +212,40 @@ def test_upload_date_is_iso_or_none(fake_ydl):
         "2026-11-06",
         None,
     ]
+
+
+def test_a_filter_reads_past_limit_until_limit_hits_pass(fake_ydl):
+    fake_ydl["result"] = _hits(10, 20, 60, 30, 70, 80, 90)
+    hits = search_youtube("x", limit=2, min_s=45)
+    assert [h.duration for h in hits] == [60, 70]  # the first two that pass, in order
+    assert fake_ydl["opts"]["playlistend"] == ytdl.MAX_SEARCH_LIMIT
+    search_youtube("x", limit=2, min_s=45, scan=10)
+    assert fake_ydl["opts"]["playlistend"] == 10
+
+
+def test_keep_is_a_predicate_on_hits(fake_ydl):
+    fake_ydl["result"] = _hits(60, 61, 62, 63)
+    hits = search_youtube("x", limit=5, keep=lambda h: h.duration % 2 == 1)
+    assert [h.duration for h in hits] == [61, 63]
+
+
+def test_sp_is_youtubes_filter_and_creative_commons_its_shorthand(fake_ydl):
+    fake_ydl["result"] = _hits(60)
+    search_youtube("x", sp="EgIIAg==")  # e.g. uploaded this week
+    assert _page(fake_ydl["query"])[1]["sp"] == ["EgIIAg=="]
+    search_youtube("x", creative_commons=True)
+    assert _page(fake_ydl["query"])[1]["sp"] == [ytdl.CREATIVE_COMMONS_SP]
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        dict(sp="EgIIAg==", creative_commons=True),
+        dict(min_s=1, limit=10, scan=5),
+        dict(min_s=1, scan=ytdl.MAX_SEARCH_LIMIT + 1),
+    ],
+)
+def test_conflicting_or_out_of_range_options_fail_before_any_request(fake_ydl, kwargs):
+    with pytest.raises(ValueError):
+        search_youtube("x", **kwargs)
+    assert "query" not in fake_ydl

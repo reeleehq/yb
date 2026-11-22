@@ -71,7 +71,10 @@ search_youtube(
 )  # -> [SearchHit(id, title, duration, channel, url, view_count)]
 search_youtube(
     "house dance footwork", limit=20, creative_commons=True, min_s=45, max_s=900
-)  # YouTube's Creative Commons filter + a duration window
+)  # YouTube's Creative Commons filter + a duration window (reads past 20 rows to fill it)
+search_youtube(
+    "lofi", limit=10, sp="EgIIAg==", keep=lambda h: (h.view_count or 0) > 1000
+)  # any YouTube filter (sp, from its filter menu's links) + your own predicate
 download_audio_bounded(
     url, download_dir=tmp, max_bytes=..., max_duration_s=..., validate_target=...
 )  # mp3 + caps + copyright notice, for services (see below)
