@@ -285,6 +285,7 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">itertools</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
@@ -1078,6 +1079,10 @@
 <span class="c1">#: ``license = "Creative Commons Attribution license (reuse allowed)"``).</span>
 <span class="n">CREATIVE_COMMONS_SP</span> <span class="o">=</span> <span class="s2">"EgIwAQ=="</span>
 
+<span class="c1">#: YouTube's ``sp`` search parameter for videos only: the one yt-dlp's ``ytsearchN:``</span>
+<span class="c1">#: sends (``extractor/youtube/_search.py``), so the default search is that search.</span>
+<span class="n">VIDEOS_SP</span> <span class="o">=</span> <span class="s2">"EgIQAfABAQ=="</span>
+
 <span class="c1">#: yt-dlp's ``ie_key`` of a video row (channel and playlist rows have others).</span>
 <span class="n">_VIDEO_IE_KEY</span> <span class="o">=</span> <span class="s2">"Youtube"</span>
 
@@ -1088,9 +1093,12 @@
     <span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
     <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
+    <span class="n">sp</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">creative_commons</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">min_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">max_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">keep</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">SearchHit</span><span class="p">],</span> <span class="nb">bool</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">scan</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">MAX_SEARCH_LIMIT</span><span class="p">,</span>
     <span class="n">extra_opts</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">cookies_file</span><span class="p">:</span> <span class="n">CookiesFile</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">SearchHit</span><span class="p">]:</span>
@@ -1108,32 +1116,45 @@
 <span class="sd">        &gt;&gt;&gt; search_youtube("house dance footwork", limit=20, creative_commons=True,</span>
 <span class="sd">        ...                min_s=45, max_s=900)  # doctest: +SKIP</span>
 
-<span class="sd">    Uses flat extraction (one request, no per-video fetch), sharing the cookie</span>
-<span class="sd">    and JS-runtime handling of the downloads: yt-dlp's ``ytsearchN:``, or the</span>
-<span class="sd">    search results page when a YouTube search filter is asked for. Only video</span>
-<span class="sd">    rows are returned (YouTube's channel rows are dropped, so fewer than</span>
-<span class="sd">    ``limit`` may come back); a Short's ``url`` is its ``/shorts/`` link.</span>
+<span class="sd">    Uses flat extraction of YouTube's search results page (no per-video fetch),</span>
+<span class="sd">    sharing the cookie and JS-runtime handling of the downloads. Only video rows</span>
+<span class="sd">    are returned (YouTube's channel rows are dropped); a Short's ``url`` is its</span>
+<span class="sd">    ``/shorts/`` link. Rows are read until ``limit`` hits pass (``min_s``,</span>
+<span class="sd">    ``max_s``, ``keep``), up to ``scan`` rows.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        query: What to search for (any script).</span>
-<span class="sd">        limit: How many results to search, 1..:data:`MAX_SEARCH_LIMIT`.</span>
-<span class="sd">        creative_commons: Only videos their uploader licensed as Creative</span>
-<span class="sd">            Commons (YouTube's own search filter). The filter is YouTube's</span>
-<span class="sd">            declaration; check a hit's full info (``license``) before relying</span>
-<span class="sd">            on it.</span>
+<span class="sd">        limit: How many hits to return at most, 1..:data:`MAX_SEARCH_LIMIT`.</span>
+<span class="sd">        sp: YouTube's own search filter, the results page's ``sp`` parameter (upload</span>
+<span class="sd">            date, duration buckets, features, ... as YouTube's filter menu encodes</span>
+<span class="sd">            them in its links; the links' percent-encoded form is decoded here).</span>
+<span class="sd">            Default :data:`VIDEOS_SP`, videos only: the search yt-dlp's</span>
+<span class="sd">            ``ytsearchN:`` makes. ``""``: no filter (channel and playlist rows are</span>
+<span class="sd">            still dropped).</span>
+<span class="sd">        creative_commons: Shorthand for ``sp=CREATIVE_COMMONS_SP``: only videos</span>
+<span class="sd">            their uploader licensed as Creative Commons. The filter is YouTube's</span>
+<span class="sd">            declaration; check a hit's full info (``license``) before relying on it.</span>
 <span class="sd">        min_s, max_s: Keep only hits whose duration is within these bounds</span>
-<span class="sd">            (non-negative seconds, inclusive). Applied to the ``limit`` results, so fewer may</span>
-<span class="sd">            come back; a hit with no reported duration is dropped when either</span>
-<span class="sd">            bound is set.</span>
+<span class="sd">            (non-negative seconds, inclusive); a hit with no reported duration is</span>
+<span class="sd">            dropped when either bound is set.</span>
+<span class="sd">        keep: Keep only hits for which this returns true (after the bounds).</span>
+<span class="sd">        scan: How many result rows to read at most, ``limit``..</span>
+<span class="sd">            :data:`MAX_SEARCH_LIMIT`. Rows are read lazily: result pages (about 20</span>
+<span class="sd">            rows each) are fetched only until ``limit`` hits pass, so with no</span>
+<span class="sd">            filter that is about ``limit`` rows.</span>
 <span class="sd">        extra_opts: Additional raw yt-dlp options (merged last).</span>
 <span class="sd">        cookies_file: See :func:`download_youtube_video`.</span>
 
 <span class="sd">    Raises:</span>
-<span class="sd">        ValueError: If ``query`` is blank, ``limit`` is out of range, or</span>
-<span class="sd">            ``min_s`` is above ``max_s``.</span>
+<span class="sd">        ValueError: If ``query`` is blank, ``limit`` or ``scan`` is out of range,</span>
+<span class="sd">            ``min_s`` is above ``max_s``, or ``sp`` and ``creative_commons`` are</span>
+<span class="sd">            both given.</span>
 <span class="sd">    """</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">query</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"query must not be blank"</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">count</span> <span class="ow">in</span> <span class="p">((</span><span class="s2">"limit"</span><span class="p">,</span> <span class="n">limit</span><span class="p">),</span> <span class="p">(</span><span class="s2">"scan"</span><span class="p">,</span> <span class="n">scan</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">count</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">count</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> must be an int, got </span><span class="si">{</span><span class="n">count</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="mi">1</span> <span class="o">&lt;=</span> <span class="n">limit</span> <span class="o">&lt;=</span> <span class="n">MAX_SEARCH_LIMIT</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"limit must be in 1..</span><span class="si">{</span><span class="n">MAX_SEARCH_LIMIT</span><span class="si">}</span><span class="s2">, got </span><span class="si">{</span><span class="n">limit</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">bound</span> <span class="ow">in</span> <span class="p">((</span><span class="s2">"min_s"</span><span class="p">,</span> <span class="n">min_s</span><span class="p">),</span> <span class="p">(</span><span class="s2">"max_s"</span><span class="p">,</span> <span class="n">max_s</span><span class="p">)):</span>
@@ -1141,17 +1162,31 @@
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> must be a non-negative number, got </span><span class="si">{</span><span class="n">bound</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">min_s</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">max_s</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">min_s</span> <span class="o">&gt;</span> <span class="n">max_s</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"min_s (</span><span class="si">{</span><span class="n">min_s</span><span class="si">}</span><span class="s2">) is above max_s (</span><span class="si">{</span><span class="n">max_s</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">sp</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">creative_commons</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"pass sp or creative_commons=True, not both"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">limit</span> <span class="o">&lt;=</span> <span class="n">scan</span> <span class="o">&lt;=</span> <span class="n">MAX_SEARCH_LIMIT</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"scan must be in </span><span class="si">{</span><span class="n">limit</span><span class="si">}</span><span class="s2">..</span><span class="si">{</span><span class="n">MAX_SEARCH_LIMIT</span><span class="si">}</span><span class="s2">, got </span><span class="si">{</span><span class="n">scan</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
-    <span class="n">opts</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"quiet"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"skip_download"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"extract_flat"</span><span class="p">:</span> <span class="kc">True</span><span class="p">}</span>
     <span class="k">if</span> <span class="n">creative_commons</span><span class="p">:</span>
-        <span class="n">target</span> <span class="o">=</span> <span class="n">_search_results_url</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">sp</span><span class="o">=</span><span class="n">CREATIVE_COMMONS_SP</span><span class="p">)</span>
-        <span class="n">opts</span><span class="p">[</span><span class="s2">"playlistend"</span><span class="p">]</span> <span class="o">=</span> <span class="n">limit</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">target</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"ytsearch</span><span class="si">{</span><span class="n">limit</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">query</span><span class="si">}</span><span class="s2">"</span>
-    <span class="n">info</span> <span class="o">=</span> <span class="n">_extract_info</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">opts</span><span class="p">,</span> <span class="n">extra_opts</span><span class="o">=</span><span class="n">extra_opts</span><span class="p">,</span> <span class="n">cookies_file</span><span class="o">=</span><span class="n">cookies_file</span><span class="p">)</span>
-    <span class="n">entries</span> <span class="o">=</span> <span class="p">(</span><span class="n">info</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"entries"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]</span>
-    <span class="n">hits</span> <span class="o">=</span> <span class="p">[</span><span class="n">_search_hit</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">entries</span> <span class="k">if</span> <span class="n">_is_video_entry</span><span class="p">(</span><span class="n">e</span><span class="p">)]</span>
-    <span class="k">return</span> <span class="p">[</span><span class="n">h</span> <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">hits</span><span class="p">[:</span><span class="n">limit</span><span class="p">]</span> <span class="k">if</span> <span class="n">_within</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">duration</span><span class="p">,</span> <span class="n">min_s</span><span class="p">,</span> <span class="n">max_s</span><span class="p">)]</span></div>
+        <span class="n">sp</span> <span class="o">=</span> <span class="n">CREATIVE_COMMONS_SP</span>
+    <span class="k">elif</span> <span class="n">sp</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">sp</span> <span class="o">=</span> <span class="n">VIDEOS_SP</span>
+    <span class="k">while</span> <span class="s2">"%"</span> <span class="ow">in</span> <span class="n">sp</span><span class="p">:</span>  <span class="c1"># a filter-menu link's sp is percent-encoded (twice)</span>
+        <span class="n">sp</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">unquote</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span>
+    <span class="n">opts</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"quiet"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"skip_download"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"extract_flat"</span><span class="p">:</span> <span class="kc">True</span><span class="p">}</span>
+    <span class="n">target</span> <span class="o">=</span> <span class="n">_search_results_url</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">sp</span><span class="o">=</span><span class="n">sp</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">youtube_dl</span><span class="p">(</span><span class="n">opts</span><span class="p">,</span> <span class="n">extra_opts</span><span class="o">=</span><span class="n">extra_opts</span><span class="p">,</span> <span class="n">cookies_file</span><span class="o">=</span><span class="n">cookies_file</span><span class="p">)</span> <span class="k">as</span> <span class="n">ydl</span><span class="p">:</span>
+        <span class="c1"># unprocessed: the entries stay a lazy generator, so pages are fetched only</span>
+        <span class="c1"># as rows are read (a processed playlist resolves every row up front)</span>
+        <span class="n">info</span> <span class="o">=</span> <span class="n">ydl</span><span class="o">.</span><span class="n">extract_info</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">process</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">entries</span> <span class="o">=</span> <span class="n">itertools</span><span class="o">.</span><span class="n">islice</span><span class="p">((</span><span class="n">info</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"entries"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(),</span> <span class="n">scan</span><span class="p">)</span>
+        <span class="n">hits</span> <span class="o">=</span> <span class="p">(</span><span class="n">_search_hit</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">entries</span> <span class="k">if</span> <span class="n">_is_video_entry</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+        <span class="n">passing</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">h</span>
+            <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">hits</span>
+            <span class="k">if</span> <span class="n">_within</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">duration</span><span class="p">,</span> <span class="n">min_s</span><span class="p">,</span> <span class="n">max_s</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">keep</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">keep</span><span class="p">(</span><span class="n">h</span><span class="p">))</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">islice</span><span class="p">(</span><span class="n">passing</span><span class="p">,</span> <span class="n">limit</span><span class="p">))</span></div>
 
 
 
@@ -1178,7 +1213,8 @@
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_search_results_url</span><span class="p">(</span><span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">sp</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""The results page for ``query`` with YouTube's ``sp`` filter applied."""</span>
-    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">SEARCH_RESULTS_URL</span><span class="si">}</span><span class="s2">?</span><span class="si">{</span><span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">urlencode</span><span class="p">({</span><span class="s1">'search_query'</span><span class="p">:</span><span class="w"> </span><span class="n">query</span><span class="p">,</span><span class="w"> </span><span class="s1">'sp'</span><span class="p">:</span><span class="w"> </span><span class="n">sp</span><span class="p">})</span><span class="si">}</span><span class="s2">"</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"search_query"</span><span class="p">:</span> <span class="n">query</span><span class="p">,</span> <span class="o">**</span><span class="p">({</span><span class="s2">"sp"</span><span class="p">:</span> <span class="n">sp</span><span class="p">}</span> <span class="k">if</span> <span class="n">sp</span> <span class="k">else</span> <span class="p">{})}</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">SEARCH_RESULTS_URL</span><span class="si">}</span><span class="s2">?</span><span class="si">{</span><span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">urlencode</span><span class="p">(</span><span class="n">params</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_within</span><span class="p">(</span><span class="n">duration</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">min_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">max_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
@@ -1714,7 +1750,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=6264e773"></script>
+</div><script src="../../../_static/documentation_options.js?v=cb249315"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

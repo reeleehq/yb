@@ -53,7 +53,7 @@ how to install it. The first download in a process runs it and warns.
 | [`youtube_video_info`](#yb.download.youtube_video_info)(url, \*[, extra_opts, ...])  | Fetch a video's metadata without downloading it.                                 |
 | [`download_youtube_playlist`](#yb.download.download_youtube_playlist)(url, \*[, ...])       | Download all (or a selected subset of) a YouTube playlist's videos.              |
 | [`youtube_playlist_info`](#yb.download.youtube_playlist_info)(url, \*[, ...])           | Fetch a playlist's per-video metadata without downloading.                       |
-| [`search_youtube`](#yb.download.search_youtube)(query, \*[, limit, ...])         | Search YouTube by name; returns up to `limit` hits, best match first.            |
+| [`search_youtube`](#yb.download.search_youtube)(query, \*[, limit, sp, ...])     | Search YouTube by name; returns up to `limit` hits, best match first.            |
 | [`download_audio_bounded`](#yb.download.download_audio_bounded)(url, \*, download_dir)   | Download the audio of one video link as mp3, refusing what exceeds the caps.     |
 | [`require_http_url`](#yb.download.require_http_url)(url)                           | Default target check: an http(s) URL with a host.                                |
 | [`install_subtitle_fallback`](#yb.download.install_subtitle_fallback)(ydl, \*, ...)         | Make `ydl` survive a failed subtitle fetch; returns the failures as they happen. |
@@ -803,7 +803,7 @@ link-local and cloud-metadata hosts.
 * **Return type:**
   [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
-### yb.download.search_youtube(query, , limit=5, creative_commons=False, min_s=None, max_s=None, extra_opts=None, cookies_file=None)
+### yb.download.search_youtube(query, , limit=5, sp=None, creative_commons=False, min_s=None, max_s=None, keep=None, scan=50, extra_opts=None, cookies_file=None)
 
 Search YouTube by name; returns up to `limit` hits, best match first.
 
@@ -823,32 +823,41 @@ clips of a useful length:
 ...                min_s=45, max_s=900)
 ```
 
-Uses flat extraction (one request, no per-video fetch), sharing the cookie
-and JS-runtime handling of the downloads: yt-dlp’s `ytsearchN:`, or the
-search results page when a YouTube search filter is asked for. Only video
-rows are returned (YouTube’s channel rows are dropped, so fewer than
-`limit` may come back); a Short’s `url` is its `/shorts/` link.
+Uses flat extraction of YouTube’s search results page (no per-video fetch),
+sharing the cookie and JS-runtime handling of the downloads. Only video rows
+are returned (YouTube’s channel rows are dropped); a Short’s `url` is its
+`/shorts/` link. Rows are read until `limit` hits pass (`min_s`,
+`max_s`, `keep`), up to `scan` rows.
 
 * **Parameters:**
   * **query** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – What to search for (any script).
-  * **limit** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – How many results to search, 1..:data:`MAX_SEARCH_LIMIT`.
-  * **creative_commons** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Only videos their uploader licensed as Creative
-    Commons (YouTube’s own search filter). The filter is YouTube’s
-    declaration; check a hit’s full info (`license`) before relying
-    on it.
+  * **limit** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – How many hits to return at most, 1..:data:`MAX_SEARCH_LIMIT`.
+  * **sp** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – YouTube’s own search filter, the results page’s `sp` parameter (upload
+    date, duration buckets, features, … as YouTube’s filter menu encodes
+    them in its links; the links’ percent-encoded form is decoded here).
+    Default `VIDEOS_SP`, videos only: the search yt-dlp’s
+    `ytsearchN:` makes. `""`: no filter (channel and playlist rows are
+    still dropped).
+  * **creative_commons** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Shorthand for `sp=CREATIVE_COMMONS_SP`: only videos
+    their uploader licensed as Creative Commons. The filter is YouTube’s
+    declaration; check a hit’s full info (`license`) before relying on it.
   * **min_s** ([`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Keep only hits whose duration is within these bounds
-    (non-negative seconds, inclusive). Applied to the `limit` results, so fewer may
-    come back; a hit with no reported duration is dropped when either
-    bound is set.
+    (non-negative seconds, inclusive); a hit with no reported duration is
+    dropped when either bound is set.
   * **max_s** ([`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Keep only hits whose duration is within these bounds
-    (non-negative seconds, inclusive). Applied to the `limit` results, so fewer may
-    come back; a hit with no reported duration is dropped when either
-    bound is set.
+    (non-negative seconds, inclusive); a hit with no reported duration is
+    dropped when either bound is set.
+  * **keep** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`SearchHit`](yb.download.youtube.html.md#yb.download.youtube.SearchHit)], [`bool`](https://docs.python.org/3/builtins/functions.html#bool)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Keep only hits for which this returns true (after the bounds).
+  * **scan** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – How many result rows to read at most, `limit`..
+    `MAX_SEARCH_LIMIT`. Rows are read lazily: result pages (about 20
+    rows each) are fetched only until `limit` hits pass, so with no
+    filter that is about `limit` rows.
   * **extra_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Additional raw yt-dlp options (merged last).
   * **cookies_file** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[[`False`](https://docs.python.org/3/builtins/constants.html#False)], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – See [`download_youtube_video()`](#yb.download.download_youtube_video).
 * **Raises:**
-  [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `query` is blank, `limit` is out of range, or
-      `min_s` is above `max_s`.
+  [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `query` is blank, `limit` or `scan` is out of range,
+      `min_s` is above `max_s`, or `sp` and `creative_commons` are
+      both given.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`SearchHit`](yb.download.youtube.html.md#yb.download.youtube.SearchHit)]
 

@@ -22,6 +22,7 @@ yb.download.youtube
       MAX_SEARCH_LIMIT
       SEARCH_RESULTS_URL
       CREATIVE_COMMONS_SP
+      VIDEOS_SP
    
    .. rubric:: Functions
 

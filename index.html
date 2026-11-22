@@ -352,7 +352,10 @@ one — the error only surfaces when you actually call that feature. You also ne
 <span class="p">)</span>  <span class="c1"># -&gt; [SearchHit(id, title, duration, channel, url, view_count)]</span>
 <span class="n">search_youtube</span><span class="p">(</span>
     <span class="s2">"house dance footwork"</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">creative_commons</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">min_s</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span> <span class="n">max_s</span><span class="o">=</span><span class="mi">900</span>
-<span class="p">)</span>  <span class="c1"># YouTube's Creative Commons filter + a duration window</span>
+<span class="p">)</span>  <span class="c1"># YouTube's Creative Commons filter + a duration window (reads past 20 rows to fill it)</span>
+<span class="n">search_youtube</span><span class="p">(</span>
+    <span class="s2">"lofi"</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">sp</span><span class="o">=</span><span class="s2">"EgIIAg=="</span><span class="p">,</span> <span class="n">keep</span><span class="o">=</span><span class="k">lambda</span> <span class="n">h</span><span class="p">:</span> <span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">view_count</span> <span class="ow">or</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1000</span>
+<span class="p">)</span>  <span class="c1"># any YouTube filter (sp, from its filter menu's links) + your own predicate</span>
 <span class="n">download_audio_bounded</span><span class="p">(</span>
     <span class="n">url</span><span class="p">,</span> <span class="n">download_dir</span><span class="o">=</span><span class="n">tmp</span><span class="p">,</span> <span class="n">max_bytes</span><span class="o">=...</span><span class="p">,</span> <span class="n">max_duration_s</span><span class="o">=...</span><span class="p">,</span> <span class="n">validate_target</span><span class="o">=...</span>
 <span class="p">)</span>  <span class="c1"># mp3 + caps + copyright notice, for services (see below)</span>
@@ -667,7 +670,7 @@ it, and the <code class="docutils literal notranslate"><span class="pre">music</
 </section>
 </section>
 
-<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-11-22 08:52 UTC from <a href="https://github.com/reeleehq/yb/commit/2b563e95397fdf7c12b4648ed70599e7cfe05db2">2b563e9</a> (main) · yb 0.1.40 · <a href="about-this-build.html">about this build</a></p>
+<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-11-22 11:44 UTC from <a href="https://github.com/reeleehq/yb/commit/d63225b11e9ca1a3b4dd2c8a4b9a91506750b2ff">d63225b</a> (main) · yb 0.1.41 · <a href="about-this-build.html">about this build</a></p>
         </article>
       </div>
       <footer>
@@ -737,7 +740,7 @@ it, and the <code class="docutils literal notranslate"><span class="pre">music</
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=6264e773"></script>
+</div><script src="_static/documentation_options.js?v=cb249315"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>
