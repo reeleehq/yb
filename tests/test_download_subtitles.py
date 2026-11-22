@@ -204,3 +204,129 @@ def test_download_subtitles_fetches_only_subtitles(ydl, tmp_path):
 def test_download_subtitles_can_skip_auto(ydl, tmp_path):
     download_youtube_subtitles("u", download_dir=tmp_path, auto_subtitles=False)
     assert ydl.seen[0]["writeautomaticsub"] is False
+
+
+class _RetryYDL:
+    """A YoutubeDL-shaped fake whose process_info records what each call would do."""
+
+    def __init__(self, outcomes, *, params=None, folder=None):
+        self.folder = Path(folder or ".")
+        self.params = {"writesubtitles": True, "writeautomaticsub": False, **(params or {})}
+        self._pps = {"video": ["parse_metadata"], "post_process": ["ffmpeg"]}
+        self.outcomes, self.calls, self._num_downloads = list(outcomes), [], 0
+
+    def process_info(self, info):
+        self._num_downloads += 1
+        self.calls.append(
+            {
+                "video_pps": list(self._pps["video"]),
+                "forcetitle": self.params.get("forcetitle"),
+                "forceprint": dict(self.params.get("forceprint") or {}),
+                "subs": self.params["writesubtitles"],
+                "langs": sorted(info.get("requested_subtitles") or {}),
+            }
+        )
+        for lang, sub in (info.get("requested_subtitles") or {}).items():
+            if lang == "en":  # en is written before fr fails
+                sub["filepath"] = str(self.folder / f"T.{lang}.vtt")
+                Path(sub["filepath"]).write_text(sub.get("data") or "WEBVTT en")
+        outcome = self.outcomes.pop(0)
+        if outcome:
+            raise outcome
+
+
+def _two_langs():
+    return {"id": "v", "requested_subtitles": {"en": {"ext": "vtt"}, "fr": {"ext": "vtt"}}}
+
+
+def test_the_retry_does_not_rerun_pre_processors_or_printings():
+    from yb.download.youtube import install_subtitle_fallback
+
+    fake = _RetryYDL(
+        [Exception(SUBS_429), None],
+        params={"forcetitle": True, "forceprint": {"video": ["%(id)s"], "after_move": ["x"]}},
+    )
+    install_subtitle_fallback(fake, on_subtitle_error="warn")
+    with pytest.warns(UserWarning):
+        fake.process_info(_two_langs())
+    first, retry = fake.calls
+    assert first["video_pps"] == ["parse_metadata"] and first["forcetitle"] is True
+    assert retry["video_pps"] == [] and retry["forcetitle"] is False
+    assert retry["forceprint"] == {"after_move": ["x"]}  # only the item's own printing muted
+    assert fake._pps["video"] == ["parse_metadata"]  # all restored after
+    assert fake.params["forcetitle"] is True and "video" in fake.params["forceprint"]
+    assert fake._num_downloads == 1  # the retry is the same download (autonumber)
+
+
+def test_languages_written_before_the_failure_are_kept_and_moved(tmp_path):
+    from yb.download.youtube import install_subtitle_fallback
+
+    fake = _RetryYDL([Exception(SUBS_429), None], folder=tmp_path)
+    install_subtitle_fallback(fake, on_subtitle_error="warn")
+    with pytest.warns(UserWarning):
+        fake.process_info(_two_langs())
+    assert [c["langs"] for c in fake.calls] == [["en", "fr"], ["en"]]
+    assert fake.calls[1]["subs"] is True  # yt-dlp finds en's file and records its move
+
+
+def test_if_the_written_languages_fail_again_subtitles_go_off(tmp_path):
+    from yb.download.youtube import install_subtitle_fallback
+
+    fake = _RetryYDL([Exception(SUBS_429), Exception(SUBS_429), None], folder=tmp_path)
+    install_subtitle_fallback(fake, on_subtitle_error="warn")
+    with pytest.warns(UserWarning):
+        fake.process_info(_two_langs())
+    assert [c["subs"] for c in fake.calls] == [True, True, False]
+    assert fake.params["writesubtitles"] is True and fake._pps["video"] == ["parse_metadata"]
+
+
+def test_a_video_error_on_the_retry_propagates():
+    from yb.download.youtube import install_subtitle_fallback
+
+    fake = _RetryYDL([Exception(SUBS_429), Exception("ERROR: unable to download video data")])
+    install_subtitle_fallback(fake, on_subtitle_error="warn")
+    with pytest.warns(UserWarning), pytest.raises(Exception, match="video data"):
+        fake.process_info(_two_langs())
+    assert len(fake.calls) == 2 and fake._pps["video"] == ["parse_metadata"]
+
+
+@pytest.mark.parametrize("temp", [False, True])
+def test_with_real_yt_dlp_a_written_language_is_not_fetched_again(tmp_path, temp):
+    """The real ``YoutubeDL.process_info`` (``dl`` patched, no network): en is written,
+    fr is refused; en must not be fetched again (yt-dlp's default overwrites would
+    delete and refetch it, and lose it while the 429 lasts) and must end up home."""
+    yt_dlp = pytest.importorskip("yt_dlp")
+    from yb.download.youtube import install_subtitle_fallback
+
+    paths = {"home": str(tmp_path / "home")}
+    if temp:
+        paths["temp"] = str(tmp_path / "tmp")
+    ydl = yt_dlp.YoutubeDL(
+        {"outtmpl": "%(id)s.%(ext)s", "paths": paths, "writesubtitles": True,
+         "skip_download": True, "quiet": True, "no_warnings": True}
+    )
+    fetched = []
+
+    def dl(name, info, subtitle=False, test=False):
+        lang = info["url"].rsplit("/", 1)[-1]
+        fetched.append(lang)
+        if lang == "fr" or fetched.count("en") > 1:  # the 429 lasts
+            raise OSError("HTTP Error 429: Too Many Requests")
+        Path(name).write_text("WEBVTT\n\n00:00.000 --> 00:01.000\nhi\n")
+
+    ydl.dl = dl
+    failures = install_subtitle_fallback(ydl, on_subtitle_error="warn")
+    info = {
+        "id": "vid", "title": "t", "ext": "mp4", "url": "http://x/v", "format": "x",
+        "webpage_url": "http://x", "extractor": "generic", "extractor_key": "Generic",
+        "requested_subtitles": {
+            "en": {"ext": "vtt", "url": "http://x/en"},
+            "fr": {"ext": "vtt", "url": "http://x/fr"},
+        },
+    }
+    with pytest.warns(UserWarning, match=r"only the subtitles \['en'\]"):
+        ydl.process_info(info)
+    assert fetched == ["en", "fr"]  # en written once, from memory the second time
+    assert [f.video_id for f in failures] == ["vid"]
+    assert (tmp_path / "home" / "vid.en.vtt").read_text().startswith("WEBVTT")
+    assert not list((tmp_path / "tmp").glob("*")) if temp else True  # nothing stranded

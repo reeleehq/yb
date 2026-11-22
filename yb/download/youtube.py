@@ -61,6 +61,14 @@ SUBTITLE_FAILURE_MARKER = "Unable to download video subtitles"
 
 #: yt-dlp options that ask for subtitle files.
 _SUBTITLE_OPT_KEYS = ("writesubtitles", "writeautomaticsub")
+#: yt-dlp params that print an item as ``process_info`` starts it (muted on a retry).
+_FORCED_PRINT_FLAGS = tuple(
+    f"force{f}"
+    for f in ("title", "id", "url", "thumbnail", "description", "filename")
+    + ("duration", "format", "json")
+)
+#: yt-dlp params mapping a ``when`` to templates to print (the ``"video"`` one is muted).
+_PRINT_TEMPLATE_KEYS = ("forceprint", "print_to_file")
 
 #: Env var that overrides the default download directory.
 DOWNLOAD_DIR_ENV = "YB_DOWNLOAD_DIR"
@@ -1254,27 +1262,33 @@ def install_subtitle_fallback(
     Wraps ``ydl.process_info`` (called once per video, with the formats already
     chosen), so the retry happens in place: same item, same filename and order,
     no second extraction. Failures are keyed by video id (a video listed twice
-    in a playlist marks both rows). With several ``subtitle_langs``, the ones
-    written before the failure stay beside the video. On a failure of the
-    subtitle fetch only:
+    in a playlist marks both rows). On a failure of the subtitle fetch only:
 
-    - ``"warn"``: warn, then process the item again with subtitles off;
+    - ``"warn"``: warn, then process the item again: first with the subtitle
+      languages already written (their text handed to yt-dlp, which writes them
+      again with no fetch and moves them with the video, also out of a
+      ``paths: {"temp": ...}`` dir), then, if that fails too, with subtitles off. What ``process_info`` did once already for the item
+      (its ``"video"`` pre-processors, such as ``parse_metadata``, and the
+      ``--print``-style printings) is not done again;
     - ``"raise"``: re-raise (a 429 as :class:`~yb.download.RateLimitedError`
       saying only the subtitles were refused). Under ``ignoreerrors`` yt-dlp
       then skips the item, which the recorded failure still names.
     """
     failures: list[SubtitleFailure] = []
-    process_info = getattr(ydl, "process_info", None)
-    if process_info is None:  # a test fake without one
-        return failures
+    process_info = ydl.process_info
+
+    def subtitle_error(exc) -> str:
+        error = _subtitle_failure(exc)
+        if error is None:
+            raise exc
+        return error
 
     def with_fallback(info_dict):
+        downloads = getattr(ydl, "_num_downloads", None)
         try:
             return process_info(info_dict)
         except Exception as exc:
-            error = _subtitle_failure(exc)
-            if error is None:
-                raise
+            error = subtitle_error(exc)
             failures.append(SubtitleFailure(info_dict.get("id") or "", error))
             if on_subtitle_error == "raise":
                 if BLOCK_PATTERNS.search(error):
@@ -1283,24 +1297,85 @@ def install_subtitle_fallback(
                         "on_subtitle_error='warn' downloads the video without them."
                     ) from exc
                 raise
+        requested = info_dict.get("requested_subtitles") or {}
+        written = _written_subtitles(requested)
+        kept = f"only the subtitles {sorted(written)}" if written else "without subtitles"
         try:  # a warning filter set to "error" must not drop the video
             warn_at_caller(
-                f"Downloading without subtitles: {error}",
-                plumbing=_plumbing_with_ytdlp(),
+                f"Downloading {kept}: {error}", plumbing=_plumbing_with_ytdlp()
             )
         except UserWarning:
             pass
-        saved = {key: ydl.params.get(key) for key in _SUBTITLE_OPT_KEYS}
-        if isinstance(getattr(ydl, "_num_downloads", None), int):
-            ydl._num_downloads -= 1  # the retry is the same download (autonumber)
-        ydl.params.update(dict.fromkeys(_SUBTITLE_OPT_KEYS, False))
-        try:
+
+        def again():  # the same item, as the same download (autonumber, max_downloads)
+            if isinstance(downloads, int):
+                ydl._num_downloads = downloads
             return process_info(info_dict)
-        finally:
-            ydl.params.update(saved)
+
+        with _quiet_retry(ydl):
+            if written:  # rewritten from memory: no fetch, under any `overwrites`
+                info_dict["requested_subtitles"] = written
+                try:
+                    return again()
+                except Exception as exc:
+                    subtitle_error(exc)
+                info_dict["requested_subtitles"] = {
+                    lang: {k: v for k, v in sub.items() if k != "filepath"}
+                    if sub and sub.get("filepath") and not os.path.isfile(sub["filepath"])
+                    else sub
+                    for lang, sub in requested.items()
+                }
+            with _subtitles_off(ydl):
+                return again()
 
     ydl.process_info = with_fallback
     return failures
+
+
+def _written_subtitles(requested: dict) -> dict:
+    """The ``requested_subtitles`` entries already on disk, each carrying its text as
+    ``data``, so yt-dlp writes it again from memory (and records its move) instead of
+    fetching it: by default it deletes a file it finds (``overwrites``) and refetches."""
+    written = {}
+    for lang, sub in requested.items():
+        path = (sub or {}).get("filepath")
+        if path and os.path.isfile(path):
+            written[lang] = {**sub, "data": Path(path).read_text(encoding="utf-8")}
+    return written
+
+
+@contextmanager
+def _subtitles_off(ydl: Any):
+    """``ydl`` with subtitle writing off, its params restored after."""
+    saved = {key: ydl.params.get(key) for key in _SUBTITLE_OPT_KEYS}
+    ydl.params.update(dict.fromkeys(_SUBTITLE_OPT_KEYS, False))
+    try:
+        yield
+    finally:
+        ydl.params.update(saved)
+
+
+@contextmanager
+def _quiet_retry(ydl: Any):
+    """``ydl`` without what ``process_info`` does as it starts an item: its ``"video"``
+    pre-processors and the forced printings (restored after)."""
+    params = ydl.params
+    flags = {k: params[k] for k in _FORCED_PRINT_FLAGS if k in params}
+    templates = {k: params[k] for k in _PRINT_TEMPLATE_KEYS if isinstance(params.get(k), dict)}
+    pps = getattr(ydl, "_pps", None)
+    video_pps = pps.get("video") if isinstance(pps, dict) else None
+    params.update(dict.fromkeys(flags, False))
+    for key, by_when in templates.items():
+        params[key] = {w: t for w, t in by_when.items() if w != "video"}
+    if video_pps is not None:
+        pps["video"] = []
+    try:
+        yield
+    finally:
+        params.update(flags)
+        params.update(templates)
+        if video_pps is not None:
+            pps["video"] = video_pps
 
 
 def _coerce_cookies_from_browser(value: str | tuple) -> tuple:
