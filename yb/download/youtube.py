@@ -22,7 +22,8 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from collections.abc import Callable
-from typing import Any, Literal
+from functools import lru_cache
+from typing import Any, Literal, Optional
 
 from yb.download.ranges import (
     INFO_RANGE_KEY,
@@ -1101,9 +1102,10 @@ def download_youtube_playlist(
         on_subtitle_error: When only an item's subtitle fetch fails (yt-dlp
             would otherwise drop the item): ``"warn"`` (default) warns and
             downloads that item without subtitles, in place (its result carries
-            ``subtitles_error``); ``"raise"`` skips it and raises
-            :class:`PlaylistSubtitleError` after the run, carrying the items
-            that did download.
+            ``subtitles_error``); ``"raise"`` stops the run at the first
+            such item (no further item is fetched) and raises
+            :class:`PlaylistSubtitleError`, carrying the items that did
+            download before it.
 
     Audio only: pass ``fmt="bestaudio/best", merge_to=None`` (keeps the source
     stream, e.g. ``.m4a``, without re-encoding).
@@ -1112,7 +1114,8 @@ def download_youtube_playlist(
         RateLimitedError: On HTTP 429 or a "confirm you're not a bot" wall, with
             a backoff hint. (Per-item failures under ``ignoreerrors`` are skipped.)
         PlaylistSubtitleError: Some items' subtitles failed and
-            ``on_subtitle_error="raise"``. When a failure was a 429 / bot check it
+            ``on_subtitle_error="raise"`` (the run stops at the first such item, so
+            ``failures`` has one entry). When a failure was a 429 / bot check it
             is the subclass :class:`PlaylistRateLimitedError`, which is also a
             ``RateLimitedError`` (so ``except RateLimitedError`` catches it).
 
@@ -1175,8 +1178,18 @@ def download_youtube_playlist(
             cookies_from_browser=cookies_from_browser,
         ) as ydl,
     ):
-        failures = install_subtitle_fallback(ydl, on_subtitle_error=on_subtitle_error)
-        info = ydl.extract_info(url, download=True)
+        processed: list[dict] = []
+        failures = install_subtitle_fallback(
+            ydl,
+            on_subtitle_error=on_subtitle_error,
+            stop_at_first=True,
+            processed=processed,
+        )
+        stop = _stop_exception() if on_subtitle_error == "raise" else ()
+        try:
+            info = ydl.extract_info(url, download=True)
+        except stop:  # raise-policy: no more items, no more budget spent
+            info = {"entries": processed}
 
     errors = {f.video_id: f.error for f in failures}
     results: list[DownloadResult] = []
@@ -1213,6 +1226,18 @@ class SubtitleFailure:
 
     video_id: str
     error: str
+
+
+@lru_cache(maxsize=None)
+def _stop_exception() -> type[Exception]:
+    """The exception that ends a playlist run at the first subtitle failure.
+
+    A ``yt_dlp.utils.DownloadCancelled`` is the one kind yt-dlp re-raises even
+    under ``ignoreerrors``. Built on first use: yt-dlp is imported lazily.
+    """
+    from yt_dlp.utils import DownloadCancelled
+
+    return type("SubtitleFailureStop", (DownloadCancelled,), {})
 
 
 class PlaylistSubtitleError(RuntimeError):
@@ -1255,7 +1280,11 @@ def _plumbing_with_ytdlp() -> tuple[str, ...]:
 
 
 def install_subtitle_fallback(
-    ydl: Any, *, on_subtitle_error: OnSubtitleError
+    ydl: Any,
+    *,
+    on_subtitle_error: OnSubtitleError,
+    stop_at_first: bool = False,
+    processed: Optional[list] = None,
 ) -> list[SubtitleFailure]:
     """Make ``ydl`` survive a failed subtitle fetch; returns the failures as they happen.
 
@@ -1272,7 +1301,10 @@ def install_subtitle_fallback(
       ``--print``-style printings) is not done again;
     - ``"raise"``: re-raise (a 429 as :class:`~yb.download.RateLimitedError`
       saying only the subtitles were refused). Under ``ignoreerrors`` yt-dlp
-      then skips the item, which the recorded failure still names.
+      then skips the item, which the recorded failure still names. With
+      ``stop_at_first`` the run ends there instead (:func:`_stop_exception`,
+      which the caller catches), and every item processed before it is appended
+      to ``processed``.
     """
     failures: list[SubtitleFailure] = []
     process_info = ydl.process_info
@@ -1286,11 +1318,16 @@ def install_subtitle_fallback(
     def with_fallback(info_dict):
         downloads = getattr(ydl, "_num_downloads", None)
         try:
-            return process_info(info_dict)
+            result = process_info(info_dict)
+            if processed is not None:
+                processed.append(dict(info_dict))  # yt-dlp clears it afterwards
+            return result
         except Exception as exc:
             error = subtitle_error(exc)
             failures.append(SubtitleFailure(info_dict.get("id") or "", error))
             if on_subtitle_error == "raise":
+                if stop_at_first:
+                    raise _stop_exception()(error) from exc
                 if BLOCK_PATTERNS.search(error):
                     raise RateLimitedError(
                         f"Only the subtitles were refused ({error}); "

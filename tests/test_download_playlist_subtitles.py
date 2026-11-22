@@ -120,10 +120,22 @@ def test_order_is_kept_with_a_retry(page, tmp_path):
     assert [r.video_id for r in results] == ["page-2", "page-1"]
 
 
-def test_raise_reports_the_failed_items_and_keeps_the_rest(page, tmp_path):
+def test_raise_stops_at_the_first_failure_and_keeps_what_came_before(
+    page, tmp_path, monkeypatch
+):
+    """#68: no item after the failing one is fetched; the ones before are returned."""
+    monkeypatch.setattr(_Captions429, "refused", "/b.vtt")
+    with pytest.raises(PlaylistSubtitleError, match="page-2") as got:
+        get(page, tmp_path, on_subtitle_error="raise")
+    assert [r.video_id for r in got.value.results] == ["page-1"]
+    assert [f.video_id for f in got.value.failures] == ["page-2"]
+
+
+def test_raise_stops_before_the_items_after_the_failure(page, tmp_path):
     with pytest.raises(PlaylistSubtitleError, match="page-1") as got:
         get(page, tmp_path, on_subtitle_error="raise")
-    assert [r.video_id for r in got.value.results] == ["page-2"]
+    assert got.value.results == []
+    assert not list(tmp_path.glob("*page-2*"))  # page-2 was never downloaded
     (failure,) = got.value.failures
     assert isinstance(failure, SubtitleFailure)
     assert failure.video_id == "page-1" and "HTTP Error 429" in failure.error
@@ -138,7 +150,7 @@ def test_a_captions_429_is_also_a_rate_limited_error(page, tmp_path):
         get(page, tmp_path, on_subtitle_error="raise")
     assert isinstance(got.value, PlaylistRateLimitedError)
     assert isinstance(got.value, PlaylistSubtitleError)
-    assert [r.video_id for r in got.value.results] == ["page-2"]
+    assert got.value.results == []
 
 
 def test_no_failure_no_subtitles_error(page, tmp_path, monkeypatch):
