@@ -524,3 +524,13 @@ def test_real_ytdlp_bounds_a_fragmented_hls_source(tmp_path):
         server.shutdown()
     assert got.path.suffix == ".mp3" and got.path.stat().st_size > 0
     assert {p.name for p in segments} <= {u.rsplit("/", 1)[-1] for u in seen}
+
+
+def test_pinned_opts_keep_signed_url_file_names_short():
+    """Regression (#77): a long id from a signed, redirected URL must not overflow the name."""
+    yt_dlp = pytest.importorskip("yt_dlp")
+    opts = bounded._pinned_opts(Path("w"), max_bytes=1, deadline=0.0)
+    name = yt_dlp.YoutubeDL(opts).prepare_filename(
+        {"title": "t" * 300, "id": "52892780?" + "s" * 350, "ext": "mp3"}
+    )
+    assert len(Path(name).name) + len(".part") < 255
