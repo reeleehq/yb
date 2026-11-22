@@ -1106,6 +1106,7 @@
     <span class="n">creative_commons</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">min_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">max_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">max_age_days</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">keep</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">SearchHit</span><span class="p">],</span> <span class="nb">bool</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">scan</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">MAX_SEARCH_LIMIT</span><span class="p">,</span>
     <span class="n">extra_opts</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -1129,7 +1130,7 @@
 <span class="sd">    sharing the cookie and JS-runtime handling of the downloads. Only video rows</span>
 <span class="sd">    are returned (YouTube's channel rows are dropped); a Short's ``url`` is its</span>
 <span class="sd">    ``/shorts/`` link. Rows are read until ``limit`` hits pass (``min_s``,</span>
-<span class="sd">    ``max_s``, ``keep``), up to ``scan`` rows.</span>
+<span class="sd">    ``max_s``, ``max_age_days``, ``keep``), up to ``scan`` rows.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        query: What to search for (any script).</span>
@@ -1146,6 +1147,11 @@
 <span class="sd">        min_s, max_s: Keep only hits whose duration is within these bounds</span>
 <span class="sd">            (non-negative seconds, inclusive); a hit with no reported duration is</span>
 <span class="sd">            dropped when either bound is set.</span>
+<span class="sd">        max_age_days: Keep only hits uploaded at most this many days ago (inclusive,</span>
+<span class="sd">            by :attr:`SearchHit.upload_date`, UTC). A hit with no date is dropped</span>
+<span class="sd">            (as with ``min_s`` and a hit with no duration), and the flat listing</span>
+<span class="sd">            often carries none: expect few or no hits, then screen with</span>
+<span class="sd">            ``youtube_video_info`` or YouTube's own date filter through ``sp``.</span>
 <span class="sd">        keep: Keep only hits for which this returns true (after the bounds).</span>
 <span class="sd">        scan: How many result rows to read at most, ``limit``..</span>
 <span class="sd">            :data:`MAX_SEARCH_LIMIT`. Rows are read lazily: result pages (about 20</span>
@@ -1156,7 +1162,8 @@
 
 <span class="sd">    Raises:</span>
 <span class="sd">        ValueError: If ``query`` is blank, ``limit`` or ``scan`` is out of range,</span>
-<span class="sd">            ``min_s`` is above ``max_s``, or ``sp`` and ``creative_commons`` are</span>
+<span class="sd">            ``min_s`` is above ``max_s``, ``max_age_days`` is negative or not a</span>
+<span class="sd">            number, or ``sp`` and ``creative_commons`` are</span>
 <span class="sd">            both given.</span>
 <span class="sd">    """</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">query</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
@@ -1171,6 +1178,10 @@
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> must be a non-negative number, got </span><span class="si">{</span><span class="n">bound</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">min_s</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">max_s</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">min_s</span> <span class="o">&gt;</span> <span class="n">max_s</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"min_s (</span><span class="si">{</span><span class="n">min_s</span><span class="si">}</span><span class="s2">) is above max_s (</span><span class="si">{</span><span class="n">max_s</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">max_age_days</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">_is_seconds</span><span class="p">(</span><span class="n">max_age_days</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"max_age_days must be a non-negative number, got </span><span class="si">{</span><span class="n">max_age_days</span><span class="si">!r}</span><span class="s2">"</span>
+        <span class="p">)</span>
     <span class="k">if</span> <span class="n">sp</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">creative_commons</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"pass sp or creative_commons=True, not both"</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">limit</span> <span class="o">&lt;=</span> <span class="n">scan</span> <span class="o">&lt;=</span> <span class="n">MAX_SEARCH_LIMIT</span><span class="p">:</span>
@@ -1190,10 +1201,13 @@
         <span class="n">info</span> <span class="o">=</span> <span class="n">ydl</span><span class="o">.</span><span class="n">extract_info</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">process</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
         <span class="n">entries</span> <span class="o">=</span> <span class="n">itertools</span><span class="o">.</span><span class="n">islice</span><span class="p">((</span><span class="n">info</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"entries"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(),</span> <span class="n">scan</span><span class="p">)</span>
         <span class="n">hits</span> <span class="o">=</span> <span class="p">(</span><span class="n">_search_hit</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">entries</span> <span class="k">if</span> <span class="n">_is_video_entry</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+        <span class="n">recent</span> <span class="o">=</span> <span class="n">_not_older_than</span><span class="p">(</span><span class="n">max_age_days</span><span class="p">)</span>
         <span class="n">passing</span> <span class="o">=</span> <span class="p">(</span>
             <span class="n">h</span>
             <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">hits</span>
-            <span class="k">if</span> <span class="n">_within</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">duration</span><span class="p">,</span> <span class="n">min_s</span><span class="p">,</span> <span class="n">max_s</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">keep</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">keep</span><span class="p">(</span><span class="n">h</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">_within</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">duration</span><span class="p">,</span> <span class="n">min_s</span><span class="p">,</span> <span class="n">max_s</span><span class="p">)</span>
+            <span class="ow">and</span> <span class="n">recent</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">upload_date</span><span class="p">)</span>
+            <span class="ow">and</span> <span class="p">(</span><span class="n">keep</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">keep</span><span class="p">(</span><span class="n">h</span><span class="p">))</span>
         <span class="p">)</span>
         <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">islice</span><span class="p">(</span><span class="n">passing</span><span class="p">,</span> <span class="n">limit</span><span class="p">))</span></div>
 
@@ -1233,6 +1247,16 @@
     <span class="k">if</span> <span class="n">duration</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">False</span>
     <span class="k">return</span> <span class="p">(</span><span class="n">min_s</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">duration</span> <span class="o">&gt;=</span> <span class="n">min_s</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">max_s</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">duration</span> <span class="o">&lt;=</span> <span class="n">max_s</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_not_older_than</span><span class="p">(</span><span class="n">max_age_days</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">],</span> <span class="nb">bool</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""A test on an ISO upload date: not older than ``max_age_days``; unknown fails when set."""</span>
+    <span class="k">if</span> <span class="n">max_age_days</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="k">lambda</span> <span class="n">date</span><span class="p">:</span> <span class="kc">True</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">timedelta</span><span class="p">,</span> <span class="n">timezone</span>
+
+    <span class="n">cutoff</span> <span class="o">=</span> <span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">(</span><span class="n">timezone</span><span class="o">.</span><span class="n">utc</span><span class="p">)</span> <span class="o">-</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="n">max_age_days</span><span class="p">))</span><span class="o">.</span><span class="n">date</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()</span>
+    <span class="k">return</span> <span class="k">lambda</span> <span class="n">date</span><span class="p">:</span> <span class="n">date</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">date</span> <span class="o">&gt;=</span> <span class="n">cutoff</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_entry_url</span><span class="p">(</span><span class="n">entry</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
@@ -1868,7 +1892,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=aaf63c28"></script>
+</div><script src="../../../_static/documentation_options.js?v=03b6484e"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

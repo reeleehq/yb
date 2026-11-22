@@ -1,4 +1,4 @@
-> built 2026-11-22 18:49 UTC from 1efc56b (main) · yb 0.1.44. Details: build_info.json
+> built 2026-11-22 18:56 UTC from 4a924e3 (main) · yb 0.1.45. Details: build_info.json
 
 # index.html.md
 
@@ -1901,7 +1901,7 @@ link-local and cloud-metadata hosts.
 * **Return type:**
   [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
-### yb.download.search_youtube(query, , limit=5, sp=None, creative_commons=False, min_s=None, max_s=None, keep=None, scan=50, extra_opts=None, cookies_file=None)
+### yb.download.search_youtube(query, , limit=5, sp=None, creative_commons=False, min_s=None, max_s=None, max_age_days=None, keep=None, scan=50, extra_opts=None, cookies_file=None)
 
 Search YouTube by name; returns up to `limit` hits, best match first.
 
@@ -1925,7 +1925,7 @@ Uses flat extraction of YouTube’s search results page (no per-video fetch),
 sharing the cookie and JS-runtime handling of the downloads. Only video rows
 are returned (YouTube’s channel rows are dropped); a Short’s `url` is its
 `/shorts/` link. Rows are read until `limit` hits pass (`min_s`,
-`max_s`, `keep`), up to `scan` rows.
+`max_s`, `max_age_days`, `keep`), up to `scan` rows.
 
 * **Parameters:**
   * **query** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – What to search for (any script).
@@ -1945,6 +1945,11 @@ are returned (YouTube’s channel rows are dropped); a Short’s `url` is its
   * **max_s** ([`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Keep only hits whose duration is within these bounds
     (non-negative seconds, inclusive); a hit with no reported duration is
     dropped when either bound is set.
+  * **max_age_days** ([`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Keep only hits uploaded at most this many days ago (inclusive,
+    by `SearchHit.upload_date`, UTC). A hit with no date is dropped
+    (as with `min_s` and a hit with no duration), and the flat listing
+    often carries none: expect few or no hits, then screen with
+    `youtube_video_info` or YouTube’s own date filter through `sp`.
   * **keep** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`SearchHit`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.SearchHit)], [`bool`](https://docs.python.org/3/builtins/functions.html#bool)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Keep only hits for which this returns true (after the bounds).
   * **scan** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – How many result rows to read at most, `limit`..
     `MAX_SEARCH_LIMIT`. Rows are read lazily: result pages (about 20
@@ -1954,7 +1959,8 @@ are returned (YouTube’s channel rows are dropped); a Short’s `url` is its
   * **cookies_file** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[[`False`](https://docs.python.org/3/builtins/constants.html#False)], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – See [`download_youtube_video()`](_autosummary/yb.download.html.md#yb.download.download_youtube_video).
 * **Raises:**
   [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `query` is blank, `limit` or `scan` is out of range,
-      `min_s` is above `max_s`, or `sp` and `creative_commons` are
+      `min_s` is above `max_s`, `max_age_days` is negative or not a
+      number, or `sp` and `creative_commons` are
       both given.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`SearchHit`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.SearchHit)]
@@ -3301,7 +3307,7 @@ Best-effort resolution of the final media path yt-dlp produced.
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
-### yb.download.youtube.search_youtube(query, , limit=5, sp=None, creative_commons=False, min_s=None, max_s=None, keep=None, scan=50, extra_opts=None, cookies_file=None)
+### yb.download.youtube.search_youtube(query, , limit=5, sp=None, creative_commons=False, min_s=None, max_s=None, max_age_days=None, keep=None, scan=50, extra_opts=None, cookies_file=None)
 
 Search YouTube by name; returns up to `limit` hits, best match first.
 
@@ -3325,7 +3331,7 @@ Uses flat extraction of YouTube’s search results page (no per-video fetch),
 sharing the cookie and JS-runtime handling of the downloads. Only video rows
 are returned (YouTube’s channel rows are dropped); a Short’s `url` is its
 `/shorts/` link. Rows are read until `limit` hits pass (`min_s`,
-`max_s`, `keep`), up to `scan` rows.
+`max_s`, `max_age_days`, `keep`), up to `scan` rows.
 
 * **Parameters:**
   * **query** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – What to search for (any script).
@@ -3345,6 +3351,11 @@ are returned (YouTube’s channel rows are dropped); a Short’s `url` is its
   * **max_s** ([`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Keep only hits whose duration is within these bounds
     (non-negative seconds, inclusive); a hit with no reported duration is
     dropped when either bound is set.
+  * **max_age_days** ([`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Keep only hits uploaded at most this many days ago (inclusive,
+    by `SearchHit.upload_date`, UTC). A hit with no date is dropped
+    (as with `min_s` and a hit with no duration), and the flat listing
+    often carries none: expect few or no hits, then screen with
+    `youtube_video_info` or YouTube’s own date filter through `sp`.
   * **keep** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`SearchHit`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.SearchHit)], [`bool`](https://docs.python.org/3/builtins/functions.html#bool)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Keep only hits for which this returns true (after the bounds).
   * **scan** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – How many result rows to read at most, `limit`..
     [`MAX_SEARCH_LIMIT`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.MAX_SEARCH_LIMIT). Rows are read lazily: result pages (about 20
@@ -3354,7 +3365,8 @@ are returned (YouTube’s channel rows are dropped); a Short’s `url` is its
   * **cookies_file** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[[`False`](https://docs.python.org/3/builtins/constants.html#False)], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – See [`download_youtube_video()`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.download_youtube_video).
 * **Raises:**
   [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `query` is blank, `limit` or `scan` is out of range,
-      `min_s` is above `max_s`, or `sp` and `creative_commons` are
+      `min_s` is above `max_s`, `max_age_days` is negative or not a
+      number, or `sp` and `creative_commons` are
       both given.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`SearchHit`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.SearchHit)]
@@ -6453,16 +6465,18 @@ Fetch a video’s live metadata & engagement numbers.
 
 # About this build
 
-This documentation was built on **2026-11-22 18:49 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/1efc56baad6293ffcf0eb0331112884583c2f142"><code>1efc56b</code></a> on branch <code>main</code>, for **yb 0.1.44** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-22 18:56 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/4a924e32ff0b34772df78acf6f09d25e77393872"><code>4a924e3</code></a> on branch <code>main</code>, for **yb 0.1.45** (from <code>pyproject.toml</code>).
 
-#### NOTE
-Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
+#### WARNING
+The documentation and the package may be misaligned:
+
+- The documented version (0.1.45) is behind the latest release on PyPI (0.1.46): `pip install yb` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                    |
 |---------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/yb/commit/1efc56baad6293ffcf0eb0331112884583c2f142"><code>1efc56baad6293ffcf0eb0331112884583c2f142</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/yb/commit/4a924e32ff0b34772df78acf6f09d25e77393872"><code>4a924e32ff0b34772df78acf6f09d25e77393872</code></a> |
 | Branch              | <code>main</code>                                                                                                                                  |
 | Tags at this commit | none                                                                                                                                               |
 | Working tree        | clean                                                                                                                                              |
@@ -6473,9 +6487,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/yb</code>                                                                   |
-| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/45057083744">45057083744</a>          |
+| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/45057666080">45057666080</a>          |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>1efc56baad6293ffcf0eb0331112884583c2f142</code> (in the history of the built commit) |
+| Event commit | <code>4a924e32ff0b34772df78acf6f09d25e77393872</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -6500,13 +6514,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/yb/0.1.44/">0.1.44</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/yb/0.1.46/">0.1.46</a>, newer than the documented version (0.1.45).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/yb && cd yb
-git checkout 1efc56baad6293ffcf0eb0331112884583c2f142
+git checkout 4a924e32ff0b34772df78acf6f09d25e77393872
 pip install "epythet==0.2.23"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

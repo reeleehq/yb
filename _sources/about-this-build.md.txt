@@ -5,17 +5,19 @@ orphan: true
 
 # About this build
 
-This documentation was built on **2026-11-22 18:49 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/1efc56baad6293ffcf0eb0331112884583c2f142"><code>1efc56b</code></a> on branch <code>main</code>, for **yb 0.1.44** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-22 18:56 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/4a924e32ff0b34772df78acf6f09d25e77393872"><code>4a924e3</code></a> on branch <code>main</code>, for **yb 0.1.45** (from <code>pyproject.toml</code>).
 
-:::{note}
-Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
+:::{warning}
+The documentation and the package may be misaligned:
+
+- The documented version (0.1.45) is behind the latest release on PyPI (0.1.46): `pip install yb` gives newer code than these docs describe.
 :::
 
 ## Source
 
 | | |
 |---|---|
-| Commit | <a href="https://github.com/reeleehq/yb/commit/1efc56baad6293ffcf0eb0331112884583c2f142"><code>1efc56baad6293ffcf0eb0331112884583c2f142</code></a> |
+| Commit | <a href="https://github.com/reeleehq/yb/commit/4a924e32ff0b34772df78acf6f09d25e77393872"><code>4a924e32ff0b34772df78acf6f09d25e77393872</code></a> |
 | Branch | <code>main</code> |
 | Tags at this commit | none |
 | Working tree | clean |
@@ -26,9 +28,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 | | |
 |---|---|
 | Repository | <code>reeleehq/yb</code> |
-| Run | <a href="https://github.com/reeleehq/yb/actions/runs/45057083744">45057083744</a> |
+| Run | <a href="https://github.com/reeleehq/yb/actions/runs/45057666080">45057666080</a> |
 | Ref | <code>refs/heads/main</code> |
-| Event commit | <code>1efc56baad6293ffcf0eb0331112884583c2f142</code> (in the history of the built commit) |
+| Event commit | <code>4a924e32ff0b34772df78acf6f09d25e77393872</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -53,13 +55,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/yb/0.1.44/">0.1.44</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/yb/0.1.46/">0.1.46</a>, newer than the documented version (0.1.45).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/yb && cd yb
-git checkout 1efc56baad6293ffcf0eb0331112884583c2f142
+git checkout 4a924e32ff0b34772df78acf6f09d25e77393872
 pip install "epythet==0.2.23"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

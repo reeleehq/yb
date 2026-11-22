@@ -570,7 +570,7 @@ Best-effort resolution of the final media path yt-dlp produced.
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
-### yb.download.youtube.search_youtube(query, , limit=5, sp=None, creative_commons=False, min_s=None, max_s=None, keep=None, scan=50, extra_opts=None, cookies_file=None)
+### yb.download.youtube.search_youtube(query, , limit=5, sp=None, creative_commons=False, min_s=None, max_s=None, max_age_days=None, keep=None, scan=50, extra_opts=None, cookies_file=None)
 
 Search YouTube by name; returns up to `limit` hits, best match first.
 
@@ -594,7 +594,7 @@ Uses flat extraction of YouTube’s search results page (no per-video fetch),
 sharing the cookie and JS-runtime handling of the downloads. Only video rows
 are returned (YouTube’s channel rows are dropped); a Short’s `url` is its
 `/shorts/` link. Rows are read until `limit` hits pass (`min_s`,
-`max_s`, `keep`), up to `scan` rows.
+`max_s`, `max_age_days`, `keep`), up to `scan` rows.
 
 * **Parameters:**
   * **query** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – What to search for (any script).
@@ -614,6 +614,11 @@ are returned (YouTube’s channel rows are dropped); a Short’s `url` is its
   * **max_s** ([`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Keep only hits whose duration is within these bounds
     (non-negative seconds, inclusive); a hit with no reported duration is
     dropped when either bound is set.
+  * **max_age_days** ([`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Keep only hits uploaded at most this many days ago (inclusive,
+    by `SearchHit.upload_date`, UTC). A hit with no date is dropped
+    (as with `min_s` and a hit with no duration), and the flat listing
+    often carries none: expect few or no hits, then screen with
+    `youtube_video_info` or YouTube’s own date filter through `sp`.
   * **keep** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`SearchHit`](#yb.download.youtube.SearchHit)], [`bool`](https://docs.python.org/3/builtins/functions.html#bool)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Keep only hits for which this returns true (after the bounds).
   * **scan** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – How many result rows to read at most, `limit`..
     [`MAX_SEARCH_LIMIT`](#yb.download.youtube.MAX_SEARCH_LIMIT). Rows are read lazily: result pages (about 20
@@ -623,7 +628,8 @@ are returned (YouTube’s channel rows are dropped); a Short’s `url` is its
   * **cookies_file** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[[`False`](https://docs.python.org/3/builtins/constants.html#False)], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – See [`download_youtube_video()`](#yb.download.youtube.download_youtube_video).
 * **Raises:**
   [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If `query` is blank, `limit` or `scan` is out of range,
-      `min_s` is above `max_s`, or `sp` and `creative_commons` are
+      `min_s` is above `max_s`, `max_age_days` is negative or not a
+      number, or `sp` and `creative_commons` are
       both given.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`SearchHit`](#yb.download.youtube.SearchHit)]
