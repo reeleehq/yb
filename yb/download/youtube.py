@@ -1185,9 +1185,10 @@ def download_youtube_playlist(
             stop_at_first=True,
             processed=processed,
         )
+        stop = _stop_exception() if on_subtitle_error == "raise" else ()
         try:
             info = ydl.extract_info(url, download=True)
-        except _stop_exception():  # raise-policy: no more items, no more budget spent
+        except stop:  # raise-policy: no more items, no more budget spent
             info = {"entries": processed}
 
     errors = {f.video_id: f.error for f in failures}
