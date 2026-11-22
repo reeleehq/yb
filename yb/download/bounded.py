@@ -156,6 +156,9 @@ def _mp3_path(path: Path) -> Path:
     return converted if converted.exists() else path
 
 
+MAX_FILENAME_CHARS = 100  # yt-dlp ``trim_file_name``: keeps names under OS limits (255)
+
+
 def _format_selector(protocols: tuple[str, ...]) -> str:
     """Best audio, else best, restricted to ``protocols``."""
     only = "[protocol~='^(%s)$']" % "|".join(protocols)
@@ -170,6 +173,9 @@ def _pinned_opts(work: Path, *, max_bytes: int, deadline: float) -> dict[str, An
         "noprogress": True,
         "format": _format_selector(GUARDED_PROTOCOLS),
         "outtmpl": str(work / "%(title)s (%(id)s).%(ext)s"),
+        # Direct links that redirect to a signed address get title/id from a URL
+        # with a ~350-character signature: cap the name, not the caller's problem.
+        "trim_file_name": MAX_FILENAME_CHARS,
         "max_filesize": max_bytes,  # yt-dlp skips/aborts formats of known size
         "progress_hooks": [_byte_and_time_cap(max_bytes, deadline)],
         # HLS the native downloader cannot handle is delegated to ffmpeg, which
