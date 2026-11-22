@@ -543,11 +543,14 @@ Make `ydl` survive a failed subtitle fetch; returns the failures as they happen.
 Wraps `ydl.process_info` (called once per video, with the formats already
 chosen), so the retry happens in place: same item, same filename and order,
 no second extraction. Failures are keyed by video id (a video listed twice
-in a playlist marks both rows). With several `subtitle_langs`, the ones
-written before the failure stay beside the video. On a failure of the
-subtitle fetch only:
+in a playlist marks both rows). On a failure of the subtitle fetch only:
 
-- `"warn"`: warn, then process the item again with subtitles off;
+- `"warn"`: warn, then process the item again: first with the subtitle
+  languages already written (their text handed to yt-dlp, which writes them
+  again with no fetch and moves them with the video, also out of a
+  `paths: {"temp": ...}` dir), then, if that fails too, with subtitles off. What `process_info` did once already for the item
+  (its `"video"` pre-processors, such as `parse_metadata`, and the
+  `--print`-style printings) is not done again;
 - `"raise"`: re-raise (a 429 as [`RateLimitedError`](yb.download.html.md#yb.download.RateLimitedError)
   saying only the subtitles were refused). Under `ignoreerrors` yt-dlp
   then skips the item, which the recorded failure still names.

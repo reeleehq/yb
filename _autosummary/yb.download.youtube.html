@@ -1027,11 +1027,14 @@ subtitles were refused). See <a class="reference internal" href="#yb.download.yo
 <p>Wraps <code class="docutils literal notranslate"><span class="pre">ydl.process_info</span></code> (called once per video, with the formats already
 chosen), so the retry happens in place: same item, same filename and order,
 no second extraction. Failures are keyed by video id (a video listed twice
-in a playlist marks both rows). With several <code class="docutils literal notranslate"><span class="pre">subtitle_langs</span></code>, the ones
-written before the failure stay beside the video. On a failure of the
-subtitle fetch only:</p>
+in a playlist marks both rows). On a failure of the subtitle fetch only:</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">&quot;warn&quot;</span></code>: warn, then process the item again with subtitles off;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;warn&quot;</span></code>: warn, then process the item again: first with the subtitle
+languages already written (their text handed to yt-dlp, which writes them
+again with no fetch and moves them with the video, also out of a
+<code class="docutils literal notranslate"><span class="pre">paths:</span> <span class="pre">{&quot;temp&quot;:</span> <span class="pre">...}</span></code> dir), then, if that fails too, with subtitles off. What <code class="docutils literal notranslate"><span class="pre">process_info</span></code> did once already for the item
+(its <code class="docutils literal notranslate"><span class="pre">&quot;video&quot;</span></code> pre-processors, such as <code class="docutils literal notranslate"><span class="pre">parse_metadata</span></code>, and the
+<code class="docutils literal notranslate"><span class="pre">--print</span></code>-style printings) is not done again;</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">&quot;raise&quot;</span></code>: re-raise (a 429 as <a class="reference internal" href="yb.download.html#yb.download.RateLimitedError" title="yb.download.RateLimitedError"><code class="xref py py-class docutils literal notranslate"><span class="pre">RateLimitedError</span></code></a>
 saying only the subtitles were refused). Under <code class="docutils literal notranslate"><span class="pre">ignoreerrors</span></code> yt-dlp
 then skips the item, which the recorded failure still names.</p></li>
@@ -1299,7 +1302,7 @@ the title/duration/chapters before deciding to download.</p>
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=cb249315"></script>
+</div><script src="../_static/documentation_options.js?v=eb9509fe"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>

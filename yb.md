@@ -1,4 +1,4 @@
-> built 2026-11-22 11:44 UTC from d63225b (main) · yb 0.1.41. Details: build_info.json
+> built 2026-11-22 11:53 UTC from 8b013da (main) · yb 0.1.42. Details: build_info.json
 
 # index.html.md
 
@@ -1861,11 +1861,14 @@ Make `ydl` survive a failed subtitle fetch; returns the failures as they happen.
 Wraps `ydl.process_info` (called once per video, with the formats already
 chosen), so the retry happens in place: same item, same filename and order,
 no second extraction. Failures are keyed by video id (a video listed twice
-in a playlist marks both rows). With several `subtitle_langs`, the ones
-written before the failure stay beside the video. On a failure of the
-subtitle fetch only:
+in a playlist marks both rows). On a failure of the subtitle fetch only:
 
-- `"warn"`: warn, then process the item again with subtitles off;
+- `"warn"`: warn, then process the item again: first with the subtitle
+  languages already written (their text handed to yt-dlp, which writes them
+  again with no fetch and moves them with the video, also out of a
+  `paths: {"temp": ...}` dir), then, if that fails too, with subtitles off. What `process_info` did once already for the item
+  (its `"video"` pre-processors, such as `parse_metadata`, and the
+  `--print`-style printings) is not done again;
 - `"raise"`: re-raise (a 429 as [`RateLimitedError`](_autosummary/yb.download.html.md#yb.download.RateLimitedError)
   saying only the subtitles were refused). Under `ignoreerrors` yt-dlp
   then skips the item, which the recorded failure still names.
@@ -3266,11 +3269,14 @@ Make `ydl` survive a failed subtitle fetch; returns the failures as they happen.
 Wraps `ydl.process_info` (called once per video, with the formats already
 chosen), so the retry happens in place: same item, same filename and order,
 no second extraction. Failures are keyed by video id (a video listed twice
-in a playlist marks both rows). With several `subtitle_langs`, the ones
-written before the failure stay beside the video. On a failure of the
-subtitle fetch only:
+in a playlist marks both rows). On a failure of the subtitle fetch only:
 
-- `"warn"`: warn, then process the item again with subtitles off;
+- `"warn"`: warn, then process the item again: first with the subtitle
+  languages already written (their text handed to yt-dlp, which writes them
+  again with no fetch and moves them with the video, also out of a
+  `paths: {"temp": ...}` dir), then, if that fails too, with subtitles off. What `process_info` did once already for the item
+  (its `"video"` pre-processors, such as `parse_metadata`, and the
+  `--print`-style printings) is not done again;
 - `"raise"`: re-raise (a 429 as [`RateLimitedError`](_autosummary/yb.download.html.md#yb.download.RateLimitedError)
   saying only the subtitles were refused). Under `ignoreerrors` yt-dlp
   then skips the item, which the recorded failure still names.
@@ -6437,16 +6443,18 @@ Fetch a video’s live metadata & engagement numbers.
 
 # About this build
 
-This documentation was built on **2026-11-22 11:44 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/d63225b11e9ca1a3b4dd2c8a4b9a91506750b2ff"><code>d63225b</code></a> on branch <code>main</code>, for **yb 0.1.41** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-22 11:53 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/8b013da05a977041351445450bd4344565127a27"><code>8b013da</code></a> on branch <code>main</code>, for **yb 0.1.42** (from <code>pyproject.toml</code>).
 
-#### NOTE
-Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
+#### WARNING
+The documentation and the package may be misaligned:
+
+- The documented version (0.1.42) is behind the latest release on PyPI (0.1.43): `pip install yb` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                    |
 |---------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/yb/commit/d63225b11e9ca1a3b4dd2c8a4b9a91506750b2ff"><code>d63225b11e9ca1a3b4dd2c8a4b9a91506750b2ff</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/yb/commit/8b013da05a977041351445450bd4344565127a27"><code>8b013da05a977041351445450bd4344565127a27</code></a> |
 | Branch              | <code>main</code>                                                                                                                                  |
 | Tags at this commit | none                                                                                                                                               |
 | Working tree        | clean                                                                                                                                              |
@@ -6457,9 +6465,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/yb</code>                                                                   |
-| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/45018691879">45018691879</a>          |
+| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/45019365080">45019365080</a>          |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>d63225b11e9ca1a3b4dd2c8a4b9a91506750b2ff</code> (in the history of the built commit) |
+| Event commit | <code>8b013da05a977041351445450bd4344565127a27</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -6484,13 +6492,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/yb/0.1.41/">0.1.41</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/yb/0.1.43/">0.1.43</a>, newer than the documented version (0.1.42).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/yb && cd yb
-git checkout d63225b11e9ca1a3b4dd2c8a4b9a91506750b2ff
+git checkout 8b013da05a977041351445450bd4344565127a27
 pip install "epythet==0.2.23"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

@@ -1,32 +1,32 @@
 {
   "schema_version": 1,
-  "built_at": "2026-11-22T11:44:54Z",
+  "built_at": "2026-11-22T11:53:22Z",
   "package": {
     "name": "yb",
-    "version": "0.1.41",
+    "version": "0.1.42",
     "display_name": "yb",
     "source": "pyproject.toml"
   },
   "git": {
     "available": true,
-    "commit": "d63225b11e9ca1a3b4dd2c8a4b9a91506750b2ff",
-    "short_commit": "d63225b",
+    "commit": "8b013da05a977041351445450bd4344565127a27",
+    "short_commit": "8b013da",
     "branch": "main",
     "tags": [],
     "dirty": false,
     "remote_url": "https://github.com/reeleehq/yb",
-    "commit_url": "https://github.com/reeleehq/yb/commit/d63225b11e9ca1a3b4dd2c8a4b9a91506750b2ff",
+    "commit_url": "https://github.com/reeleehq/yb/commit/8b013da05a977041351445450bd4344565127a27",
     "error": null
   },
   "ci": {
     "provider": "github",
     "repository": "reeleehq/yb",
-    "sha": "d63225b11e9ca1a3b4dd2c8a4b9a91506750b2ff",
+    "sha": "8b013da05a977041351445450bd4344565127a27",
     "sha_in_history": true,
     "ref": "refs/heads/main",
     "ref_name": "main",
-    "run_id": "45018691879",
-    "run_url": "https://github.com/reeleehq/yb/actions/runs/45018691879",
+    "run_id": "45019365080",
+    "run_url": "https://github.com/reeleehq/yb/actions/runs/45019365080",
     "server_url": "https://github.com"
   },
   "tools": {
@@ -60,14 +60,16 @@
   },
   "pypi": {
     "checked": true,
-    "latest": "0.1.41",
-    "relation": "same",
+    "latest": "0.1.43",
+    "relation": "behind",
     "error": null
   },
-  "reproduce": "git clone https://github.com/reeleehq/yb && cd yb\ngit checkout d63225b11e9ca1a3b4dd2c8a4b9a91506750b2ff\npip install \"epythet==0.2.23\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
+  "reproduce": "git clone https://github.com/reeleehq/yb && cd yb\ngit checkout 8b013da05a977041351445450bd4344565127a27\npip install \"epythet==0.2.23\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
   "warnings": [],
   "alignment": {
-    "aligned": true,
-    "notes": []
+    "aligned": false,
+    "notes": [
+      "The documented version (0.1.42) is behind the latest release on PyPI (0.1.43): `pip install yb` gives newer code than these docs describe."
+    ]
   }
 }

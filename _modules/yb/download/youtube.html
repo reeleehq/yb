@@ -336,6 +336,14 @@
 
 <span class="c1">#: yt-dlp options that ask for subtitle files.</span>
 <span class="n">_SUBTITLE_OPT_KEYS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"writesubtitles"</span><span class="p">,</span> <span class="s2">"writeautomaticsub"</span><span class="p">)</span>
+<span class="c1">#: yt-dlp params that print an item as ``process_info`` starts it (muted on a retry).</span>
+<span class="n">_FORCED_PRINT_FLAGS</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
+    <span class="sa">f</span><span class="s2">"force</span><span class="si">{</span><span class="n">f</span><span class="si">}</span><span class="s2">"</span>
+    <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"title"</span><span class="p">,</span> <span class="s2">"id"</span><span class="p">,</span> <span class="s2">"url"</span><span class="p">,</span> <span class="s2">"thumbnail"</span><span class="p">,</span> <span class="s2">"description"</span><span class="p">,</span> <span class="s2">"filename"</span><span class="p">)</span>
+    <span class="o">+</span> <span class="p">(</span><span class="s2">"duration"</span><span class="p">,</span> <span class="s2">"format"</span><span class="p">,</span> <span class="s2">"json"</span><span class="p">)</span>
+<span class="p">)</span>
+<span class="c1">#: yt-dlp params mapping a ``when`` to templates to print (the ``"video"`` one is muted).</span>
+<span class="n">_PRINT_TEMPLATE_KEYS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"forceprint"</span><span class="p">,</span> <span class="s2">"print_to_file"</span><span class="p">)</span>
 
 <span class="c1">#: Env var that overrides the default download directory.</span>
 <span class="n">DOWNLOAD_DIR_ENV</span> <span class="o">=</span> <span class="s2">"YB_DOWNLOAD_DIR"</span>
@@ -1579,27 +1587,33 @@
 <span class="sd">    Wraps ``ydl.process_info`` (called once per video, with the formats already</span>
 <span class="sd">    chosen), so the retry happens in place: same item, same filename and order,</span>
 <span class="sd">    no second extraction. Failures are keyed by video id (a video listed twice</span>
-<span class="sd">    in a playlist marks both rows). With several ``subtitle_langs``, the ones</span>
-<span class="sd">    written before the failure stay beside the video. On a failure of the</span>
-<span class="sd">    subtitle fetch only:</span>
+<span class="sd">    in a playlist marks both rows). On a failure of the subtitle fetch only:</span>
 
-<span class="sd">    - ``"warn"``: warn, then process the item again with subtitles off;</span>
+<span class="sd">    - ``"warn"``: warn, then process the item again: first with the subtitle</span>
+<span class="sd">      languages already written (their text handed to yt-dlp, which writes them</span>
+<span class="sd">      again with no fetch and moves them with the video, also out of a</span>
+<span class="sd">      ``paths: {"temp": ...}`` dir), then, if that fails too, with subtitles off. What ``process_info`` did once already for the item</span>
+<span class="sd">      (its ``"video"`` pre-processors, such as ``parse_metadata``, and the</span>
+<span class="sd">      ``--print``-style printings) is not done again;</span>
 <span class="sd">    - ``"raise"``: re-raise (a 429 as :class:`~yb.download.RateLimitedError`</span>
 <span class="sd">      saying only the subtitles were refused). Under ``ignoreerrors`` yt-dlp</span>
 <span class="sd">      then skips the item, which the recorded failure still names.</span>
 <span class="sd">    """</span>
     <span class="n">failures</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">SubtitleFailure</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="n">process_info</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">ydl</span><span class="p">,</span> <span class="s2">"process_info"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">process_info</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># a test fake without one</span>
-        <span class="k">return</span> <span class="n">failures</span>
+    <span class="n">process_info</span> <span class="o">=</span> <span class="n">ydl</span><span class="o">.</span><span class="n">process_info</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">subtitle_error</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="n">error</span> <span class="o">=</span> <span class="n">_subtitle_failure</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">error</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">exc</span>
+        <span class="k">return</span> <span class="n">error</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">with_fallback</span><span class="p">(</span><span class="n">info_dict</span><span class="p">):</span>
+        <span class="n">downloads</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">ydl</span><span class="p">,</span> <span class="s2">"_num_downloads"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">process_info</span><span class="p">(</span><span class="n">info_dict</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-            <span class="n">error</span> <span class="o">=</span> <span class="n">_subtitle_failure</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">error</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="k">raise</span>
+            <span class="n">error</span> <span class="o">=</span> <span class="n">subtitle_error</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
             <span class="n">failures</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">SubtitleFailure</span><span class="p">(</span><span class="n">info_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">,</span> <span class="n">error</span><span class="p">))</span>
             <span class="k">if</span> <span class="n">on_subtitle_error</span> <span class="o">==</span> <span class="s2">"raise"</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">BLOCK_PATTERNS</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">error</span><span class="p">):</span>
@@ -1608,25 +1622,86 @@
                         <span class="s2">"on_subtitle_error='warn' downloads the video without them."</span>
                     <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
                 <span class="k">raise</span>
+        <span class="n">requested</span> <span class="o">=</span> <span class="n">info_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"requested_subtitles"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
+        <span class="n">written</span> <span class="o">=</span> <span class="n">_written_subtitles</span><span class="p">(</span><span class="n">requested</span><span class="p">)</span>
+        <span class="n">kept</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"only the subtitles </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">written</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span> <span class="k">if</span> <span class="n">written</span> <span class="k">else</span> <span class="s2">"without subtitles"</span>
         <span class="k">try</span><span class="p">:</span>  <span class="c1"># a warning filter set to "error" must not drop the video</span>
             <span class="n">warn_at_caller</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"Downloading without subtitles: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
-                <span class="n">plumbing</span><span class="o">=</span><span class="n">_plumbing_with_ytdlp</span><span class="p">(),</span>
+                <span class="sa">f</span><span class="s2">"Downloading </span><span class="si">{</span><span class="n">kept</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">plumbing</span><span class="o">=</span><span class="n">_plumbing_with_ytdlp</span><span class="p">()</span>
             <span class="p">)</span>
         <span class="k">except</span> <span class="ne">UserWarning</span><span class="p">:</span>
             <span class="k">pass</span>
-        <span class="n">saved</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">ydl</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">_SUBTITLE_OPT_KEYS</span><span class="p">}</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">ydl</span><span class="p">,</span> <span class="s2">"_num_downloads"</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span> <span class="nb">int</span><span class="p">):</span>
-            <span class="n">ydl</span><span class="o">.</span><span class="n">_num_downloads</span> <span class="o">-=</span> <span class="mi">1</span>  <span class="c1"># the retry is the same download (autonumber)</span>
-        <span class="n">ydl</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">_SUBTITLE_OPT_KEYS</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
-        <span class="k">try</span><span class="p">:</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">again</span><span class="p">():</span>  <span class="c1"># the same item, as the same download (autonumber, max_downloads)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">downloads</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+                <span class="n">ydl</span><span class="o">.</span><span class="n">_num_downloads</span> <span class="o">=</span> <span class="n">downloads</span>
             <span class="k">return</span> <span class="n">process_info</span><span class="p">(</span><span class="n">info_dict</span><span class="p">)</span>
-        <span class="k">finally</span><span class="p">:</span>
-            <span class="n">ydl</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">saved</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="n">_quiet_retry</span><span class="p">(</span><span class="n">ydl</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">written</span><span class="p">:</span>  <span class="c1"># rewritten from memory: no fetch, under any `overwrites`</span>
+                <span class="n">info_dict</span><span class="p">[</span><span class="s2">"requested_subtitles"</span><span class="p">]</span> <span class="o">=</span> <span class="n">written</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">again</span><span class="p">()</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                    <span class="n">subtitle_error</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
+                <span class="n">info_dict</span><span class="p">[</span><span class="s2">"requested_subtitles"</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="n">lang</span><span class="p">:</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">sub</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="o">!=</span> <span class="s2">"filepath"</span><span class="p">}</span>
+                    <span class="k">if</span> <span class="n">sub</span> <span class="ow">and</span> <span class="n">sub</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"filepath"</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">sub</span><span class="p">[</span><span class="s2">"filepath"</span><span class="p">])</span>
+                    <span class="k">else</span> <span class="n">sub</span>
+                    <span class="k">for</span> <span class="n">lang</span><span class="p">,</span> <span class="n">sub</span> <span class="ow">in</span> <span class="n">requested</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                <span class="p">}</span>
+            <span class="k">with</span> <span class="n">_subtitles_off</span><span class="p">(</span><span class="n">ydl</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">again</span><span class="p">()</span>
 
     <span class="n">ydl</span><span class="o">.</span><span class="n">process_info</span> <span class="o">=</span> <span class="n">with_fallback</span>
     <span class="k">return</span> <span class="n">failures</span></div>
 
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_written_subtitles</span><span class="p">(</span><span class="n">requested</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The ``requested_subtitles`` entries already on disk, each carrying its text as</span>
+<span class="sd">    ``data``, so yt-dlp writes it again from memory (and records its move) instead of</span>
+<span class="sd">    fetching it: by default it deletes a file it finds (``overwrites``) and refetches."""</span>
+    <span class="n">written</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">lang</span><span class="p">,</span> <span class="n">sub</span> <span class="ow">in</span> <span class="n">requested</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="p">(</span><span class="n">sub</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"filepath"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">path</span> <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+            <span class="n">written</span><span class="p">[</span><span class="n">lang</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">sub</span><span class="p">,</span> <span class="s2">"data"</span><span class="p">:</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)}</span>
+    <span class="k">return</span> <span class="n">written</span>
+
+
+<span class="nd">@contextmanager</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_subtitles_off</span><span class="p">(</span><span class="n">ydl</span><span class="p">:</span> <span class="n">Any</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""``ydl`` with subtitle writing off, its params restored after."""</span>
+    <span class="n">saved</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">ydl</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">_SUBTITLE_OPT_KEYS</span><span class="p">}</span>
+    <span class="n">ydl</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">_SUBTITLE_OPT_KEYS</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">yield</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">ydl</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">saved</span><span class="p">)</span>
+
+
+<span class="nd">@contextmanager</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_quiet_retry</span><span class="p">(</span><span class="n">ydl</span><span class="p">:</span> <span class="n">Any</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""``ydl`` without what ``process_info`` does as it starts an item: its ``"video"``</span>
+<span class="sd">    pre-processors and the forced printings (restored after)."""</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="n">ydl</span><span class="o">.</span><span class="n">params</span>
+    <span class="n">flags</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">params</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">_FORCED_PRINT_FLAGS</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">params</span><span class="p">}</span>
+    <span class="n">templates</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">params</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">_PRINT_TEMPLATE_KEYS</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">k</span><span class="p">),</span> <span class="nb">dict</span><span class="p">)}</span>
+    <span class="n">pps</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">ydl</span><span class="p">,</span> <span class="s2">"_pps"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="n">video_pps</span> <span class="o">=</span> <span class="n">pps</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"video"</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">pps</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="n">params</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">flags</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">by_when</span> <span class="ow">in</span> <span class="n">templates</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">params</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="n">w</span><span class="p">:</span> <span class="n">t</span> <span class="k">for</span> <span class="n">w</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">by_when</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">w</span> <span class="o">!=</span> <span class="s2">"video"</span><span class="p">}</span>
+    <span class="k">if</span> <span class="n">video_pps</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">pps</span><span class="p">[</span><span class="s2">"video"</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">yield</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">params</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">flags</span><span class="p">)</span>
+        <span class="n">params</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">templates</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">video_pps</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">pps</span><span class="p">[</span><span class="s2">"video"</span><span class="p">]</span> <span class="o">=</span> <span class="n">video_pps</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_coerce_cookies_from_browser</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
@@ -1750,7 +1825,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=cb249315"></script>
+</div><script src="../../../_static/documentation_options.js?v=eb9509fe"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>
