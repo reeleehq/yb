@@ -144,3 +144,36 @@ def test_add_video_to_playlist_no_create_raises():
     svc = FakeService()
     with pytest.raises(KeyError):
         add_video_to_playlist("vid", "Missing", create=False, service=svc)
+
+
+class _NotFound(Exception):
+    class resp:
+        status = 404
+
+    def __str__(self):
+        return "HttpError 404 playlistNotFound"
+
+
+def test_add_video_to_new_playlist_skips_list_and_retries_404(monkeypatch):
+    """Regression (#75): a playlist just created 404s for a moment; no list, retry insert."""
+    import yb.youtube.playlists as pl
+
+    monkeypatch.setattr(pl.time, "sleep", lambda s: None)
+    svc = FakeService()
+    fails = {"n": 2}
+    real_insert = _PlaylistItems.insert
+
+    def flaky_insert(self, *, part, body):
+        if fails["n"]:
+            fails["n"] -= 1
+            raise _NotFound()
+        return real_insert(self, part=part, body=body)
+
+    def no_list(self, **kw):
+        raise AssertionError("presence check must be skipped for a new playlist")
+
+    monkeypatch.setattr(_PlaylistItems, "insert", flaky_insert)
+    monkeypatch.setattr(_PlaylistItems, "list", no_list)
+    r = add_video_to_playlist("vid1", "Brand new", service=svc)
+    assert r["created"] is True and r["added"] is True
+    assert svc.items[r["playlist_id"]] == ["vid1"]

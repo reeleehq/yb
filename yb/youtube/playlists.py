@@ -10,9 +10,37 @@ re-running is idempotent.
 
 from __future__ import annotations
 
+import time
+
 from yb.config import DEFAULT_PLAYLIST_PRIVACY_STATUS
 
 _MAX_RESULTS = 50
+# A just-created playlist can answer 404 ``playlistNotFound`` for a few seconds.
+_NEW_PLAYLIST_RETRIES = 5
+_NEW_PLAYLIST_BACKOFF_S = 1.0
+
+
+def _is_playlist_not_found(exc: Exception) -> bool:
+    status = getattr(getattr(exc, "resp", None), "status", None)
+    return status == 404 and "playlistNotFound" in str(exc)
+
+
+def _add_to_new_playlist(
+    video_id: str,
+    playlist_id: str,
+    *,
+    service,
+    retries: int = _NEW_PLAYLIST_RETRIES,
+    backoff_s: float = _NEW_PLAYLIST_BACKOFF_S,
+) -> dict:
+    """Insert into a playlist created moments ago, retrying on ``playlistNotFound``."""
+    for attempt in range(retries + 1):
+        try:
+            return add_to_playlist(video_id, playlist_id, service=service)
+        except Exception as exc:  # googleapiclient.errors.HttpError
+            if attempt == retries or not _is_playlist_not_found(exc):
+                raise
+            time.sleep(backoff_s * (attempt + 1))
 
 
 def _service(**cred_kwargs):
@@ -179,7 +207,13 @@ def add_video_to_playlist(
     )
     created = existing is None
 
-    if skip_if_present and is_video_in_playlist(video_id, playlist_id, service=service):
+    if created:
+        # A new playlist is empty: skip the presence check (it 404s right after creation).
+        _add_to_new_playlist(video_id, playlist_id, service=service)
+        added = True
+    elif skip_if_present and is_video_in_playlist(
+        video_id, playlist_id, service=service
+    ):
         added = False
     else:
         add_to_playlist(video_id, playlist_id, service=service)
