@@ -446,6 +446,9 @@
     <span class="k">return</span> <span class="n">converted</span> <span class="k">if</span> <span class="n">converted</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="k">else</span> <span class="n">path</span>
 
 
+<span class="n">MAX_FILENAME_CHARS</span> <span class="o">=</span> <span class="mi">100</span>  <span class="c1"># yt-dlp ``trim_file_name``: keeps names under OS limits (255)</span>
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">_format_selector</span><span class="p">(</span><span class="n">protocols</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Best audio, else best, restricted to ``protocols``."""</span>
     <span class="n">only</span> <span class="o">=</span> <span class="s2">"[protocol~='^(</span><span class="si">%s</span><span class="s2">)$']"</span> <span class="o">%</span> <span class="s2">"|"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">protocols</span><span class="p">)</span>
@@ -460,6 +463,9 @@
         <span class="s2">"noprogress"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
         <span class="s2">"format"</span><span class="p">:</span> <span class="n">_format_selector</span><span class="p">(</span><span class="n">GUARDED_PROTOCOLS</span><span class="p">),</span>
         <span class="s2">"outtmpl"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">work</span> <span class="o">/</span> <span class="s2">"</span><span class="si">%(title)s</span><span class="s2"> (</span><span class="si">%(id)s</span><span class="s2">).</span><span class="si">%(ext)s</span><span class="s2">"</span><span class="p">),</span>
+        <span class="c1"># Direct links that redirect to a signed address get title/id from a URL</span>
+        <span class="c1"># with a ~350-character signature: cap the name, not the caller's problem.</span>
+        <span class="s2">"trim_file_name"</span><span class="p">:</span> <span class="n">MAX_FILENAME_CHARS</span><span class="p">,</span>
         <span class="s2">"max_filesize"</span><span class="p">:</span> <span class="n">max_bytes</span><span class="p">,</span>  <span class="c1"># yt-dlp skips/aborts formats of known size</span>
         <span class="s2">"progress_hooks"</span><span class="p">:</span> <span class="p">[</span><span class="n">_byte_and_time_cap</span><span class="p">(</span><span class="n">max_bytes</span><span class="p">,</span> <span class="n">deadline</span><span class="p">)],</span>
         <span class="c1"># HLS the native downloader cannot handle is delegated to ffmpeg, which</span>
@@ -709,7 +715,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=41ce360e"></script>
+</div><script src="../../../_static/documentation_options.js?v=e3b9c749"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>
