@@ -185,6 +185,9 @@ class _FakeYDL:
     def __exit__(self, *exc):
         return False
 
+    def process_info(self, info):  # shaped like YoutubeDL (the subtitle hook wraps it)
+        pass
+
     def extract_info(self, url, download=False):
         return {"id": "abc", "title": "T"}
 
