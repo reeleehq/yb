@@ -28,10 +28,12 @@ missing extra — the error surfaces only when you actually use that feature.
 
 ```pycon
 >>> import yb
->>> r = yb.download_youtube_video("https://youtu.be/PRa9ciOe-us")  # needs yb[download]
+>>> r = yb.download_youtube_video("https://youtu.be/PRa9ciOe-us")
 >>> content = yb.prepare_content(r.path, language="English", language_code="en")
->>> yb.prepare_and_publish(r.path, privacy_status="unlisted")        # needs yb[youtube]
+>>> yb.prepare_and_publish(r.path, privacy_status="unlisted")
 ```
+
+The first needs `yb[download]`, the last `yb[youtube]`.
 
 ### *class* yb.ContentMetadata(title, description, keywords=list())
 

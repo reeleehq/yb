@@ -375,8 +375,8 @@ also save) is overridable, and any raw yt-dlp option can be passed through.</p>
 <tr class="row-even"><td><p><a class="reference internal" href="#yb.download.youtube.search_youtube" title="yb.download.youtube.search_youtube"><code class="xref py py-obj docutils literal notranslate"><span class="pre">search_youtube</span></code></a>(query, *[, limit, sp, ...])</p></td>
 <td><p>Search YouTube by name; returns up to <code class="docutils literal notranslate"><span class="pre">limit</span></code> hits, best match first.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">trim_info</span></code>(info)</p></td>
-<td><p></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.youtube.trim_info" title="yb.download.youtube.trim_info"><code class="xref py py-obj docutils literal notranslate"><span class="pre">trim_info</span></code></a>(info)</p></td>
+<td><p>The known fields of a downloader <code class="docutils literal notranslate"><span class="pre">info</span></code> dict that are present (<code class="docutils literal notranslate"><span class="pre">{}</span></code> for none).</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#yb.download.youtube.youtube_dl" title="yb.download.youtube.youtube_dl"><code class="xref py py-obj docutils literal notranslate"><span class="pre">youtube_dl</span></code></a>(base_opts, *[, extra_opts, ...])</p></td>
 <td><p>Yield a <code class="docutils literal notranslate"><span class="pre">YoutubeDL</span></code> built the way every yb download builds one.</p></td>
@@ -1130,6 +1130,17 @@ filter that is about <code class="docutils literal notranslate"><span class="pre
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="yb.download.youtube.trim_info">
+<span class="sig-prename descclassname"><span class="pre">yb.download.youtube.</span></span><span class="sig-name descname"><span class="pre">trim_info</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">info</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/download/youtube.html#trim_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.download.youtube.trim_info" title="Link to this definition">¶</a></dt>
+<dd><p>The known fields of a downloader <code class="docutils literal notranslate"><span class="pre">info</span></code> dict that are present (<code class="docutils literal notranslate"><span class="pre">{}</span></code> for none).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code></a>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="yb.download.youtube.youtube_dl">
 <span class="sig-prename descclassname"><span class="pre">yb.download.youtube.</span></span><span class="sig-name descname"><span class="pre">youtube_dl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">base_opts</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_opts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cookies_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cookies_from_browser</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ydl_cls</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">private_cookie_copy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/download/youtube.html#youtube_dl"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.download.youtube.youtube_dl" title="Link to this definition">¶</a></dt>
 <dd><p>Yield a <code class="docutils literal notranslate"><span class="pre">YoutubeDL</span></code> built the way every yb download builds one.</p>
@@ -1298,6 +1309,7 @@ the title/duration/chapters before deciding to download.</p>
 <li><a class="reference internal" href="#yb.download.youtube.install_subtitle_fallback"><code class="docutils literal notranslate"><span class="pre">install_subtitle_fallback()</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.youtube.resolve_output_path"><code class="docutils literal notranslate"><span class="pre">resolve_output_path()</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.youtube.search_youtube"><code class="docutils literal notranslate"><span class="pre">search_youtube()</span></code></a></li>
+<li><a class="reference internal" href="#yb.download.youtube.trim_info"><code class="docutils literal notranslate"><span class="pre">trim_info()</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.youtube.youtube_dl"><code class="docutils literal notranslate"><span class="pre">youtube_dl()</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.youtube.youtube_dl_cls"><code class="docutils literal notranslate"><span class="pre">youtube_dl_cls()</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.youtube.youtube_playlist_info"><code class="docutils literal notranslate"><span class="pre">youtube_playlist_info()</span></code></a></li>
@@ -1313,7 +1325,7 @@ the title/duration/chapters before deciding to download.</p>
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=03b6484e"></script>
+</div><script src="../_static/documentation_options.js?v=2307d2a5"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>

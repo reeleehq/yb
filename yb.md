@@ -1,4 +1,4 @@
-> built 2026-11-22 18:56 UTC from 4a924e3 (main) · yb 0.1.45. Details: build_info.json
+> built 2026-11-23 00:57 UTC from 511f5c3 (main) · yb 0.1.46. Details: build_info.json
 
 # index.html.md
 
@@ -2778,7 +2778,7 @@ The destination defaults to `$YB_DOWNLOAD_DIR` when set, else `~/Downloads`.
 | [`install_subtitle_fallback`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.install_subtitle_fallback)(ydl, \*, ...[, ...])    | Make `ydl` survive a failed subtitle fetch; returns the failures as they happen. |
 | [`resolve_output_path`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.resolve_output_path)(info, ydl, out_dir, merge_to) | Best-effort resolution of the final media path yt-dlp produced.                  |
 | [`search_youtube`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.search_youtube)(query, \*[, limit, sp, ...])       | Search YouTube by name; returns up to `limit` hits, best match first.            |
-| `trim_info`(info)                                                                                  |                                                                                  |
+| [`trim_info`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.trim_info)(info)                                   | The known fields of a downloader `info` dict that are present (`{}` for none).   |
 | [`youtube_dl`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.youtube_dl)(base_opts, \*[, extra_opts, ...])      | Yield a `YoutubeDL` built the way every yb download builds one.                  |
 | [`youtube_dl_cls`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.youtube_dl_cls)()                                  | `yt_dlp.YoutubeDL`, or an `ImportError` that says how to install it.             |
 | [`youtube_playlist_info`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.youtube_playlist_info)(url, \*[, ...])             | Fetch a playlist's per-video metadata without downloading.                       |
@@ -3371,6 +3371,13 @@ are returned (YouTube’s channel rows are dropped); a Short’s `url` is its
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`SearchHit`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.SearchHit)]
 
+### yb.download.youtube.trim_info(info)
+
+The known fields of a downloader `info` dict that are present (`{}` for none).
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]
+
 ### yb.download.youtube.youtube_dl(base_opts, , extra_opts=None, cookies_file=None, cookies_from_browser=None, ydl_cls=None, private_cookie_copy=None)
 
 Yield a `YoutubeDL` built the way every yb download builds one.
@@ -3462,10 +3469,12 @@ missing extra — the error surfaces only when you actually use that feature.
 
 ```pycon
 >>> import yb
->>> r = yb.download_youtube_video("https://youtu.be/PRa9ciOe-us")  # needs yb[download]
+>>> r = yb.download_youtube_video("https://youtu.be/PRa9ciOe-us")
 >>> content = yb.prepare_content(r.path, language="English", language_code="en")
->>> yb.prepare_and_publish(r.path, privacy_status="unlisted")        # needs yb[youtube]
+>>> yb.prepare_and_publish(r.path, privacy_status="unlisted")
 ```
+
+The first needs `yb[download]`, the last `yb[youtube]`.
 
 ### *class* yb.ContentMetadata(title, description, keywords=list())
 
@@ -4859,7 +4868,7 @@ Edit an existing video:
 
 | [`api_available`](_autosummary/yb.youtube.html.md#yb.youtube.api_available)(\*[, api_key])                       | Whether the Data API can actually be called with the key we have.                                                                                             |
 |-----------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `watch_url`(video_id)                                                                               |                                                                                                                                                               |
+| [`watch_url`](_autosummary/yb.youtube.html.md#yb.youtube.watch_url)(video_id)                                | The watch-page URL of a video.                                                                                                                                |
 | [`thumbnail_url`](_autosummary/yb.youtube.html.md#yb.youtube.thumbnail_url)(video_id, \*[, quality])             | Thumbnail URL for a video.                                                                                                                                    |
 | [`rank_by_engagement`](_autosummary/yb.youtube.html.md#yb.youtube.rank_by_engagement)(videos, \*[, min_views, ...])   | Order videos by a like-rate-and-reach score.                                                                                                                  |
 | [`add_stats`](_autosummary/yb.youtube.html.md#yb.youtube.add_stats)(videos, \*[, api_key, backend])          | Fill in engagement numbers on search results, in place-ish (returns them).                                                                                    |
@@ -5688,6 +5697,13 @@ Fetch a video’s live metadata & engagement numbers.
   A flat `dict` for one id / `list[dict]` for many — or an ASCII
   table `str` when `as_table=True`.
 
+### yb.youtube.watch_url(video_id)
+
+The watch-page URL of a video.
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
 ### Modules
 
 | [`api`](_autosummary/yb.youtube.api.html.md#module-yb.youtube.api)                     | YouTube video operations: get, upload, update metadata, thumbnail, chapters.   |
@@ -6266,7 +6282,7 @@ missing; enabling the Data API is what makes approval-weighted ranking possible.
 | [`rank_by_engagement`](_autosummary/yb.youtube.search.html.md#yb.youtube.search.rank_by_engagement)(videos, \*[, min_views, ...]) | Order videos by a like-rate-and-reach score.                                 |
 | [`search_videos`](_autosummary/yb.youtube.search.html.md#yb.youtube.search.search_videos)(query, \*[, max_results, ...])     | Search YouTube and return a list of video records.                           |
 | [`thumbnail_url`](_autosummary/yb.youtube.search.html.md#yb.youtube.search.thumbnail_url)(video_id, \*[, quality])           | Thumbnail URL for a video.                                                   |
-| `watch_url`(video_id)                                                                             |                                                                              |
+| [`watch_url`](_autosummary/yb.youtube.search.html.md#yb.youtube.search.watch_url)(video_id)                              | The watch-page URL of a video.                                               |
 
 ### yb.youtube.search.THUMBNAIL_QUALITIES *= ('default', 'mqdefault', 'hqdefault', 'sddefault', 'maxresdefault')*
 
@@ -6323,6 +6339,13 @@ makes an English video look like a local one.
 ### yb.youtube.search.thumbnail_url(video_id, , quality='mqdefault')
 
 Thumbnail URL for a video. Always available, no API call, no key.
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
+### yb.youtube.search.watch_url(video_id)
+
+The watch-page URL of a video.
 
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
@@ -6465,18 +6488,16 @@ Fetch a video’s live metadata & engagement numbers.
 
 # About this build
 
-This documentation was built on **2026-11-22 18:56 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/4a924e32ff0b34772df78acf6f09d25e77393872"><code>4a924e3</code></a> on branch <code>main</code>, for **yb 0.1.45** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-23 00:57 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/511f5c32dd1a717b4e466857de0cf4e8c7f3ad61"><code>511f5c3</code></a> on branch <code>main</code>, for **yb 0.1.46** (from <code>pyproject.toml</code>).
 
-#### WARNING
-The documentation and the package may be misaligned:
-
-- The documented version (0.1.45) is behind the latest release on PyPI (0.1.46): `pip install yb` gives newer code than these docs describe.
+#### NOTE
+Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
 
 ## Source
 
 |                     |                                                                                                                                                    |
 |---------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/yb/commit/4a924e32ff0b34772df78acf6f09d25e77393872"><code>4a924e32ff0b34772df78acf6f09d25e77393872</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/yb/commit/511f5c32dd1a717b4e466857de0cf4e8c7f3ad61"><code>511f5c32dd1a717b4e466857de0cf4e8c7f3ad61</code></a> |
 | Branch              | <code>main</code>                                                                                                                                  |
 | Tags at this commit | none                                                                                                                                               |
 | Working tree        | clean                                                                                                                                              |
@@ -6487,9 +6508,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/yb</code>                                                                   |
-| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/45057666080">45057666080</a>          |
+| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/45091561392">45091561392</a>          |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>4a924e32ff0b34772df78acf6f09d25e77393872</code> (in the history of the built commit) |
+| Event commit | <code>511f5c32dd1a717b4e466857de0cf4e8c7f3ad61</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -6514,13 +6535,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/yb/0.1.46/">0.1.46</a>, newer than the documented version (0.1.45).
+Latest release: <a href="https://pypi.org/project/yb/0.1.46/">0.1.46</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/yb && cd yb
-git checkout 4a924e32ff0b34772df78acf6f09d25e77393872
+git checkout 511f5c32dd1a717b4e466857de0cf4e8c7f3ad61
 pip install "epythet==0.2.23"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

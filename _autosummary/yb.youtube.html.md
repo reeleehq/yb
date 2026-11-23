@@ -25,7 +25,7 @@ Edit an existing video:
 
 | [`api_available`](#yb.youtube.api_available)(\*[, api_key])                       | Whether the Data API can actually be called with the key we have.                                                                                             |
 |-----------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `watch_url`(video_id)                                                                               |                                                                                                                                                               |
+| [`watch_url`](#yb.youtube.watch_url)(video_id)                                | The watch-page URL of a video.                                                                                                                                |
 | [`thumbnail_url`](#yb.youtube.thumbnail_url)(video_id, \*[, quality])             | Thumbnail URL for a video.                                                                                                                                    |
 | [`rank_by_engagement`](#yb.youtube.rank_by_engagement)(videos, \*[, min_views, ...])   | Order videos by a like-rate-and-reach score.                                                                                                                  |
 | [`add_stats`](#yb.youtube.add_stats)(videos, \*[, api_key, backend])          | Fill in engagement numbers on search results, in place-ish (returns them).                                                                                    |
@@ -853,6 +853,13 @@ Fetch a video’s live metadata & engagement numbers.
 * **Returns:**
   A flat `dict` for one id / `list[dict]` for many — or an ASCII
   table `str` when `as_table=True`.
+
+### yb.youtube.watch_url(video_id)
+
+The watch-page URL of a video.
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 ### Modules
 

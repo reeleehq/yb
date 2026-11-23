@@ -56,7 +56,7 @@ missing; enabling the Data API is what makes approval-weighted ranking possible.
 | [`rank_by_engagement`](#yb.youtube.search.rank_by_engagement)(videos, \*[, min_views, ...]) | Order videos by a like-rate-and-reach score.                                 |
 | [`search_videos`](#yb.youtube.search.search_videos)(query, \*[, max_results, ...])     | Search YouTube and return a list of video records.                           |
 | [`thumbnail_url`](#yb.youtube.search.thumbnail_url)(video_id, \*[, quality])           | Thumbnail URL for a video.                                                   |
-| `watch_url`(video_id)                                                                             |                                                                              |
+| [`watch_url`](#yb.youtube.search.watch_url)(video_id)                              | The watch-page URL of a video.                                               |
 
 ### yb.youtube.search.THUMBNAIL_QUALITIES *= ('default', 'mqdefault', 'hqdefault', 'sddefault', 'maxresdefault')*
 
@@ -113,6 +113,13 @@ makes an English video look like a local one.
 ### yb.youtube.search.thumbnail_url(video_id, , quality='mqdefault')
 
 Thumbnail URL for a video. Always available, no API call, no key.
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
+### yb.youtube.search.watch_url(video_id)
+
+The watch-page URL of a video.
 
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)

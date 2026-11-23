@@ -41,7 +41,7 @@ The destination defaults to `$YB_DOWNLOAD_DIR` when set, else `~/Downloads`.
 | [`install_subtitle_fallback`](#yb.download.youtube.install_subtitle_fallback)(ydl, \*, ...[, ...])    | Make `ydl` survive a failed subtitle fetch; returns the failures as they happen. |
 | [`resolve_output_path`](#yb.download.youtube.resolve_output_path)(info, ydl, out_dir, merge_to) | Best-effort resolution of the final media path yt-dlp produced.                  |
 | [`search_youtube`](#yb.download.youtube.search_youtube)(query, \*[, limit, sp, ...])       | Search YouTube by name; returns up to `limit` hits, best match first.            |
-| `trim_info`(info)                                                                                  |                                                                                  |
+| [`trim_info`](#yb.download.youtube.trim_info)(info)                                   | The known fields of a downloader `info` dict that are present (`{}` for none).   |
 | [`youtube_dl`](#yb.download.youtube.youtube_dl)(base_opts, \*[, extra_opts, ...])      | Yield a `YoutubeDL` built the way every yb download builds one.                  |
 | [`youtube_dl_cls`](#yb.download.youtube.youtube_dl_cls)()                                  | `yt_dlp.YoutubeDL`, or an `ImportError` that says how to install it.             |
 | [`youtube_playlist_info`](#yb.download.youtube.youtube_playlist_info)(url, \*[, ...])             | Fetch a playlist's per-video metadata without downloading.                       |
@@ -633,6 +633,13 @@ are returned (YouTube’s channel rows are dropped); a Short’s `url` is its
       both given.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`SearchHit`](#yb.download.youtube.SearchHit)]
+
+### yb.download.youtube.trim_info(info)
+
+The known fields of a downloader `info` dict that are present (`{}` for none).
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]
 
 ### yb.download.youtube.youtube_dl(base_opts, , extra_opts=None, cookies_file=None, cookies_from_browser=None, ydl_cls=None, private_cookie_copy=None)
 
