@@ -590,3 +590,160 @@ def test_pinned_opts_keep_signed_url_file_names_short():
         {"title": "t" * 300, "id": "52892780?" + "s" * 350, "ext": "mp3"}
     )
     assert len(Path(name).name) + len(".part") < 255
+
+
+# --- connect-time address checks: DNS rebinding and redirect hops ------------
+
+
+class _Recorder(http.server.BaseHTTPRequestHandler):
+    """Serves a little mp3-ish body and records every path it is asked for."""
+
+    hits: list = []
+    redirect_to = ""
+
+    def log_message(self, *args):
+        pass
+
+    def do_GET(self):
+        type(self).hits.append(self.path)
+        if self.path == "/redirect":
+            self.send_response(302)
+            self.send_header("Location", type(self).redirect_to)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+        body = b"\xff" * 100
+        self.send_response(200)
+        self.send_header("Content-Type", "audio/mpeg")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+
+def _serve(handler_cls):
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler_cls)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    return server
+
+
+@pytest.fixture
+def fake_dns(monkeypatch):
+    """A resolver under the connect-time check: ``rebind.test`` answers loopback.
+
+    It stands for the second answer of a rebinding name: the URL check's own
+    lookup (in the validators below) saw a public address, the connection's
+    lookup sees an internal one.
+    """
+    from yb.download import egress
+
+    real = egress._resolve
+
+    def resolve(host, port, *args, **kwargs):
+        if host == "rebind.test":
+            host = "127.0.0.1"
+        return real(host, port, *args, **kwargs)
+
+    monkeypatch.setattr(egress, "_resolve", resolve)
+    monkeypatch.delenv("http_proxy", raising=False)
+    monkeypatch.delenv("HTTP_PROXY", raising=False)
+    monkeypatch.setenv("NO_PROXY", "*")
+
+
+def _refuse_loopback_literals(url):
+    """A URL check whose DNS (not consulted here) said every name is public."""
+    from urllib.parse import urlparse
+
+    if urlparse(url).hostname.startswith("127."):
+        raise ValueError(f"refused {url}")
+
+
+def test_a_rebinding_name_never_connects_to_the_internal_address(fake_dns, tmp_path):
+    """The name passes the URL check, then resolves to loopback to connect: refused."""
+
+    class Hits(_Recorder):
+        hits = []
+
+    server = _serve(Hits)
+    try:
+        with pytest.raises(AudioTargetError, match="refused to connect to http://127.0.0.1"):
+            download_audio_bounded(
+                f"http://rebind.test:{server.server_port}/secret.mp3",
+                download_dir=tmp_path,
+                validate_target=_refuse_loopback_literals,
+            )
+    finally:
+        server.shutdown()
+    assert Hits.hits == []  # not even a request reached the internal server
+    assert leftovers(tmp_path) == []
+
+
+def test_an_intermediate_redirect_hop_is_never_requested(fake_dns, tmp_path):
+    """A 302 into a refused address: the hop is refused before it connects (no blind GET)."""
+
+    class Public(_Recorder):
+        hits = []
+
+    class Internal(_Recorder):
+        hits = []
+
+    internal = _serve(Internal)
+    Public.redirect_to = f"http://127.0.0.1:{internal.server_port}/admin"
+    public = _serve(Public)
+
+    def refuse_internal_port(url):
+        from urllib.parse import urlparse
+
+        if urlparse(url).port == internal.server_port:
+            raise ValueError(f"refused {url}")
+
+    try:
+        with pytest.raises(AudioTargetError, match="refused to connect"):
+            download_audio_bounded(
+                f"http://127.0.0.1:{public.server_port}/redirect",
+                download_dir=tmp_path,
+                validate_target=refuse_internal_port,
+            )
+    finally:
+        public.shutdown()
+        internal.shutdown()
+    assert Public.hits and Internal.hits == []
+    assert leftovers(tmp_path) == []
+
+
+def test_the_default_floor_and_a_proxy_skip_the_address_check(monkeypatch):
+    calls = []
+    monkeypatch.setattr(bounded, "address_check", lambda check: calls.append(check))
+    with bounded._connect_guard(require_http_url, {}):
+        pass
+    with bounded._connect_guard(_refuse_loopback_literals, {"proxy": "http://p:3128"}):
+        pass
+    assert calls == []
+
+
+def test_every_resolved_address_is_checked_and_outside_the_context_none_is():
+    import socket
+
+    from yb.download import egress
+
+    seen = []
+    with egress.address_check(lambda ip, port: seen.append((ip, port))):
+        socket.getaddrinfo("127.0.0.1", "443", 0, socket.SOCK_STREAM)
+    socket.getaddrinfo("127.0.0.1", 80, 0, socket.SOCK_STREAM)
+    assert seen == [("127.0.0.1", 443)]
+
+
+def test_a_refusing_address_check_stops_the_resolution():
+    import socket
+
+    from yb.download import egress
+
+    def refuse(ip, port):
+        raise ValueError(f"no {ip}")
+
+    with egress.address_check(refuse), pytest.raises(ValueError, match="no 127.0.0.1"):
+        socket.getaddrinfo("127.0.0.1", 80)
+
+
+def test_fragments_stay_on_the_checked_thread(fakes, tmp_path):
+    run(tmp_path)
+    assert fakes["opts"]["concurrent_fragment_downloads"] == 1
