@@ -28,6 +28,14 @@ ffmpeg, see [`yb.download.ranges`](yb.download.ranges.html.md#module-yb.download
 >>> clip = download_youtube_audio(url, start="0:07.9", end="0:08.75")
 ```
 
+To find *where* in a video something is without downloading it, fetch its
+storyboard (the seek-bar thumbnails, [`yb.download.storyboards`](yb.download.storyboards.html.md#module-yb.download.storyboards)):
+
+```pycon
+>>> board = youtube_storyboard(url)
+>>> for t, image in board.frames(): ...
+```
+
 To go from a name to a download, search first ([`search_youtube()`](#yb.download.search_youtube)):
 
 ```pycon
@@ -46,8 +54,10 @@ how to install it. The first download in a process runs it and warns.
 
 ### Functions
 
-| [`download_youtube_video`](#yb.download.download_youtube_video)(url, \*[, ...])          | Download a YouTube video to `download_dir` (default `~/Downloads`).              |
+| [`youtube_storyboard`](#yb.download.youtube_storyboard)(url, \*[, format_id, ...])   | Fetch a video's storyboard (metadata plus its sprite sheets; no video).          |
 |--------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
+| [`storyboard_formats`](#yb.download.storyboard_formats)(info)                        | The storyboard formats in a yt-dlp info dict, largest first.                     |
+| [`download_youtube_video`](#yb.download.download_youtube_video)(url, \*[, ...])          | Download a YouTube video to `download_dir` (default `~/Downloads`).              |
 | [`download_youtube_audio`](#yb.download.download_youtube_audio)(url, \*[, ...])          | Download only a video's audio (no video stream).                                 |
 | [`download_youtube_subtitles`](#yb.download.download_youtube_subtitles)(url, \*[, ...])      | Download only a video's subtitles (no media); returns the files written.         |
 | [`youtube_video_info`](#yb.download.youtube_video_info)(url, \*[, extra_opts, ...])  | Fetch a video's metadata without downloading it.                                 |
@@ -67,14 +77,16 @@ how to install it. The first download in a process runs it and warns.
 
 ### Classes
 
-| [`AudioDownload`](#yb.download.AudioDownload)(path, title, duration_s, ...)     | A bounded audio download.                                                                                               |
-|--------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
-| [`SearchHit`](#yb.download.SearchHit)(id, title, duration, channel, url)    | One row of [`search_youtube()`](#yb.download.search_youtube) (flat extraction: no per-video fetch).     |
-| [`SubtitleFailure`](#yb.download.SubtitleFailure)(video_id, error)                | An item whose subtitle fetch failed (see [`install_subtitle_fallback()`](#yb.download.install_subtitle_fallback)). |
-| [`DownloadResult`](#yb.download.DownloadResult)(path, info[, sidecars, ...])     | Outcome of a download.                                                                                                  |
-| [`JsRuntime`](#yb.download.JsRuntime)(name, path, on_path)                  | A JavaScript runtime found for yt-dlp.                                                                                  |
-| [`Pace`](#yb.download.Pace)([sleep_interval, max_sleep_interval, ...]) | How gently to talk to YouTube.                                                                                          |
-| [`TimeRange`](#yb.download.TimeRange)([start, end])                         | A span of a video, in seconds.                                                                                          |
+| [`Storyboard`](#yb.download.Storyboard)(video_id, url, title, duration, ...)   | A video's storyboard: its sheets, their tiling, and the video's identity and licence.                                   |
+|----------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
+| [`StoryboardSheet`](#yb.download.StoryboardSheet)(start, duration, image_bytes)     | One sprite sheet: `rows` x `columns` frames covering `duration` s from `start`.                                         |
+| [`AudioDownload`](#yb.download.AudioDownload)(path, title, duration_s, ...)       | A bounded audio download.                                                                                               |
+| [`SearchHit`](#yb.download.SearchHit)(id, title, duration, channel, url)      | One row of [`search_youtube()`](#yb.download.search_youtube) (flat extraction: no per-video fetch).     |
+| [`SubtitleFailure`](#yb.download.SubtitleFailure)(video_id, error)                  | An item whose subtitle fetch failed (see [`install_subtitle_fallback()`](#yb.download.install_subtitle_fallback)). |
+| [`DownloadResult`](#yb.download.DownloadResult)(path, info[, sidecars, ...])       | Outcome of a download.                                                                                                  |
+| [`JsRuntime`](#yb.download.JsRuntime)(name, path, on_path)                    | A JavaScript runtime found for yt-dlp.                                                                                  |
+| [`Pace`](#yb.download.Pace)([sleep_interval, max_sleep_interval, ...])   | How gently to talk to YouTube.                                                                                          |
+| [`TimeRange`](#yb.download.TimeRange)([start, end])                           | A span of a video, in seconds.                                                                                          |
 
 ### Exceptions
 
@@ -309,6 +321,43 @@ carries `upload_date` or a `timestamp`/`release_timestamp`, else `None`.
 YouTube’s results page usually shows only “3 weeks ago”, which yt-dlp does
 not turn into a date, so expect `None` often; `youtube_video_info` has
 the exact date.
+
+### *class* yb.download.Storyboard(video_id, url, title, duration, license, format_id, width, height, rows, columns, sheets=())
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+A video’s storyboard: its sheets, their tiling, and the video’s identity and licence.
+
+#### frame_times()
+
+The start time of every frame, in order (what [`frames()`](#yb.download.Storyboard.frames) yields).
+
+```pycon
+>>> sheet = StoryboardSheet(start=0.0, duration=8.0, image_bytes=b"")
+>>> board = Storyboard("v", "u", None, 10.0, None, "sb0", 4, 2, 2, 2,
+...                    sheets=(sheet, StoryboardSheet(8.0, 8.0, b"")))
+>>> board.frame_times()
+[0.0, 2.0, 4.0, 6.0, 8.0]
+```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`float`](https://docs.python.org/3/builtins/functions.html#float)]
+
+#### frames()
+
+`(t, image)` for every frame: `t` in seconds, `image` a PIL image.
+
+Needs `pillow`. Tiles past the video’s end (a last sheet’s padding) are
+skipped.
+
+* **Return type:**
+  [`Iterator`](https://docs.python.org/3/library/typing.html#typing.Iterator)[[`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`float`](https://docs.python.org/3/builtins/functions.html#float), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]]
+
+### *class* yb.download.StoryboardSheet(start, duration, image_bytes)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+One sprite sheet: `rows` x `columns` frames covering `duration` s from `start`.
 
 ### *class* yb.download.SubtitleFailure(video_id, error)
 
@@ -875,6 +924,20 @@ are returned (YouTube’s channel rows are dropped); a Short’s `url` is its
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`SearchHit`](yb.download.youtube.html.md#yb.download.youtube.SearchHit)]
 
+### yb.download.storyboard_formats(info)
+
+The storyboard formats in a yt-dlp info dict, largest first.
+
+```pycon
+>>> storyboard_formats({"formats": [{"format_id": "18"},
+...     {"format_id": "sb1", "format_note": "storyboard", "width": 160},
+...     {"format_id": "sb0", "format_note": "storyboard", "width": 320}]})
+[{'format_id': 'sb0', 'format_note': 'storyboard', 'width': 320}, {'format_id': 'sb1', 'format_note': 'storyboard', 'width': 160}]
+```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]
+
 ### yb.download.youtube_playlist_info(url, , playlist_items=None, flat=True, extra_opts=None, cookies_file=None)
 
 Fetch a playlist’s per-video metadata without downloading.
@@ -894,6 +957,22 @@ and trimmed to `_INFO_FIELDS` (slower, but includes duration/fps/etc.).
   * **cookies_file** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[[`False`](https://docs.python.org/3/builtins/constants.html#False)], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – See [`download_youtube_video()`](#yb.download.download_youtube_video).
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]
+
+### yb.download.youtube_storyboard(url, , format_id='sb0', extra_opts=None, cookies_file=None, ydl_cls=None)
+
+Fetch a video’s storyboard (metadata plus its sprite sheets; no video).
+
+* **Parameters:**
+  * **url** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – The video’s URL (or anything yt-dlp resolves to one video).
+  * **format_id** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Which storyboard: `sb0` (default, 320x180) down to `sb3`.
+  * **extra_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Raw yt-dlp options, as everywhere in [`yb.download`](#module-yb.download).
+  * **cookies_file** ([`Any`](https://docs.python.org/3/library/typing.html#typing.Any)) – As in [`download_youtube_video()`](#yb.download.download_youtube_video).
+  * **ydl_cls** ([`Optional`](https://docs.python.org/3/library/typing.html#typing.Optional)[[`Callable`](https://docs.python.org/3/library/typing.html#typing.Callable)[[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)], [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]]) – What to build instead of `yt_dlp.YoutubeDL` (a fake in tests).
+* **Raises:**
+  [**LookupError**](https://docs.python.org/3/builtins/exceptions.html#LookupError) – The video has no storyboard of that format (live streams,
+      some very short videos); the message lists the ones it has.
+* **Return type:**
+  [`Storyboard`](yb.download.storyboards.html.md#yb.download.storyboards.Storyboard)
 
 ### yb.download.youtube_video_info(url, , extra_opts=None, cookies_file=None)
 
@@ -915,5 +994,6 @@ the title/duration/chapters before deciding to download.
 | [`probe`](yb.download.probe.html.md#module-yb.download.probe)               | Online checks for servers: do the configured cookies still get past YouTube?                                                    |
 | [`ranges`](yb.download.ranges.html.md#module-yb.download.ranges)             | Download just a time range of a video: parse start/end, build yt-dlp's options.                                                 |
 | [`requirements`](yb.download.requirements.html.md#module-yb.download.requirements) | Preflight for downloading: does yt-dlp have what YouTube now demands?                                                           |
+| [`storyboards`](yb.download.storyboards.html.md#module-yb.download.storyboards)   | YouTube storyboards: a video's seek-bar thumbnails, by time, with no video download.                                            |
 | [`warn`](yb.download.warn.html.md#module-yb.download.warn)                 | Warnings attributed to the caller's code, not to yb's own plumbing.                                                             |
 | [`youtube`](yb.download.youtube.html.md#module-yb.download.youtube)           | Download YouTube videos (and their metadata) via yt-dlp.                                                                        |

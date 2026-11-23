@@ -15,6 +15,7 @@
 - [yb.download.probe](yb.download.probe.html.md): Online checks for servers: do the configured cookies still get past YouTube?
 - [yb.download.ranges](yb.download.ranges.html.md): Download just a time range of a video: parse start/end, build yt-dlp’s options.
 - [yb.download.requirements](yb.download.requirements.html.md): Preflight for downloading: does yt-dlp have what YouTube now demands?
+- [yb.download.storyboards](yb.download.storyboards.html.md): YouTube storyboards: a video’s seek-bar thumbnails, by time, with no video download.
 - [yb.download.warn](yb.download.warn.html.md): Warnings attributed to the caller’s code, not to yb’s own plumbing.
 - [yb.download.youtube](yb.download.youtube.html.md): Download YouTube videos (and their metadata) via yt-dlp.
 - [yb.podcast](yb.podcast.html.md): Podcast publishing: show notes, chapters, cover video, and RSS.

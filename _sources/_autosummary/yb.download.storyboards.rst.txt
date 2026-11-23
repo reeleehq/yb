@@ -1,0 +1,26 @@
+yb.download.storyboards
+=======================
+
+.. automodule:: yb.download.storyboards
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      DFLT_STORYBOARD_FORMAT
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      youtube_storyboard
+      storyboard_formats
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      Storyboard
+      StoryboardSheet
+   

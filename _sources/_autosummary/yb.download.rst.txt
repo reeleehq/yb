@@ -8,6 +8,8 @@ yb.download
 
    .. autosummary::
    
+      youtube_storyboard
+      storyboard_formats
       download_youtube_video
       download_youtube_audio
       download_youtube_subtitles
@@ -30,6 +32,8 @@ yb.download
 
    .. autosummary::
    
+      Storyboard
+      StoryboardSheet
       AudioDownload
       SearchHit
       SubtitleFailure
@@ -62,5 +66,6 @@ yb.download
    probe
    ranges
    requirements
+   storyboards
    warn
    youtube

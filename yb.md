@@ -1,4 +1,4 @@
-> built 2026-11-23 00:57 UTC from 511f5c3 (main) · yb 0.1.46. Details: build_info.json
+> built 2026-11-23 04:25 UTC from 7c39394 (main) · yb 0.1.46. Details: build_info.json
 
 # index.html.md
 
@@ -1118,6 +1118,14 @@ ffmpeg, see [`yb.download.ranges`](_autosummary/yb.download.ranges.html.md#modul
 >>> clip = download_youtube_audio(url, start="0:07.9", end="0:08.75")
 ```
 
+To find *where* in a video something is without downloading it, fetch its
+storyboard (the seek-bar thumbnails, [`yb.download.storyboards`](_autosummary/yb.download.storyboards.html.md#module-yb.download.storyboards)):
+
+```pycon
+>>> board = youtube_storyboard(url)
+>>> for t, image in board.frames(): ...
+```
+
 To go from a name to a download, search first ([`search_youtube()`](_autosummary/yb.download.html.md#yb.download.search_youtube)):
 
 ```pycon
@@ -1136,8 +1144,10 @@ how to install it. The first download in a process runs it and warns.
 
 ### Functions
 
-| [`download_youtube_video`](_autosummary/yb.download.html.md#yb.download.download_youtube_video)(url, \*[, ...])          | Download a YouTube video to `download_dir` (default `~/Downloads`).              |
+| [`youtube_storyboard`](_autosummary/yb.download.html.md#yb.download.youtube_storyboard)(url, \*[, format_id, ...])   | Fetch a video's storyboard (metadata plus its sprite sheets; no video).          |
 |--------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
+| [`storyboard_formats`](_autosummary/yb.download.html.md#yb.download.storyboard_formats)(info)                        | The storyboard formats in a yt-dlp info dict, largest first.                     |
+| [`download_youtube_video`](_autosummary/yb.download.html.md#yb.download.download_youtube_video)(url, \*[, ...])          | Download a YouTube video to `download_dir` (default `~/Downloads`).              |
 | [`download_youtube_audio`](_autosummary/yb.download.html.md#yb.download.download_youtube_audio)(url, \*[, ...])          | Download only a video's audio (no video stream).                                 |
 | [`download_youtube_subtitles`](_autosummary/yb.download.html.md#yb.download.download_youtube_subtitles)(url, \*[, ...])      | Download only a video's subtitles (no media); returns the files written.         |
 | [`youtube_video_info`](_autosummary/yb.download.html.md#yb.download.youtube_video_info)(url, \*[, extra_opts, ...])  | Fetch a video's metadata without downloading it.                                 |
@@ -1157,14 +1167,16 @@ how to install it. The first download in a process runs it and warns.
 
 ### Classes
 
-| [`AudioDownload`](_autosummary/yb.download.html.md#yb.download.AudioDownload)(path, title, duration_s, ...)     | A bounded audio download.                                                                                               |
-|--------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
-| [`SearchHit`](_autosummary/yb.download.html.md#yb.download.SearchHit)(id, title, duration, channel, url)    | One row of [`search_youtube()`](_autosummary/yb.download.html.md#yb.download.search_youtube) (flat extraction: no per-video fetch).     |
-| [`SubtitleFailure`](_autosummary/yb.download.html.md#yb.download.SubtitleFailure)(video_id, error)                | An item whose subtitle fetch failed (see [`install_subtitle_fallback()`](_autosummary/yb.download.html.md#yb.download.install_subtitle_fallback)). |
-| [`DownloadResult`](_autosummary/yb.download.html.md#yb.download.DownloadResult)(path, info[, sidecars, ...])     | Outcome of a download.                                                                                                  |
-| [`JsRuntime`](_autosummary/yb.download.html.md#yb.download.JsRuntime)(name, path, on_path)                  | A JavaScript runtime found for yt-dlp.                                                                                  |
-| [`Pace`](_autosummary/yb.download.html.md#yb.download.Pace)([sleep_interval, max_sleep_interval, ...]) | How gently to talk to YouTube.                                                                                          |
-| [`TimeRange`](_autosummary/yb.download.html.md#yb.download.TimeRange)([start, end])                         | A span of a video, in seconds.                                                                                          |
+| [`Storyboard`](_autosummary/yb.download.html.md#yb.download.Storyboard)(video_id, url, title, duration, ...)   | A video's storyboard: its sheets, their tiling, and the video's identity and licence.                                   |
+|----------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
+| [`StoryboardSheet`](_autosummary/yb.download.html.md#yb.download.StoryboardSheet)(start, duration, image_bytes)     | One sprite sheet: `rows` x `columns` frames covering `duration` s from `start`.                                         |
+| [`AudioDownload`](_autosummary/yb.download.html.md#yb.download.AudioDownload)(path, title, duration_s, ...)       | A bounded audio download.                                                                                               |
+| [`SearchHit`](_autosummary/yb.download.html.md#yb.download.SearchHit)(id, title, duration, channel, url)      | One row of [`search_youtube()`](_autosummary/yb.download.html.md#yb.download.search_youtube) (flat extraction: no per-video fetch).     |
+| [`SubtitleFailure`](_autosummary/yb.download.html.md#yb.download.SubtitleFailure)(video_id, error)                  | An item whose subtitle fetch failed (see [`install_subtitle_fallback()`](_autosummary/yb.download.html.md#yb.download.install_subtitle_fallback)). |
+| [`DownloadResult`](_autosummary/yb.download.html.md#yb.download.DownloadResult)(path, info[, sidecars, ...])       | Outcome of a download.                                                                                                  |
+| [`JsRuntime`](_autosummary/yb.download.html.md#yb.download.JsRuntime)(name, path, on_path)                    | A JavaScript runtime found for yt-dlp.                                                                                  |
+| [`Pace`](_autosummary/yb.download.html.md#yb.download.Pace)([sleep_interval, max_sleep_interval, ...])   | How gently to talk to YouTube.                                                                                          |
+| [`TimeRange`](_autosummary/yb.download.html.md#yb.download.TimeRange)([start, end])                           | A span of a video, in seconds.                                                                                          |
 
 ### Exceptions
 
@@ -1399,6 +1411,43 @@ carries `upload_date` or a `timestamp`/`release_timestamp`, else `None`.
 YouTube’s results page usually shows only “3 weeks ago”, which yt-dlp does
 not turn into a date, so expect `None` often; `youtube_video_info` has
 the exact date.
+
+### *class* yb.download.Storyboard(video_id, url, title, duration, license, format_id, width, height, rows, columns, sheets=())
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+A video’s storyboard: its sheets, their tiling, and the video’s identity and licence.
+
+#### frame_times()
+
+The start time of every frame, in order (what [`frames()`](_autosummary/yb.download.html.md#yb.download.Storyboard.frames) yields).
+
+```pycon
+>>> sheet = StoryboardSheet(start=0.0, duration=8.0, image_bytes=b"")
+>>> board = Storyboard("v", "u", None, 10.0, None, "sb0", 4, 2, 2, 2,
+...                    sheets=(sheet, StoryboardSheet(8.0, 8.0, b"")))
+>>> board.frame_times()
+[0.0, 2.0, 4.0, 6.0, 8.0]
+```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`float`](https://docs.python.org/3/builtins/functions.html#float)]
+
+#### frames()
+
+`(t, image)` for every frame: `t` in seconds, `image` a PIL image.
+
+Needs `pillow`. Tiles past the video’s end (a last sheet’s padding) are
+skipped.
+
+* **Return type:**
+  [`Iterator`](https://docs.python.org/3/library/typing.html#typing.Iterator)[[`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`float`](https://docs.python.org/3/builtins/functions.html#float), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]]
+
+### *class* yb.download.StoryboardSheet(start, duration, image_bytes)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+One sprite sheet: `rows` x `columns` frames covering `duration` s from `start`.
 
 ### *class* yb.download.SubtitleFailure(video_id, error)
 
@@ -1965,6 +2014,20 @@ are returned (YouTube’s channel rows are dropped); a Short’s `url` is its
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`SearchHit`](_autosummary/yb.download.youtube.html.md#yb.download.youtube.SearchHit)]
 
+### yb.download.storyboard_formats(info)
+
+The storyboard formats in a yt-dlp info dict, largest first.
+
+```pycon
+>>> storyboard_formats({"formats": [{"format_id": "18"},
+...     {"format_id": "sb1", "format_note": "storyboard", "width": 160},
+...     {"format_id": "sb0", "format_note": "storyboard", "width": 320}]})
+[{'format_id': 'sb0', 'format_note': 'storyboard', 'width': 320}, {'format_id': 'sb1', 'format_note': 'storyboard', 'width': 160}]
+```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]
+
 ### yb.download.youtube_playlist_info(url, , playlist_items=None, flat=True, extra_opts=None, cookies_file=None)
 
 Fetch a playlist’s per-video metadata without downloading.
@@ -1984,6 +2047,22 @@ and trimmed to `_INFO_FIELDS` (slower, but includes duration/fps/etc.).
   * **cookies_file** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[[`False`](https://docs.python.org/3/builtins/constants.html#False)], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – See [`download_youtube_video()`](_autosummary/yb.download.html.md#yb.download.download_youtube_video).
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]
+
+### yb.download.youtube_storyboard(url, , format_id='sb0', extra_opts=None, cookies_file=None, ydl_cls=None)
+
+Fetch a video’s storyboard (metadata plus its sprite sheets; no video).
+
+* **Parameters:**
+  * **url** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – The video’s URL (or anything yt-dlp resolves to one video).
+  * **format_id** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Which storyboard: `sb0` (default, 320x180) down to `sb3`.
+  * **extra_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Raw yt-dlp options, as everywhere in [`yb.download`](_autosummary/yb.download.html.md#module-yb.download).
+  * **cookies_file** ([`Any`](https://docs.python.org/3/library/typing.html#typing.Any)) – As in [`download_youtube_video()`](_autosummary/yb.download.html.md#yb.download.download_youtube_video).
+  * **ydl_cls** ([`Optional`](https://docs.python.org/3/library/typing.html#typing.Optional)[[`Callable`](https://docs.python.org/3/library/typing.html#typing.Callable)[[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)], [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]]) – What to build instead of `yt_dlp.YoutubeDL` (a fake in tests).
+* **Raises:**
+  [**LookupError**](https://docs.python.org/3/builtins/exceptions.html#LookupError) – The video has no storyboard of that format (live streams,
+      some very short videos); the message lists the ones it has.
+* **Return type:**
+  [`Storyboard`](_autosummary/yb.download.storyboards.html.md#yb.download.storyboards.Storyboard)
 
 ### yb.download.youtube_video_info(url, , extra_opts=None, cookies_file=None)
 
@@ -2005,6 +2084,7 @@ the title/duration/chapters before deciding to download.
 | [`probe`](_autosummary/yb.download.probe.html.md#module-yb.download.probe)               | Online checks for servers: do the configured cookies still get past YouTube?                                                    |
 | [`ranges`](_autosummary/yb.download.ranges.html.md#module-yb.download.ranges)             | Download just a time range of a video: parse start/end, build yt-dlp's options.                                                 |
 | [`requirements`](_autosummary/yb.download.requirements.html.md#module-yb.download.requirements) | Preflight for downloading: does yt-dlp have what YouTube now demands?                                                           |
+| [`storyboards`](_autosummary/yb.download.storyboards.html.md#module-yb.download.storyboards)   | YouTube storyboards: a video's seek-bar thumbnails, by time, with no video download.                                            |
 | [`warn`](_autosummary/yb.download.warn.html.md#module-yb.download.warn)                 | Warnings attributed to the caller's code, not to yb's own plumbing.                                                             |
 | [`youtube`](_autosummary/yb.download.youtube.html.md#module-yb.download.youtube)           | Download YouTube videos (and their metadata) via yt-dlp.                                                                        |
 
@@ -2682,6 +2762,128 @@ Empty when there’s nothing to add (no runtime, or it’s already on `PATH`).
 
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]]
+
+
+# _autosummary/yb.download.storyboards.html.md
+
+# yb.download.storyboards
+
+YouTube storyboards: a video’s seek-bar thumbnails, by time, with no video download.
+
+YouTube serves every video’s *storyboard*: sprite sheets of small frames
+(`sb0` is 320x180, about one frame every 2 to 10 seconds) that the player
+shows when you hover the seek bar. They are cheap to fetch (a few JPEGs per
+video, no video stream, and they still load where video downloads hit a bot
+wall), and they are enough to find *where* in a video something is: a scene,
+a set, a drawn object. Text-to-frame search over a channel is built on them
+(`illustration.frames`).
+
+```pycon
+>>> from yb.download import youtube_storyboard
+>>> board = youtube_storyboard("https://youtu.be/dQw4w9WgXcQ")
+>>> for t, image in board.frames():
+...     ...  # t in seconds, image a PIL image (needs pillow)
+```
+
+Two limits to design for: a frame stands for a stretch of a few seconds (its
+time is the start of that stretch, and can lag the moment shown by about a
+second, so grab a few candidates around a hit when you cut the real frame with
+[`download_youtube_video()`](_autosummary/yb.download.html.md#yb.download.download_youtube_video)’s `start`/`end`); and 320x180
+finds scenes, not small props.
+
+The frames are the video owner’s: a storyboard carries the video’s licence
+(`Storyboard.license`, YouTube’s `"Creative Commons Attribution license
+(reuse allowed)"` or nothing, which means the standard YouTube licence: all
+rights reserved).
+
+### Module Attributes
+
+| [`DFLT_STORYBOARD_FORMAT`](_autosummary/yb.download.storyboards.html.md#yb.download.storyboards.DFLT_STORYBOARD_FORMAT)   | The largest storyboard YouTube serves (320x180 frames).   |
+|---------------------------------------------------------------------------|-----------------------------------------------------------|
+
+### Functions
+
+| [`youtube_storyboard`](_autosummary/yb.download.storyboards.html.md#yb.download.storyboards.youtube_storyboard)(url, \*[, format_id, ...])   | Fetch a video's storyboard (metadata plus its sprite sheets; no video).   |
+|--------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------|
+| [`storyboard_formats`](_autosummary/yb.download.storyboards.html.md#yb.download.storyboards.storyboard_formats)(info)                        | The storyboard formats in a yt-dlp info dict, largest first.              |
+
+### Classes
+
+| [`Storyboard`](_autosummary/yb.download.storyboards.html.md#yb.download.storyboards.Storyboard)(video_id, url, title, duration, ...)   | A video's storyboard: its sheets, their tiling, and the video's identity and licence.   |
+|----------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------|
+| [`StoryboardSheet`](_autosummary/yb.download.storyboards.html.md#yb.download.storyboards.StoryboardSheet)(start, duration, image_bytes)     | One sprite sheet: `rows` x `columns` frames covering `duration` s from `start`.         |
+
+### yb.download.storyboards.DFLT_STORYBOARD_FORMAT *= 'sb0'*
+
+The largest storyboard YouTube serves (320x180 frames). `sb1` .. `sb3` are
+smaller (160x90 down to 48x27).
+
+### *class* yb.download.storyboards.Storyboard(video_id, url, title, duration, license, format_id, width, height, rows, columns, sheets=())
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+A video’s storyboard: its sheets, their tiling, and the video’s identity and licence.
+
+#### frame_times()
+
+The start time of every frame, in order (what [`frames()`](_autosummary/yb.download.storyboards.html.md#yb.download.storyboards.Storyboard.frames) yields).
+
+```pycon
+>>> sheet = StoryboardSheet(start=0.0, duration=8.0, image_bytes=b"")
+>>> board = Storyboard("v", "u", None, 10.0, None, "sb0", 4, 2, 2, 2,
+...                    sheets=(sheet, StoryboardSheet(8.0, 8.0, b"")))
+>>> board.frame_times()
+[0.0, 2.0, 4.0, 6.0, 8.0]
+```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`float`](https://docs.python.org/3/builtins/functions.html#float)]
+
+#### frames()
+
+`(t, image)` for every frame: `t` in seconds, `image` a PIL image.
+
+Needs `pillow`. Tiles past the video’s end (a last sheet’s padding) are
+skipped.
+
+* **Return type:**
+  [`Iterator`](https://docs.python.org/3/library/typing.html#typing.Iterator)[[`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`float`](https://docs.python.org/3/builtins/functions.html#float), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]]
+
+### *class* yb.download.storyboards.StoryboardSheet(start, duration, image_bytes)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+One sprite sheet: `rows` x `columns` frames covering `duration` s from `start`.
+
+### yb.download.storyboards.storyboard_formats(info)
+
+The storyboard formats in a yt-dlp info dict, largest first.
+
+```pycon
+>>> storyboard_formats({"formats": [{"format_id": "18"},
+...     {"format_id": "sb1", "format_note": "storyboard", "width": 160},
+...     {"format_id": "sb0", "format_note": "storyboard", "width": 320}]})
+[{'format_id': 'sb0', 'format_note': 'storyboard', 'width': 320}, {'format_id': 'sb1', 'format_note': 'storyboard', 'width': 160}]
+```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]
+
+### yb.download.storyboards.youtube_storyboard(url, , format_id='sb0', extra_opts=None, cookies_file=None, ydl_cls=None)
+
+Fetch a video’s storyboard (metadata plus its sprite sheets; no video).
+
+* **Parameters:**
+  * **url** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – The video’s URL (or anything yt-dlp resolves to one video).
+  * **format_id** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Which storyboard: `sb0` (default, 320x180) down to `sb3`.
+  * **extra_opts** ([`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Raw yt-dlp options, as everywhere in [`yb.download`](_autosummary/yb.download.html.md#module-yb.download).
+  * **cookies_file** ([`Any`](https://docs.python.org/3/library/typing.html#typing.Any)) – As in [`download_youtube_video()`](_autosummary/yb.download.html.md#yb.download.download_youtube_video).
+  * **ydl_cls** ([`Optional`](https://docs.python.org/3/library/typing.html#typing.Optional)[[`Callable`](https://docs.python.org/3/library/typing.html#typing.Callable)[[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)], [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]]) – What to build instead of `yt_dlp.YoutubeDL` (a fake in tests).
+* **Raises:**
+  [**LookupError**](https://docs.python.org/3/builtins/exceptions.html#LookupError) – The video has no storyboard of that format (live streams,
+      some very short videos); the message lists the ones it has.
+* **Return type:**
+  [`Storyboard`](_autosummary/yb.download.storyboards.html.md#yb.download.storyboards.Storyboard)
 
 
 # _autosummary/yb.download.warn.html.md
@@ -6488,16 +6690,18 @@ Fetch a video’s live metadata & engagement numbers.
 
 # About this build
 
-This documentation was built on **2026-11-23 00:57 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/511f5c32dd1a717b4e466857de0cf4e8c7f3ad61"><code>511f5c3</code></a> on branch <code>main</code>, for **yb 0.1.46** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-23 04:25 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/7c39394109faa26ea57d6d264a01f0bb4f73d95b"><code>7c39394</code></a> on branch <code>main</code>, for **yb 0.1.46** (from <code>pyproject.toml</code>).
 
-#### NOTE
-Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
+#### WARNING
+The documentation and the package may be misaligned:
+
+- The documented version (0.1.46) is behind the latest release on PyPI (0.1.47): `pip install yb` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                    |
 |---------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/yb/commit/511f5c32dd1a717b4e466857de0cf4e8c7f3ad61"><code>511f5c32dd1a717b4e466857de0cf4e8c7f3ad61</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/yb/commit/7c39394109faa26ea57d6d264a01f0bb4f73d95b"><code>7c39394109faa26ea57d6d264a01f0bb4f73d95b</code></a> |
 | Branch              | <code>main</code>                                                                                                                                  |
 | Tags at this commit | none                                                                                                                                               |
 | Working tree        | clean                                                                                                                                              |
@@ -6508,9 +6712,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/yb</code>                                                                   |
-| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/45091561392">45091561392</a>          |
+| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/45111540704">45111540704</a>          |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>511f5c32dd1a717b4e466857de0cf4e8c7f3ad61</code> (in the history of the built commit) |
+| Event commit | <code>7c39394109faa26ea57d6d264a01f0bb4f73d95b</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -6535,13 +6739,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/yb/0.1.46/">0.1.46</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/yb/0.1.47/">0.1.47</a>, newer than the documented version (0.1.46).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/yb && cd yb
-git checkout 511f5c32dd1a717b4e466857de0cf4e8c7f3ad61
+git checkout 7c39394109faa26ea57d6d264a01f0bb4f73d95b
 pip install "epythet==0.2.23"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

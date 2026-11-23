@@ -214,6 +214,7 @@
 <li class="toctree-l4"><a class="reference internal" href="yb.download.probe.html">yb.download.probe</a></li>
 <li class="toctree-l4"><a class="reference internal" href="yb.download.ranges.html">yb.download.ranges</a></li>
 <li class="toctree-l4"><a class="reference internal" href="yb.download.requirements.html">yb.download.requirements</a></li>
+<li class="toctree-l4"><a class="reference internal" href="yb.download.storyboards.html">yb.download.storyboards</a></li>
 <li class="toctree-l4"><a class="reference internal" href="yb.download.warn.html">yb.download.warn</a></li>
 <li class="toctree-l4"><a class="reference internal" href="yb.download.youtube.html">yb.download.youtube</a></li>
 </ul>
@@ -304,6 +305,12 @@ ffmpeg, see <a class="reference internal" href="yb.download.ranges.html#module-y
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clip</span> <span class="o">=</span> <span class="n">download_youtube_audio</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="s2">"0:07.9"</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">"0:08.75"</span><span class="p">)</span>
 </pre></div>
 </div>
+<p>To find <em>where</em> in a video something is without downloading it, fetch its
+storyboard (the seek-bar thumbnails, <a class="reference internal" href="yb.download.storyboards.html#module-yb.download.storyboards" title="yb.download.storyboards"><code class="xref py py-mod docutils literal notranslate"><span class="pre">yb.download.storyboards</span></code></a>):</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">board</span> <span class="o">=</span> <span class="n">youtube_storyboard</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">t</span><span class="p">,</span> <span class="n">image</span> <span class="ow">in</span> <span class="n">board</span><span class="o">.</span><span class="n">frames</span><span class="p">():</span> <span class="o">...</span>
+</pre></div>
+</div>
 <p>To go from a name to a download, search first (<a class="reference internal" href="#yb.download.search_youtube" title="yb.download.search_youtube"><code class="xref py py-func docutils literal notranslate"><span class="pre">search_youtube()</span></code></a>):</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">yb.download</span><span class="w"> </span><span class="kn">import</span> <span class="n">search_youtube</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">hits</span> <span class="o">=</span> <span class="n">search_youtube</span><span class="p">(</span><span class="s2">"hanuman chalisa"</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
@@ -320,6 +327,12 @@ how to install it. The first download in a process runs it and warns.</p>
 <div class="table-wrapper autosummary longtable docutils container">
 <table class="autosummary longtable docutils align-default">
 <tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.youtube_storyboard" title="yb.download.youtube_storyboard"><code class="xref py py-obj docutils literal notranslate"><span class="pre">youtube_storyboard</span></code></a>(url, *[, format_id, ...])</p></td>
+<td><p>Fetch a video's storyboard (metadata plus its sprite sheets; no video).</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#yb.download.storyboard_formats" title="yb.download.storyboard_formats"><code class="xref py py-obj docutils literal notranslate"><span class="pre">storyboard_formats</span></code></a>(info)</p></td>
+<td><p>The storyboard formats in a yt-dlp info dict, largest first.</p></td>
+</tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.download_youtube_video" title="yb.download.download_youtube_video"><code class="xref py py-obj docutils literal notranslate"><span class="pre">download_youtube_video</span></code></a>(url, *[, ...])</p></td>
 <td><p>Download a YouTube video to <code class="docutils literal notranslate"><span class="pre">download_dir</span></code> (default <code class="docutils literal notranslate"><span class="pre">~/Downloads</span></code>).</p></td>
 </tr>
@@ -378,6 +391,12 @@ how to install it. The first download in a process runs it and warns.</p>
 <div class="table-wrapper autosummary longtable docutils container">
 <table class="autosummary longtable docutils align-default">
 <tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.Storyboard" title="yb.download.Storyboard"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Storyboard</span></code></a>(video_id, url, title, duration, ...)</p></td>
+<td><p>A video's storyboard: its sheets, their tiling, and the video's identity and licence.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#yb.download.StoryboardSheet" title="yb.download.StoryboardSheet"><code class="xref py py-obj docutils literal notranslate"><span class="pre">StoryboardSheet</span></code></a>(start, duration, image_bytes)</p></td>
+<td><p>One sprite sheet: <code class="docutils literal notranslate"><span class="pre">rows</span></code> x <code class="docutils literal notranslate"><span class="pre">columns</span></code> frames covering <code class="docutils literal notranslate"><span class="pre">duration</span></code> s from <code class="docutils literal notranslate"><span class="pre">start</span></code>.</p></td>
+</tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#yb.download.AudioDownload" title="yb.download.AudioDownload"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AudioDownload</span></code></a>(path, title, duration_s, ...)</p></td>
 <td><p>A bounded audio download.</p></td>
 </tr>
@@ -745,6 +764,55 @@ carries <code class="docutils literal notranslate"><span class="pre">upload_date
 YouTube’s results page usually shows only “3 weeks ago”, which yt-dlp does
 not turn into a date, so expect <code class="docutils literal notranslate"><span class="pre">None</span></code> often; <code class="docutils literal notranslate"><span class="pre">youtube_video_info</span></code> has
 the exact date.</p>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="yb.download.Storyboard">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">yb.download.</span></span><span class="sig-name descname"><span class="pre">Storyboard</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">video_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">duration</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">license</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">format_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">width</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">height</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rows</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">columns</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sheets</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/download/storyboards.html#Storyboard"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.download.Storyboard" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#object" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>A video’s storyboard: its sheets, their tiling, and the video’s identity and licence.</p>
+<dl class="field-list simple">
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="yb.download.Storyboard.frame_times">
+<span class="sig-name descname"><span class="pre">frame_times</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/download/storyboards.html#Storyboard.frame_times"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.download.Storyboard.frame_times" title="Link to this definition">¶</a></dt>
+<dd><p>The start time of every frame, in order (what <a class="reference internal" href="#yb.download.Storyboard.frames" title="yb.download.Storyboard.frames"><code class="xref py py-meth docutils literal notranslate"><span class="pre">frames()</span></code></a> yields).</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">sheet</span> <span class="o">=</span> <span class="n">StoryboardSheet</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">duration</span><span class="o">=</span><span class="mf">8.0</span><span class="p">,</span> <span class="n">image_bytes</span><span class="o">=</span><span class="sa">b</span><span class="s2">""</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">board</span> <span class="o">=</span> <span class="n">Storyboard</span><span class="p">(</span><span class="s2">"v"</span><span class="p">,</span> <span class="s2">"u"</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">"sb0"</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span>
+<span class="gp">... </span>                   <span class="n">sheets</span><span class="o">=</span><span class="p">(</span><span class="n">sheet</span><span class="p">,</span> <span class="n">StoryboardSheet</span><span class="p">(</span><span class="mf">8.0</span><span class="p">,</span> <span class="mf">8.0</span><span class="p">,</span> <span class="sa">b</span><span class="s2">""</span><span class="p">)))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">board</span><span class="o">.</span><span class="n">frame_times</span><span class="p">()</span>
+<span class="go">[0.0, 2.0, 4.0, 6.0, 8.0]</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="yb.download.Storyboard.frames">
+<span class="sig-name descname"><span class="pre">frames</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/download/storyboards.html#Storyboard.frames"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.download.Storyboard.frames" title="Link to this definition">¶</a></dt>
+<dd><p><code class="docutils literal notranslate"><span class="pre">(t,</span> <span class="pre">image)</span></code> for every frame: <code class="docutils literal notranslate"><span class="pre">t</span></code> in seconds, <code class="docutils literal notranslate"><span class="pre">image</span></code> a PIL image.</p>
+<p>Needs <code class="docutils literal notranslate"><span class="pre">pillow</span></code>. Tiles past the video’s end (a last sheet’s padding) are
+skipped.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Iterator</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code></a>]]</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="yb.download.StoryboardSheet">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">yb.download.</span></span><span class="sig-name descname"><span class="pre">StoryboardSheet</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">duration</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_bytes</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/download/storyboards.html#StoryboardSheet"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.download.StoryboardSheet" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#object" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>One sprite sheet: <code class="docutils literal notranslate"><span class="pre">rows</span></code> x <code class="docutils literal notranslate"><span class="pre">columns</span></code> frames covering <code class="docutils literal notranslate"><span class="pre">duration</span></code> s from <code class="docutils literal notranslate"><span class="pre">start</span></code>.</p>
 <dl class="field-list simple">
 </dl>
 </dd></dl>
@@ -1438,6 +1506,23 @@ filter that is about <code class="docutils literal notranslate"><span class="pre
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="yb.download.storyboard_formats">
+<span class="sig-prename descclassname"><span class="pre">yb.download.</span></span><span class="sig-name descname"><span class="pre">storyboard_formats</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">info</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/download/storyboards.html#storyboard_formats"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.download.storyboard_formats" title="Link to this definition">¶</a></dt>
+<dd><p>The storyboard formats in a yt-dlp info dict, largest first.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">storyboard_formats</span><span class="p">({</span><span class="s2">"formats"</span><span class="p">:</span> <span class="p">[{</span><span class="s2">"format_id"</span><span class="p">:</span> <span class="s2">"18"</span><span class="p">},</span>
+<span class="gp">... </span>    <span class="p">{</span><span class="s2">"format_id"</span><span class="p">:</span> <span class="s2">"sb1"</span><span class="p">,</span> <span class="s2">"format_note"</span><span class="p">:</span> <span class="s2">"storyboard"</span><span class="p">,</span> <span class="s2">"width"</span><span class="p">:</span> <span class="mi">160</span><span class="p">},</span>
+<span class="gp">... </span>    <span class="p">{</span><span class="s2">"format_id"</span><span class="p">:</span> <span class="s2">"sb0"</span><span class="p">,</span> <span class="s2">"format_note"</span><span class="p">:</span> <span class="s2">"storyboard"</span><span class="p">,</span> <span class="s2">"width"</span><span class="p">:</span> <span class="mi">320</span><span class="p">}]})</span>
+<span class="go">[{'format_id': 'sb0', 'format_note': 'storyboard', 'width': 320}, {'format_id': 'sb1', 'format_note': 'storyboard', 'width': 160}]</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="yb.download.youtube_playlist_info">
 <span class="sig-prename descclassname"><span class="pre">yb.download.</span></span><span class="sig-name descname"><span class="pre">youtube_playlist_info</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">playlist_items</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flat</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_opts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cookies_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/download/youtube.html#youtube_playlist_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.download.youtube_playlist_info" title="Link to this definition">¶</a></dt>
 <dd><p>Fetch a playlist’s per-video metadata without downloading.</p>
@@ -1459,6 +1544,30 @@ and trimmed to <code class="xref py py-data docutils literal notranslate"><span 
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code></a>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="yb.download.youtube_storyboard">
+<span class="sig-prename descclassname"><span class="pre">yb.download.</span></span><span class="sig-name descname"><span class="pre">youtube_storyboard</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">format_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'sb0'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_opts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cookies_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ydl_cls</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/download/storyboards.html#youtube_storyboard"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.download.youtube_storyboard" title="Link to this definition">¶</a></dt>
+<dd><p>Fetch a video’s storyboard (metadata plus its sprite sheets; no video).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>url</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span>) – The video’s URL (or anything yt-dlp resolves to one video).</p></li>
+<li><p><strong>format_id</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span>) – Which storyboard: <code class="docutils literal notranslate"><span class="pre">sb0</span></code> (default, 320x180) down to <code class="docutils literal notranslate"><span class="pre">sb3</span></code>.</p></li>
+<li><p><strong>extra_opts</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a> | <span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code></a></span></span>) – Raw yt-dlp options, as everywhere in <a class="reference internal" href="#module-yb.download" title="yb.download"><code class="xref py py-mod docutils literal notranslate"><span class="pre">yb.download</span></code></a>.</p></li>
+<li><p><strong>cookies_file</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code></a></span>) – As in <a class="reference internal" href="#yb.download.download_youtube_video" title="yb.download.download_youtube_video"><code class="xref py py-func docutils literal notranslate"><span class="pre">download_youtube_video()</span></code></a>.</p></li>
+<li><p><strong>ydl_cls</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Callable</span></code></a>[[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a>], <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code></a>]]</span>) – What to build instead of <code class="docutils literal notranslate"><span class="pre">yt_dlp.YoutubeDL</span></code> (a fake in tests).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#LookupError" title="(in Python v3.15)"><strong>LookupError</strong></a> – The video has no storyboard of that format (live streams,
+    some very short videos); the message lists the ones it has.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="yb.download.storyboards.html#yb.download.storyboards.Storyboard" title="yb.download.storyboards.Storyboard"><code class="xref py py-class docutils literal notranslate"><span class="pre">Storyboard</span></code></a></span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -1496,10 +1605,13 @@ the title/duration/chapters before deciding to download.</p>
 <tr class="row-odd"><td><p><a class="reference internal" href="yb.download.requirements.html#module-yb.download.requirements" title="yb.download.requirements"><code class="xref py py-obj docutils literal notranslate"><span class="pre">requirements</span></code></a></p></td>
 <td><p>Preflight for downloading: does yt-dlp have what YouTube now demands?</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="yb.download.warn.html#module-yb.download.warn" title="yb.download.warn"><code class="xref py py-obj docutils literal notranslate"><span class="pre">warn</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="yb.download.storyboards.html#module-yb.download.storyboards" title="yb.download.storyboards"><code class="xref py py-obj docutils literal notranslate"><span class="pre">storyboards</span></code></a></p></td>
+<td><p>YouTube storyboards: a video's seek-bar thumbnails, by time, with no video download.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="yb.download.warn.html#module-yb.download.warn" title="yb.download.warn"><code class="xref py py-obj docutils literal notranslate"><span class="pre">warn</span></code></a></p></td>
 <td><p>Warnings attributed to the caller's code, not to yb's own plumbing.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="yb.download.youtube.html#module-yb.download.youtube" title="yb.download.youtube"><code class="xref py py-obj docutils literal notranslate"><span class="pre">youtube</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="yb.download.youtube.html#module-yb.download.youtube" title="yb.download.youtube"><code class="xref py py-obj docutils literal notranslate"><span class="pre">youtube</span></code></a></p></td>
 <td><p>Download YouTube videos (and their metadata) via yt-dlp.</p></td>
 </tr>
 </tbody>
@@ -1601,6 +1713,12 @@ the title/duration/chapters before deciding to download.</p>
 </li>
 <li><a class="reference internal" href="#yb.download.RateLimitedError"><code class="docutils literal notranslate"><span class="pre">RateLimitedError</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.SearchHit"><code class="docutils literal notranslate"><span class="pre">SearchHit</span></code></a></li>
+<li><a class="reference internal" href="#yb.download.Storyboard"><code class="docutils literal notranslate"><span class="pre">Storyboard</span></code></a><ul>
+<li><a class="reference internal" href="#yb.download.Storyboard.frame_times"><code class="docutils literal notranslate"><span class="pre">Storyboard.frame_times()</span></code></a></li>
+<li><a class="reference internal" href="#yb.download.Storyboard.frames"><code class="docutils literal notranslate"><span class="pre">Storyboard.frames()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#yb.download.StoryboardSheet"><code class="docutils literal notranslate"><span class="pre">StoryboardSheet</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.SubtitleFailure"><code class="docutils literal notranslate"><span class="pre">SubtitleFailure</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.TimeRange"><code class="docutils literal notranslate"><span class="pre">TimeRange</span></code></a><ul>
 <li><a class="reference internal" href="#yb.download.TimeRange.as_info"><code class="docutils literal notranslate"><span class="pre">TimeRange.as_info()</span></code></a></li>
@@ -1623,7 +1741,9 @@ the title/duration/chapters before deciding to download.</p>
 <li><a class="reference internal" href="#yb.download.parse_timestamp"><code class="docutils literal notranslate"><span class="pre">parse_timestamp()</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.require_http_url"><code class="docutils literal notranslate"><span class="pre">require_http_url()</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.search_youtube"><code class="docutils literal notranslate"><span class="pre">search_youtube()</span></code></a></li>
+<li><a class="reference internal" href="#yb.download.storyboard_formats"><code class="docutils literal notranslate"><span class="pre">storyboard_formats()</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.youtube_playlist_info"><code class="docutils literal notranslate"><span class="pre">youtube_playlist_info()</span></code></a></li>
+<li><a class="reference internal" href="#yb.download.youtube_storyboard"><code class="docutils literal notranslate"><span class="pre">youtube_storyboard()</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.youtube_video_info"><code class="docutils literal notranslate"><span class="pre">youtube_video_info()</span></code></a></li>
 </ul>
 </li>
