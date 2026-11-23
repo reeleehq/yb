@@ -21,6 +21,7 @@ can never widen them.
 from __future__ import annotations
 
 import shutil
+import socket
 import tempfile
 import math
 import time
@@ -105,6 +106,20 @@ class AudioSourceError(ValueError):
 
 class AudioTargetError(ValueError):
     """``validate_target`` refused a URL: the link, or one yt-dlp was about to fetch."""
+
+
+class AddressRefusedError(AudioTargetError, OSError):
+    """``validate_target`` refused the address a connection was about to use.
+
+    Also an ``OSError``, so the HTTP layer treats it as a failed connection (no
+    retry on another request handler) and yt-dlp wraps it as a transport error.
+    """
+
+
+#: Request handlers whose every connection resolves through ``socket.getaddrinfo``
+#: in the calling thread, where the connect-time check sits. Others (curl_cffi's,
+#: whose libcurl resolves and follows redirects in C) are removed while it runs.
+CHECKED_REQUEST_HANDLERS = frozenset({"Urllib", "Requests", "Websockets"})
 
 
 def _validated(validate: TargetValidator, url: str) -> None:
@@ -272,20 +287,28 @@ def _guard_requests(ydl: Any, validate: TargetValidator, deadline: float) -> Non
     ydl.urlopen = guarded
 
 
-def _address_rule(validate: TargetValidator) -> Callable[[str, int | None], None]:
+def _address_rule(
+    validate: TargetValidator, *, trusted: frozenset = frozenset()
+) -> Callable[[str, int | None], None]:
     """``validate`` applied to the address a connection is about to use.
 
     The address goes in as an IP-literal URL (``http://10.0.0.1:443/``), so a
     validator that refuses internal addresses judges the address itself, with no
     second lookup to rebind: the address checked is the address connected to.
+    ``trusted`` holds ``(ip, port)`` pairs that pass unchecked: the deployment's
+    proxies, which the operator configured.
     """
 
     def check(ip: str, port: int | None) -> None:
+        if (ip, port) in trusted:
+            return
+        if not port:  # a URL with no port reads as port 80: refuse, never guess
+            raise AddressRefusedError(f"refused to connect to {ip}: unknown port")
         address = url_of_address(ip, port)
         try:
             validate(address)
-        except ValueError as exc:
-            raise AudioTargetError(
+        except Exception as exc:  # a validator's bug refuses too (fail closed)
+            raise AddressRefusedError(
                 f"refused to connect to {address} (an address a requested host "
                 f"resolved to): {exc}"
             ) from exc
@@ -293,21 +316,67 @@ def _address_rule(validate: TargetValidator) -> Callable[[str, int | None], None
     return check
 
 
-@contextmanager
-def _connect_guard(
-    validate: TargetValidator, deployment_opts: Mapping[str, Any]
-) -> Iterator[None]:
-    """Check every address yt-dlp connects to with ``validate``, unless nothing needs it.
+_PROXY_DEFAULT_PORTS = {
+    "http": 80,
+    "https": 443,
+    "socks4": 1080,
+    "socks4a": 1080,
+    "socks5": 1080,
+    "socks5h": 1080,
+}
 
-    Skipped for the default floor (:func:`require_http_url` accepts any address)
-    and when the deployment routes requests through a ``proxy``: the connection
-    then goes to the proxy, which resolves the target itself and is where an
-    egress rule belongs.
+
+def _proxy_endpoints(ydl: Any) -> frozenset:
+    """``(ip, port)`` of every proxy ``ydl`` may send requests through.
+
+    From its ``proxy`` option or the ``*_PROXY`` environment (yt-dlp's ``proxies``
+    map; its ``no`` entry is a bypass list, not a proxy). Connections to these
+    pass the address check; connections that bypass a proxy are checked.
     """
-    if validate is require_http_url or deployment_opts.get("proxy"):
+    proxies = getattr(ydl, "proxies", None) or {}
+    out = set()
+    for key, value in proxies.items():
+        if key == "no" or not value or value == "__noproxy__":
+            continue
+        parts = urllib.parse.urlparse(value if "://" in value else f"http://{value}")
+        if not parts.hostname:
+            continue
+        port = parts.port or _PROXY_DEFAULT_PORTS.get(parts.scheme, 80)
+        try:  # no check is active yet: this resolves directly
+            infos = socket.getaddrinfo(parts.hostname, port, 0, socket.SOCK_STREAM)
+        except OSError:
+            continue  # unresolvable now: its connection is checked (and refused)
+        out.update((info[4][0], port) for info in infos)
+    return frozenset(out)
+
+
+def _keep_checked_handlers(ydl: Any) -> None:
+    """Remove the request handlers the connect-time check cannot see."""
+    director = getattr(ydl, "_request_director", None)
+    if director is None:  # a stand-in YoutubeDL (tests)
+        return
+    for key in list(director.handlers):
+        if key not in CHECKED_REQUEST_HANDLERS:
+            director.handlers.pop(key).close()
+
+
+@contextmanager
+def _connect_guard(validate: TargetValidator, ydl: Any) -> Iterator[None]:
+    """Check every address ``ydl`` connects to with ``validate``, unless nothing needs it.
+
+    Skipped for the default floor (:func:`require_http_url` accepts any address).
+    Otherwise only request handlers that resolve in Python are kept (impersonation,
+    which needs curl_cffi, is then unavailable: a request that requires it fails
+    as a source error). Connections to the deployment's proxies pass: a proxy
+    resolves the target itself, so the egress rule for proxied requests belongs
+    there. Every direct connection, including one a ``no_proxy`` list sends
+    around the proxy, is checked.
+    """
+    if validate is require_http_url:
         yield
         return
-    with address_check(_address_rule(validate)):
+    _keep_checked_handlers(ydl)
+    with address_check(_address_rule(validate, trusted=_proxy_endpoints(ydl))):
         yield
 
 
@@ -422,9 +491,12 @@ def download_audio_bounded(
             to every address it connects to, as an IP-literal URL
             (``http://10.0.0.1:443/``; see :mod:`yb.download.egress`), so a
             validator that refuses internal addresses also stops DNS rebinding
-            and redirect hops into them before they connect. Not applied to
-            addresses when ``extra_opts`` sets a ``proxy`` (the proxy connects,
-            so the egress rule belongs there).
+            and redirect hops into them before they connect. With a validator
+            other than the default, impersonation (curl_cffi) is not used, since
+            libcurl resolves out of the check's reach. A connection to the
+            deployment's proxy (``extra_opts["proxy"]`` or the ``*_PROXY``
+            environment) passes: the proxy connects to the target, so the egress
+            rule for proxied requests belongs there.
         extra_opts: Deployment yt-dlp options, restricted to
             :data:`DEPLOYMENT_OPT_KEYS` (credentials, cookies, proxy); anything
             else raises, so no option can widen a cap or redirect the output.
@@ -464,7 +536,7 @@ def download_audio_bounded(
                 cookies_file=cookies_file,
                 ydl_cls=ydl_cls,
             ) as ydl,
-            _connect_guard(validate_target, deployment_opts),
+            _connect_guard(validate_target, ydl),
             _typed_errors(),
             explain_rate_limit(),
         ):

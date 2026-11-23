@@ -22,9 +22,11 @@ each manifest and each fragment alike.
         ...
     ValueError: refused 127.0.0.1
 
-Outside an active check, resolution is untouched. The patch is installed once,
-on first use, and passes straight through when no check is active, so code in
-other threads is unaffected. Work a library hands to a thread pool does not see
+Outside an active check, resolution is untouched. The patch is (re)installed on
+entry to each check, over whatever ``socket.getaddrinfo`` is then (another
+library's resolver keeps working underneath), and passes straight through when no
+check is active, so code in other threads is unaffected. The check itself runs
+with no check active, so a check that resolves names does not recurse. Work a library hands to a thread pool does not see
 the check (a new thread starts with no context), so the caller must keep its
 requests on the calling thread (yb pins ``concurrent_fragment_downloads`` to 1).
 """
@@ -42,11 +44,13 @@ from contextvars import ContextVar
 AddressCheck = Callable[[str, "int | None"], None]
 
 _active: ContextVar[AddressCheck | None] = ContextVar("yb_address_check", default=None)
+_resolving: ContextVar[bool] = ContextVar("yb_address_resolving", default=False)
 _install_lock = threading.Lock()
-_installed = False
 
-#: The resolver the patch delegates to (the original ``socket.getaddrinfo``).
-#: A module attribute, looked up on every call, so tests can stand in a fake DNS.
+#: The standard resolver, for a resolver installed over ours that calls back into it.
+_STDLIB_GETADDRINFO = socket.getaddrinfo
+#: The resolver the patch delegates to: whatever ``socket.getaddrinfo`` was when the
+#: patch was (re)installed. A module attribute, looked up on every call.
 _resolve = socket.getaddrinfo
 
 _SERVICE_PORTS = {"http": 80, "https": 443}
@@ -64,21 +68,33 @@ def _port_number(port) -> int | None:
 
 
 def _checked_getaddrinfo(host, port, *args, **kwargs):
-    infos = _resolve(host, port, *args, **kwargs)
+    if _resolving.get():  # a resolver under ours called back into ours: no loop
+        return _STDLIB_GETADDRINFO(host, port, *args, **kwargs)
+    token = _resolving.set(True)
+    try:
+        infos = _resolve(host, port, *args, **kwargs)
+    finally:
+        _resolving.reset(token)
     check = _active.get()
     if check is not None:
         number = _port_number(port)
-        for info in infos:
-            check(info[4][0], number)
+        inactive = _active.set(None)  # a check that resolves must not re-enter itself
+        try:
+            for info in infos:
+                check(info[4][0], number)
+        finally:
+            _active.reset(inactive)
     return infos
 
 
 def _install() -> None:
-    global _installed
+    """Put the patch in place, over whatever resolver is there now (idempotent)."""
+    global _resolve
     with _install_lock:
-        if not _installed:
+        current = socket.getaddrinfo
+        if current is not _checked_getaddrinfo:
+            _resolve = current
             socket.getaddrinfo = _checked_getaddrinfo
-            _installed = True
 
 
 @contextmanager
