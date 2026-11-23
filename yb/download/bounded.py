@@ -32,7 +32,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from yb.download.egress import address_check, url_of_address
+from yb.download.egress import address_check, no_address_check, url_of_address
 from yb.download.pacing import explain_rate_limit
 from yb.download.youtube import (
     CookiesFile,
@@ -273,12 +273,14 @@ def _guard_requests(ydl: Any, validate: TargetValidator, deadline: float) -> Non
 
     def guarded(req):
         _check_deadline(deadline)
-        _validated(validate, req if isinstance(req, str) else req.url)
+        with no_address_check():  # the URL check's own lookups are not connections
+            _validated(validate, req if isinstance(req, str) else req.url)
         response = urlopen(req)
         final = getattr(response, "url", None)
         if final:
             try:
-                _validated(validate, final)
+                with no_address_check():
+                    _validated(validate, final)
             except BaseException:
                 response.close()
                 raise
@@ -296,14 +298,16 @@ def _address_rule(
     validator that refuses internal addresses judges the address itself, with no
     second lookup to rebind: the address checked is the address connected to.
     ``trusted`` holds ``(ip, port)`` pairs that pass unchecked: the deployment's
-    proxies, which the operator configured.
+    proxies, which the operator configured. Known residual: a direct (unproxied)
+    connection to a proxy's own address and port passes too; a forward proxy
+    answers such a request with an error, not content.
     """
 
     def check(ip: str, port: int | None) -> None:
-        if (ip, port) in trusted:
+        if not port or (ip, port) in trusted:
+            # No port: a lookup, not a connection (every connect passes its port;
+            # yt-dlp's socks4/socks5 resolve the target with none, for the proxy).
             return
-        if not port:  # a URL with no port reads as port 80: refuse, never guess
-            raise AddressRefusedError(f"refused to connect to {ip}: unknown port")
         address = url_of_address(ip, port)
         try:
             validate(address)

@@ -807,11 +807,51 @@ def test_a_validator_bug_refuses_the_connection():
         check("93.184.216.34", 443)
 
 
-def test_an_unknown_port_is_refused_not_read_as_80():
-    check = bounded._address_rule(lambda url: None)
+def test_a_lookup_without_a_port_is_not_a_connection():
+    """socks4/5 resolve the target with no port (for the proxy); a URL check resolves
+    with none too. Neither is refused as a connection."""
+    check = bounded._address_rule(_refuse_loopback_literals)
     for port in (None, 0):
-        with pytest.raises(bounded.AddressRefusedError, match="unknown port"):
-            check("93.184.216.34", port)
+        check("127.0.0.1", port)
+
+
+def test_a_validator_resolving_with_no_port_accepts_named_hosts(fake_dns, tmp_path):
+    """The usual validator shape (reelee's): ``getaddrinfo(host, None)`` on the name.
+
+    Its own lookups run with the check suspended; the connection is still checked."""
+    import ipaddress
+    import socket
+    from urllib.parse import urlparse
+
+    class Hits(_Recorder):
+        hits = []
+
+    server = _serve(Hits)
+    port = server.server_port
+    looked_up = []
+
+    def resolving_public_names(url):
+        host = urlparse(url).hostname
+        infos = socket.getaddrinfo(host, None)
+        looked_up.append(host)
+        if host != "rebind.test" and any(
+            ipaddress.ip_address(i[4][0]).is_loopback for i in infos
+        ):
+            raise ValueError(f"refused {url}")
+
+    try:
+        with pytest.raises(
+            AudioTargetError, match=f"refused to connect to http://127.0.0.1:{port}"
+        ):
+            download_audio_bounded(
+                f"http://rebind.test:{port}/a.mp3",
+                download_dir=tmp_path,
+                validate_target=resolving_public_names,
+            )
+    finally:
+        server.shutdown()
+    assert "rebind.test" in looked_up  # the URL check ran (and passed) on the name
+    assert Hits.hits == []
 
 
 def test_an_address_refusal_is_a_connection_error_and_a_target_error():

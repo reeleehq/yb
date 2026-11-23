@@ -114,6 +114,16 @@ def address_check(check: AddressCheck) -> Iterator[None]:
         _active.reset(token)
 
 
+@contextmanager
+def no_address_check() -> Iterator[None]:
+    """Suspend an active :func:`address_check` (for a URL check's own lookups)."""
+    token = _active.set(None)
+    try:
+        yield
+    finally:
+        _active.reset(token)
+
+
 def url_of_address(ip: str, port: int | None) -> str:
     """An ``http`` URL whose host is the address itself, for a URL-level target check.
 
