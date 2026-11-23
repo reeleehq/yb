@@ -76,6 +76,7 @@ def thumbnail_url(video_id: str, *, quality: str = DEFAULT_THUMBNAIL_QUALITY) ->
 
 
 def watch_url(video_id: str) -> str:
+    """The watch-page URL of a video."""
     return WATCH_URL.format(video_id=video_id)
 
 
