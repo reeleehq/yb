@@ -24,9 +24,11 @@ missing extra — the error surfaces only when you actually use that feature.
 
 Examples:
     >>> import yb  # doctest: +SKIP
-    >>> r = yb.download_youtube_video("https://youtu.be/PRa9ciOe-us")  # needs yb[download]
-    >>> content = yb.prepare_content(r.path, language="English", language_code="en")
-    >>> yb.prepare_and_publish(r.path, privacy_status="unlisted")        # needs yb[youtube]
+    >>> r = yb.download_youtube_video("https://youtu.be/PRa9ciOe-us")  # doctest: +SKIP
+    >>> content = yb.prepare_content(r.path, language="English", language_code="en")  # doctest: +SKIP
+    >>> yb.prepare_and_publish(r.path, privacy_status="unlisted")  # doctest: +SKIP
+
+    The first needs ``yb[download]``, the last ``yb[youtube]``.
 """
 
 from yb.config import YbConfig, load_config, default_config_file, resolve_profile

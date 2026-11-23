@@ -1531,6 +1531,7 @@ def glob_escape(name: str) -> str:
 
 
 def trim_info(info: dict | None) -> dict[str, Any]:
+    """The known fields of a downloader ``info`` dict that are present (``{}`` for none)."""
     if not info:
         return {}
     return {k: info.get(k) for k in _INFO_FIELDS if info.get(k) is not None}
