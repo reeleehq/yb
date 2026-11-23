@@ -303,6 +303,11 @@ def test_pinned_opts_are_single_bounded_nonlive_mp3(fakes, tmp_path):
     assert opts["noplaylist"] and "max_downloads" not in opts
     assert opts["playlist_items"] == "1" and opts["keepvideo"] is False
     assert opts["postprocessors"][0]["preferredcodec"] == "mp3"
+    # the conversion is bounded too: output bytes, CPU time, local files only
+    conv = opts["postprocessor_args"]
+    assert conv["extractaudio+ffmpeg_i"] == ["-protocol_whitelist", "file"]
+    out = conv["extractaudio+ffmpeg_o"]
+    assert out[out.index("-fs") + 1] == "100" and int(out[out.index("-timelimit") + 1]) >= 1
     assert opts["http_headers"] == {"X": "1"}  # deployment options pass through
     assert "match_filter" not in opts  # _check_preview is the one duration check
     assert opts["no_warnings"] and "m3u8'" not in opts["format"].replace(
@@ -359,6 +364,57 @@ def test_real_ytdlp_downloads_a_local_file_as_mp3(tmp_path, monkeypatch):
     finally:
         server.shutdown()
     assert got.path.suffix == ".mp3" and got.path.stat().st_size > 0
+
+
+def test_a_small_source_that_decodes_to_a_huge_mp3_is_cut_at_max_bytes(tmp_path):
+    """A few hundred KB of near-silent FLAC with no duration (a direct link) decodes
+    to tens of MB of mp3. The conversion stops writing at ``max_bytes`` and the call
+    is refused, instead of writing the whole decode to disk first."""
+    import functools
+    import shutil
+    import subprocess
+    import threading
+
+    if not shutil.which("ffmpeg"):
+        pytest.skip("ffmpeg is not installed")
+    served = tmp_path / "srv"
+    served.mkdir()
+    subprocess.run(
+        ["ffmpeg", "-y", "-f", "lavfi", "-i", "anullsrc=r=8000:cl=mono", "-t", "1800",
+         str(served / "quiet.flac")],
+        capture_output=True,
+        check=True,
+    )
+    assert (served / "quiet.flac").stat().st_size < 2_000_000
+    handler = functools.partial(
+        http.server.SimpleHTTPRequestHandler, directory=str(served)
+    )
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    import yb.download.bounded as bounded
+
+    seen_sizes = []
+    real_mp3_path = bounded._mp3_path
+
+    def measuring_mp3_path(path):  # the converted file, before the size check
+        found = real_mp3_path(path)
+        seen_sizes.append(found.stat().st_size)
+        return found
+
+    bounded._mp3_path = measuring_mp3_path
+    try:
+        with pytest.raises(AudioLimitError, match="byte limit"):
+            download_audio_bounded(
+                f"http://127.0.0.1:{server.server_port}/quiet.flac",
+                download_dir=tmp_path / "out",
+                max_bytes=2_000_000,
+                max_duration_s=60,  # not applied: a direct link has no duration
+            )
+    finally:
+        bounded._mp3_path = real_mp3_path
+        server.shutdown()
+    # 30 minutes of mp3 is ~43 MB; nothing written may be far past the cap
+    assert seen_sizes and max(seen_sizes) < 3_000_000, seen_sizes
 
 
 class _Hostile(http.server.BaseHTTPRequestHandler):

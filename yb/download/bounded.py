@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import shutil
 import tempfile
+import math
 import time
 import urllib.parse
 from collections.abc import Callable, Iterator, Mapping
@@ -165,6 +166,29 @@ def _format_selector(protocols: tuple[str, ...]) -> str:
     return f"bestaudio{only}/best{only}"
 
 
+def _conversion_args(max_bytes: int, deadline: float) -> dict[str, list[str]]:
+    """ffmpeg arguments that bound the mp3 conversion as the download is bounded.
+
+    The byte cap bounds the download, but a small, highly compressible source (an
+    hour of near-silent FLAC is a few hundred KB) decodes to far more mp3 than that,
+    and a direct link reports no duration to refuse it by. So the conversion itself
+    stops writing past ``max_bytes`` (``-fs``: the file ends just over the cap, which
+    the size check then refuses), stops after the time left to the call in CPU
+    seconds (``-timelimit``), and reads local files only (``-protocol_whitelist``:
+    a downloaded playlist must not make ffmpeg fetch its segments).
+    """
+    seconds_left = max(1, math.ceil(deadline - time.monotonic()))
+    return {
+        "extractaudio+ffmpeg_i": ["-protocol_whitelist", "file"],
+        "extractaudio+ffmpeg_o": [
+            "-fs",
+            str(max_bytes),
+            "-timelimit",
+            str(seconds_left),
+        ],
+    }
+
+
 def _pinned_opts(work: Path, *, max_bytes: int, deadline: float) -> dict[str, Any]:
     """Everything that makes this one bounded, single, non-live mp3 download."""
     return {
@@ -184,6 +208,7 @@ def _pinned_opts(work: Path, *, max_bytes: int, deadline: float) -> dict[str, An
         "noplaylist": True,
         "playlist_items": "1",
         "keepvideo": False,
+        "postprocessor_args": _conversion_args(max_bytes, deadline),
         "postprocessors": [
             {
                 "key": "FFmpegExtractAudio",
