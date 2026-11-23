@@ -5,6 +5,7 @@ import warnings
 import pytest
 
 from yb.youtube import (
+    VisibilityDropError,
     VisibilityDropWarning,
     playlists_containing,
     remove_from_playlist,
@@ -106,7 +107,9 @@ class FakeService:
     def __init__(self):
         self.status = {
             "old": {
-                "privacyStatus": "public",
+                # unlisted, like the re-cut: playlist tests are not about a
+                # visibility drop (the yb#30 tests set "public" themselves)
+                "privacyStatus": "unlisted",
                 "uploadStatus": "processed",
                 "license": "youtube",
                 "selfDeclaredMadeForKids": False,
@@ -267,13 +270,26 @@ def test_supersede_can_publish_the_new_video_first():
 # --- yb#30: the visibility warning, and retrying only manualSortRequired ---
 
 
-def test_retiring_a_public_video_for_an_unlisted_re_cut_warns_first():
+def test_retiring_a_public_video_for_an_unlisted_re_cut_is_refused_first():
+    # yb#30 option (b), decided on reeleehq/reelee#566: refuse, change nothing
     svc = FakeService()
+    svc.status["old"]["privacyStatus"] = "public"
+    before = {k: list(v) for k, v in svc.items.items()}
+
+    with pytest.raises(VisibilityDropError, match="new_privacy='public'"):
+        supersede("old", "new", service=svc)
+
+    assert svc.items == before and not svc.updates
+
+
+def test_an_explicit_drop_is_allowed_with_a_warning():
+    svc = FakeService()
+    svc.status["old"]["privacyStatus"] = "public"
 
     with pytest.warns(VisibilityDropWarning, match="new_privacy='public'"):
-        out = supersede("old", "new", service=svc)
+        out = supersede("old", "new", new_privacy="unlisted", service=svc)
 
-    assert out["new_privacy"] is None  # the result is what it always was
+    assert out["new_privacy"] == "unlisted"
     assert svc.status["new"]["privacyStatus"] == "unlisted"
     assert svc.status["old"]["privacyStatus"] == "private"
 
@@ -296,20 +312,22 @@ def test_no_warning_when_nothing_becomes_less_visible(kw, old_before):
         supersede("old", "new", service=svc, **kw)
 
 
-def test_the_warning_as_an_error_refuses_before_anything_changes():
+def test_the_warning_as_an_error_still_refuses_an_explicit_drop():
     svc = FakeService()
+    svc.status["old"]["privacyStatus"] = "public"
     before = {k: list(v) for k, v in svc.items.items()}
 
     with warnings.catch_warnings():
         warnings.simplefilter("error", VisibilityDropWarning)
         with pytest.raises(VisibilityDropWarning):
-            supersede("old", "new", service=svc)
+            supersede("old", "new", new_privacy="unlisted", service=svc)
 
     assert svc.items == before and not svc.updates
 
 
 def test_a_scheduled_re_cut_says_when_it_goes_public():
     svc = FakeService()
+    svc.status["old"]["privacyStatus"] = "public"
     svc.status["new"]["publishAt"] = "2030-01-01T00:00:00Z"
 
     with pytest.warns(VisibilityDropWarning, match="2030-01-01"):
@@ -330,6 +348,7 @@ class _HttpError(Exception):
 def test_a_failed_read_of_the_old_video_skips_the_warning_only(monkeypatch):
     """Review of #31: the warning's extra read must not add a failure path."""
     svc = FakeService()
+    svc.status["old"]["privacyStatus"] = "public"
     reads = {"n": 0}
     list_ = _Videos.list
 
