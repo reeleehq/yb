@@ -128,7 +128,8 @@ def storyboard_formats(info: dict) -> list[dict]:
     found = [
         f
         for f in info.get("formats") or ()
-        if f.get("format_note") == "storyboard" or str(f.get("format_id", "")).startswith("sb")
+        if f.get("format_note") == "storyboard"
+        or str(f.get("format_id", "")).startswith("sb")
     ]
     return sorted(found, key=lambda f: -(f.get("width") or 0))
 
@@ -175,7 +176,9 @@ def youtube_storyboard(
             duration = float(fragment.get("duration") or 0.0)
             with ydl.urlopen(frag_url) as response:
                 data = response.read()
-            sheets.append(StoryboardSheet(start=start, duration=duration, image_bytes=data))
+            sheets.append(
+                StoryboardSheet(start=start, duration=duration, image_bytes=data)
+            )
             start += duration
     duration = info.get("duration")
     return Storyboard(
