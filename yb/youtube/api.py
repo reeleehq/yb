@@ -117,6 +117,16 @@ def update_video_fields(
     return update_video(video_id, writable, service=service)
 
 
+class VisibilityDropError(ValueError):
+    """:func:`supersede` refused: the re-cut would end up less visible than the
+    original, and ``new_privacy`` was not given (yb#30, option b).
+
+    Raised before anything is changed, so the call is safe to re-run with
+    ``new_privacy=`` set (``"public"`` to publish the re-cut, or the lower value
+    to confirm the drop on purpose).
+    """
+
+
 class VisibilityDropWarning(UserWarning):
     """:func:`supersede` leaves the re-cut less visible than the original was.
 
@@ -208,10 +218,12 @@ def supersede(
 
     The new video keeps its own privacy unless ``new_privacy`` is given, and an
     upload is ``unlisted`` by default: so the re-cut of a public video is NOT
-    made public for you. When the result is less visible than the old video
-    was (a public original, an unlisted re-cut), a :class:`VisibilityDropWarning`
-    is emitted before anything changes; pass ``new_privacy="public"`` to publish
-    the re-cut, or turn the warning into an error to refuse such calls.
+    made public for you. When the result would be less visible than the old
+    video was (a public original, an unlisted re-cut) and ``new_privacy`` is not
+    given, the call is refused with :class:`VisibilityDropError` before anything
+    changes; pass ``new_privacy="public"`` to publish the re-cut, or the lower
+    value to confirm the drop. An explicit drop, or a re-cut scheduled to publish
+    later, only emits a :class:`VisibilityDropWarning`.
 
     Captions and thumbnails are not copied: upload them with the new video
     (:func:`yb.youtube.publish_video`). Safe to re-run: every step checks
@@ -300,13 +312,16 @@ def _warn_if_visibility_drops(
         return
     scheduled = new_status.get("publishAt") if new_privacy is None else None
     when = f", scheduled to publish at {scheduled}" if scheduled else ""
-    warnings.warn(
+    message = (
         f"supersede: {old_id} is {before} and will become {old_privacy}, while "
         f"its replacement {new_id} stays {new_after}{when}. Pass "
-        f"new_privacy={before!r} to give the re-cut the original's visibility.",
-        VisibilityDropWarning,
-        stacklevel=3,
+        f"new_privacy={before!r} to give the re-cut the original's visibility."
     )
+    if new_privacy is None and not scheduled:
+        raise VisibilityDropError(
+            message + f" Pass new_privacy={new_after!r} to confirm the drop."
+        )
+    warnings.warn(message, VisibilityDropWarning, stacklevel=3)
 
 
 def _is_manual_sort_required(error: Exception) -> bool:

@@ -233,15 +233,13 @@ supersede(
 )  # new takes old's playlist spots; old goes private
 ```
 
-`supersede` does not change the new video's privacy unless you pass `new_privacy=`, and uploads are `unlisted` by default. So superseding a **public** video with a fresh upload leaves the public with neither: the old one goes private and the re-cut stays unlisted. When that happens, `supersede` emits a `VisibilityDropWarning` before it changes anything. Pass `new_privacy="public"` to publish the re-cut, or make the warning an error to refuse such calls:
+`supersede` does not change the new video's privacy unless you pass `new_privacy=`, and uploads are `unlisted` by default. So superseding a **public** video with a fresh upload would leave the public with neither: the old one goes private and the re-cut stays unlisted. In that case `supersede` refuses with `VisibilityDropError` before it changes anything. Pass `new_privacy="public"` to publish the re-cut, or the lower value (`new_privacy="unlisted"`) to confirm the drop on purpose; an explicit drop, or a re-cut scheduled to publish later, only emits a `VisibilityDropWarning`:
 
 ```python
-import warnings
-from yb.youtube import VisibilityDropWarning
+from yb.youtube import supersede
 
-warnings.simplefilter(
-    "error", VisibilityDropWarning
-)  # supersede now raises, changing nothing
+supersede("OLD_ID", "NEW_ID")  # VisibilityDropError if the public would lose the video
+supersede("OLD_ID", "NEW_ID", new_privacy="public")  # publishes the re-cut in its place
 ```
 
 ### Read live stats & metadata

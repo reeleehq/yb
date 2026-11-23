@@ -60,6 +60,7 @@ from yb.youtube.api import (
     set_chapters,
     update_video_status,
     supersede,
+    VisibilityDropError,
     PRIVACY_STATUSES,
     VisibilityDropWarning,
 )
@@ -129,6 +130,7 @@ __all__ = [
     "remove_from_playlist",
     "update_video_status",
     "supersede",
+    "VisibilityDropError",
     "PRIVACY_STATUSES",
     "VisibilityDropWarning",
     "VideoMetadata",
