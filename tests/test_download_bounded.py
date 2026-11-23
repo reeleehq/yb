@@ -1,5 +1,6 @@
 """``download_audio_bounded``: the policy, with yt-dlp calls faked (no network)."""
 
+import contextlib
 import functools
 import itertools
 import http.server
@@ -307,7 +308,10 @@ def test_pinned_opts_are_single_bounded_nonlive_mp3(fakes, tmp_path):
     conv = opts["postprocessor_args"]
     assert conv["extractaudio+ffmpeg_i"] == ["-protocol_whitelist", "file"]
     out = conv["extractaudio+ffmpeg_o"]
-    assert out[out.index("-fs") + 1] == "100" and int(out[out.index("-timelimit") + 1]) >= 1
+    assert (
+        out[out.index("-fs") + 1] == "100"
+        and int(out[out.index("-timelimit") + 1]) >= 1
+    )
     assert opts["http_headers"] == {"X": "1"}  # deployment options pass through
     assert "match_filter" not in opts  # _check_preview is the one duration check
     assert opts["no_warnings"] and "m3u8'" not in opts["format"].replace(
@@ -380,8 +384,17 @@ def test_a_small_source_that_decodes_to_a_huge_mp3_is_cut_at_max_bytes(tmp_path)
     served = tmp_path / "srv"
     served.mkdir()
     subprocess.run(
-        ["ffmpeg", "-y", "-f", "lavfi", "-i", "anullsrc=r=8000:cl=mono", "-t", "1800",
-         str(served / "quiet.flac")],
+        [
+            "ffmpeg",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "anullsrc=r=8000:cl=mono",
+            "-t",
+            "1800",
+            str(served / "quiet.flac"),
+        ],
         capture_output=True,
         check=True,
     )
@@ -590,3 +603,307 @@ def test_pinned_opts_keep_signed_url_file_names_short():
         {"title": "t" * 300, "id": "52892780?" + "s" * 350, "ext": "mp3"}
     )
     assert len(Path(name).name) + len(".part") < 255
+
+
+# --- connect-time address checks: DNS rebinding and redirect hops ------------
+
+
+class _Recorder(http.server.BaseHTTPRequestHandler):
+    """Serves a little mp3-ish body and records every path it is asked for."""
+
+    hits: list = []
+    redirect_to = ""
+
+    def log_message(self, *args):
+        pass
+
+    def do_GET(self):
+        type(self).hits.append(self.path)
+        if self.path == "/redirect":
+            self.send_response(302)
+            self.send_header("Location", type(self).redirect_to)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+        body = b"\xff" * 100
+        self.send_response(200)
+        self.send_header("Content-Type", "audio/mpeg")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+
+def _serve(handler_cls):
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler_cls)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    return server
+
+
+@pytest.fixture
+def fake_dns(monkeypatch):
+    """A resolver under the connect-time check: ``rebind.test`` answers loopback.
+
+    It stands for the second answer of a rebinding name: the URL check's own
+    lookup (in the validators below) saw a public address, the connection's
+    lookup sees an internal one.
+    """
+    import socket
+
+    from yb.download import egress
+
+    real = egress._STDLIB_GETADDRINFO
+
+    def resolve(host, port, *args, **kwargs):
+        if host == "rebind.test":
+            host = "127.0.0.1"
+        return real(host, port, *args, **kwargs)
+
+    # the system resolver itself: the check installs over it, as over any other
+    monkeypatch.setattr(socket, "getaddrinfo", resolve)
+    monkeypatch.setattr(egress, "_resolve", egress._resolve)  # restored after
+    monkeypatch.delenv("http_proxy", raising=False)
+    monkeypatch.delenv("HTTP_PROXY", raising=False)
+    monkeypatch.setenv("NO_PROXY", "*")
+
+
+def _refuse_loopback_literals(url):
+    """A URL check whose DNS (not consulted here) said every name is public."""
+    from urllib.parse import urlparse
+
+    if urlparse(url).hostname.startswith("127."):
+        raise ValueError(f"refused {url}")
+
+
+def test_a_rebinding_name_never_connects_to_the_internal_address(fake_dns, tmp_path):
+    """The name passes the URL check, then resolves to loopback to connect: refused."""
+
+    class Hits(_Recorder):
+        hits = []
+
+    server = _serve(Hits)
+    try:
+        with pytest.raises(
+            AudioTargetError, match="refused to connect to http://127.0.0.1"
+        ):
+            download_audio_bounded(
+                f"http://rebind.test:{server.server_port}/secret.mp3",
+                download_dir=tmp_path,
+                validate_target=_refuse_loopback_literals,
+            )
+    finally:
+        server.shutdown()
+    assert Hits.hits == []  # not even a request reached the internal server
+    assert leftovers(tmp_path) == []
+
+
+def test_an_intermediate_redirect_hop_is_never_requested(fake_dns, tmp_path):
+    """A 302 into a refused address: the hop is refused before it connects (no blind GET)."""
+
+    class Public(_Recorder):
+        hits = []
+
+    class Internal(_Recorder):
+        hits = []
+
+    internal = _serve(Internal)
+    Public.redirect_to = f"http://127.0.0.1:{internal.server_port}/admin"
+    public = _serve(Public)
+
+    def refuse_internal_port(url):
+        from urllib.parse import urlparse
+
+        if urlparse(url).port == internal.server_port:
+            raise ValueError(f"refused {url}")
+
+    try:
+        with pytest.raises(AudioTargetError, match="refused to connect"):
+            download_audio_bounded(
+                f"http://127.0.0.1:{public.server_port}/redirect",
+                download_dir=tmp_path,
+                validate_target=refuse_internal_port,
+            )
+    finally:
+        public.shutdown()
+        internal.shutdown()
+    assert Public.hits == ["/redirect"] and Internal.hits == []  # asked once, no retry
+    assert leftovers(tmp_path) == []
+
+
+def test_impersonation_cannot_route_around_the_check(fake_dns, tmp_path):
+    """curl_cffi resolves and follows redirects in C: it is not used under a validator."""
+    pytest.importorskip("curl_cffi")
+
+    class Public(_Recorder):
+        hits = []
+
+    class Internal(_Recorder):
+        hits = []
+
+    internal = _serve(Internal)
+    Public.redirect_to = f"http://127.0.0.1:{internal.server_port}/admin"
+    public = _serve(Public)
+
+    def refuse_internal_port(url):
+        from urllib.parse import urlparse
+
+        if urlparse(url).port == internal.server_port:
+            raise ValueError(f"refused {url}")
+
+    try:
+        with pytest.raises(ValueError):
+            download_audio_bounded(
+                f"http://127.0.0.1:{public.server_port}/redirect",
+                download_dir=tmp_path,
+                validate_target=refuse_internal_port,
+                extra_opts={"extractor_args": {"generic": {"impersonate": ["chrome"]}}},
+            )
+    finally:
+        public.shutdown()
+        internal.shutdown()
+    assert Internal.hits == []
+    assert leftovers(tmp_path) == []
+
+
+def test_only_handlers_that_resolve_in_python_are_kept():
+    from yt_dlp import YoutubeDL
+
+    with YoutubeDL({"quiet": True}) as ydl:
+        bounded._keep_checked_handlers(ydl)
+        kept = set(ydl._request_director.handlers)
+    assert kept and kept <= bounded.CHECKED_REQUEST_HANDLERS
+
+
+def test_a_validator_that_resolves_names_does_not_recurse(fake_dns, tmp_path):
+    """The usual shape: resolve the host (an IP literal too), refuse internal addresses."""
+    import ipaddress
+    import socket
+    from urllib.parse import urlparse
+
+    class Hits(_Recorder):
+        hits = []
+
+    server = _serve(Hits)
+
+    def resolving(url):
+        for info in socket.getaddrinfo(urlparse(url).hostname, None):
+            if ipaddress.ip_address(info[4][0]).is_loopback:
+                raise ValueError(f"refused {url}")
+
+    try:
+        with pytest.raises(AudioTargetError, match="refused"):
+            download_audio_bounded(
+                f"http://rebind.test:{server.server_port}/a.mp3",
+                download_dir=tmp_path,
+                validate_target=resolving,
+            )
+    finally:
+        server.shutdown()
+    assert Hits.hits == []
+
+
+def test_a_validator_bug_refuses_the_connection():
+    check = bounded._address_rule(lambda url: 1 / 0)
+    with pytest.raises(bounded.AddressRefusedError, match="division"):
+        check("93.184.216.34", 443)
+
+
+def test_a_lookup_without_a_port_is_not_a_connection():
+    """socks4/5 resolve the target with no port (for the proxy); a URL check resolves
+    with none too. Neither is refused as a connection."""
+    check = bounded._address_rule(_refuse_loopback_literals)
+    for port in (None, 0):
+        check("127.0.0.1", port)
+
+
+def test_a_validator_resolving_with_no_port_accepts_named_hosts(fake_dns, tmp_path):
+    """The usual validator shape (reelee's): ``getaddrinfo(host, None)`` on the name.
+
+    Its own lookups run with the check suspended; the connection is still checked."""
+    import ipaddress
+    import socket
+    from urllib.parse import urlparse
+
+    class Hits(_Recorder):
+        hits = []
+
+    server = _serve(Hits)
+    port = server.server_port
+    looked_up = []
+
+    def resolving_public_names(url):
+        host = urlparse(url).hostname
+        infos = socket.getaddrinfo(host, None)
+        looked_up.append(host)
+        if host != "rebind.test" and any(
+            ipaddress.ip_address(i[4][0]).is_loopback for i in infos
+        ):
+            raise ValueError(f"refused {url}")
+
+    try:
+        with pytest.raises(
+            AudioTargetError, match=f"refused to connect to http://127.0.0.1:{port}"
+        ):
+            download_audio_bounded(
+                f"http://rebind.test:{port}/a.mp3",
+                download_dir=tmp_path,
+                validate_target=resolving_public_names,
+            )
+    finally:
+        server.shutdown()
+    assert "rebind.test" in looked_up  # the URL check ran (and passed) on the name
+    assert Hits.hits == []
+
+
+def test_an_address_refusal_is_a_connection_error_and_a_target_error():
+    assert issubclass(bounded.AddressRefusedError, OSError)
+    assert issubclass(bounded.AddressRefusedError, AudioTargetError)
+
+
+def test_the_default_floor_skips_the_address_check(monkeypatch):
+    calls = []
+    monkeypatch.setattr(bounded, "address_check", lambda check: calls.append(check))
+    with bounded._connect_guard(require_http_url, types.SimpleNamespace(proxies={})):
+        pass
+    assert calls == []
+
+
+def test_only_the_proxy_itself_is_trusted():
+    """A proxy's address passes; a no_proxy list and the noproxy marker are not proxies."""
+    ydl = types.SimpleNamespace(
+        proxies={"https": "http://127.0.0.1:3128", "no": "*", "http": "__noproxy__"}
+    )
+    trusted = bounded._proxy_endpoints(ydl)
+    assert trusted == {("127.0.0.1", 3128)}
+    check = bounded._address_rule(_refuse_loopback_literals, trusted=trusted)
+    check("127.0.0.1", 3128)  # the proxy
+    with pytest.raises(bounded.AddressRefusedError):
+        check("127.0.0.1", 80)  # a direct connection around it
+    assert bounded._proxy_endpoints(types.SimpleNamespace(proxies={"no": "*"})) == set()
+
+
+def test_fragments_stay_on_the_checked_thread(fakes, tmp_path):
+    """No worker threads (they would not see the check): one fragment at a time, and
+    no merged formats (yt-dlp downloads the parts of a merge in a thread pool)."""
+    run(tmp_path)
+    assert fakes["opts"]["concurrent_fragment_downloads"] == 1
+    assert "+" not in fakes["opts"]["format"]
+
+
+def test_a_resolver_installed_over_ours_is_wrapped_not_lost(monkeypatch):
+    """gevent-style replacement of socket.getaddrinfo: the next check reinstalls over it."""
+    import socket
+
+    from yb.download import egress
+
+    calls = []
+
+    def other(host, port, *args, **kwargs):
+        calls.append(host)
+        return egress._STDLIB_GETADDRINFO(host, port, *args, **kwargs)
+
+    monkeypatch.setattr(socket, "getaddrinfo", other)
+    monkeypatch.setattr(egress, "_resolve", egress._resolve)
+    seen = []
+    with egress.address_check(lambda ip, port: seen.append(ip)):
+        socket.getaddrinfo("127.0.0.1", 80, 0, socket.SOCK_STREAM)
+    assert calls == ["127.0.0.1"] and seen == ["127.0.0.1"]

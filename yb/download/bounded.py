@@ -2,7 +2,8 @@
 
 A service that turns a user-supplied link into an audio file (an MCP tool, an
 ingest endpoint) needs the same guard rails every time: refuse bad targets before
-touching the network, check every URL yt-dlp then requests (not only the first),
+touching the network, check every URL yt-dlp then requests (not only the first)
+and every address it connects to (each redirect hop, after each name lookup),
 refuse over-long sources before fetching a byte, cap the bytes and the wall-clock
 time even when the size is unknown, always produce mp3, send no ambient cookies,
 and carry a copyright notice with the file. That policy lives here so a second
@@ -20,6 +21,7 @@ can never widen them.
 from __future__ import annotations
 
 import shutil
+import socket
 import tempfile
 import math
 import time
@@ -30,6 +32,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from yb.download.egress import address_check, no_address_check, url_of_address
 from yb.download.pacing import explain_rate_limit
 from yb.download.youtube import (
     CookiesFile,
@@ -103,6 +106,20 @@ class AudioSourceError(ValueError):
 
 class AudioTargetError(ValueError):
     """``validate_target`` refused a URL: the link, or one yt-dlp was about to fetch."""
+
+
+class AddressRefusedError(AudioTargetError, OSError):
+    """``validate_target`` refused the address a connection was about to use.
+
+    Also an ``OSError``, so the HTTP layer treats it as a failed connection (no
+    retry on another request handler) and yt-dlp wraps it as a transport error.
+    """
+
+
+#: Request handlers whose every connection resolves through ``socket.getaddrinfo``
+#: in the calling thread, where the connect-time check sits. Others (curl_cffi's,
+#: whose libcurl resolves and follows redirects in C) are removed while it runs.
+CHECKED_REQUEST_HANDLERS = frozenset({"Urllib", "Requests", "Websockets"})
 
 
 def _validated(validate: TargetValidator, url: str) -> None:
@@ -207,6 +224,8 @@ def _pinned_opts(work: Path, *, max_bytes: int, deadline: float) -> dict[str, An
         "external_downloader_args": {"ffmpeg_i": ["-protocol_whitelist", "file"]},
         "noplaylist": True,
         "playlist_items": "1",
+        # The connect-time address check is per thread: fragments stay on this one.
+        "concurrent_fragment_downloads": 1,
         "keepvideo": False,
         "postprocessor_args": _conversion_args(max_bytes, deadline),
         "postprocessors": [
@@ -245,26 +264,124 @@ def _guard_requests(ydl: Any, validate: TargetValidator, deadline: float) -> Non
     Extractors and yt-dlp's own downloaders all go through ``ydl.urlopen``, so
     wrapping it covers every hop, not only the link the caller passed. The URL a
     response ends at (after redirects, which the HTTP layer follows itself) is
-    checked too, so a redirect into a refused host never yields its content
-    (the HTTP layer follows redirects itself, so the hops before the last are
-    requested unchecked: a blind request, never a returned body).
+    checked too, so a redirect into a refused host never yields its content.
+    The HTTP layer follows redirects itself, so the hops before the last never
+    pass through here: :func:`_connect_guard` checks the address each of them
+    connects to instead.
     """
     urlopen = ydl.urlopen
 
     def guarded(req):
         _check_deadline(deadline)
-        _validated(validate, req if isinstance(req, str) else req.url)
+        with no_address_check():  # the URL check's own lookups are not connections
+            _validated(validate, req if isinstance(req, str) else req.url)
         response = urlopen(req)
         final = getattr(response, "url", None)
         if final:
             try:
-                _validated(validate, final)
+                with no_address_check():
+                    _validated(validate, final)
             except BaseException:
                 response.close()
                 raise
         return response
 
     ydl.urlopen = guarded
+
+
+def _address_rule(
+    validate: TargetValidator, *, trusted: frozenset = frozenset()
+) -> Callable[[str, int | None], None]:
+    """``validate`` applied to the address a connection is about to use.
+
+    The address goes in as an IP-literal URL (``http://10.0.0.1:443/``), so a
+    validator that refuses internal addresses judges the address itself, with no
+    second lookup to rebind: the address checked is the address connected to.
+    ``trusted`` holds ``(ip, port)`` pairs that pass unchecked: the deployment's
+    proxies, which the operator configured. Known residual: a direct (unproxied)
+    connection to a proxy's own address and port passes too; a forward proxy
+    answers such a request with an error, not content.
+    """
+
+    def check(ip: str, port: int | None) -> None:
+        if not port or (ip, port) in trusted:
+            # No port: a lookup, not a connection (every connect passes its port;
+            # yt-dlp's socks4/socks5 resolve the target with none, for the proxy).
+            return
+        address = url_of_address(ip, port)
+        try:
+            validate(address)
+        except Exception as exc:  # a validator's bug refuses too (fail closed)
+            raise AddressRefusedError(
+                f"refused to connect to {address} (an address a requested host "
+                f"resolved to): {exc}"
+            ) from exc
+
+    return check
+
+
+_PROXY_DEFAULT_PORTS = {
+    "http": 80,
+    "https": 443,
+    "socks4": 1080,
+    "socks4a": 1080,
+    "socks5": 1080,
+    "socks5h": 1080,
+}
+
+
+def _proxy_endpoints(ydl: Any) -> frozenset:
+    """``(ip, port)`` of every proxy ``ydl`` may send requests through.
+
+    From its ``proxy`` option or the ``*_PROXY`` environment (yt-dlp's ``proxies``
+    map; its ``no`` entry is a bypass list, not a proxy). Connections to these
+    pass the address check; connections that bypass a proxy are checked.
+    """
+    proxies = getattr(ydl, "proxies", None) or {}
+    out = set()
+    for key, value in proxies.items():
+        if key == "no" or not value or value == "__noproxy__":
+            continue
+        parts = urllib.parse.urlparse(value if "://" in value else f"http://{value}")
+        if not parts.hostname:
+            continue
+        port = parts.port or _PROXY_DEFAULT_PORTS.get(parts.scheme, 80)
+        try:  # no check is active yet: this resolves directly
+            infos = socket.getaddrinfo(parts.hostname, port, 0, socket.SOCK_STREAM)
+        except OSError:
+            continue  # unresolvable now: its connection is checked (and refused)
+        out.update((info[4][0], port) for info in infos)
+    return frozenset(out)
+
+
+def _keep_checked_handlers(ydl: Any) -> None:
+    """Remove the request handlers the connect-time check cannot see."""
+    director = getattr(ydl, "_request_director", None)
+    if director is None:  # a stand-in YoutubeDL (tests)
+        return
+    for key in list(director.handlers):
+        if key not in CHECKED_REQUEST_HANDLERS:
+            director.handlers.pop(key).close()
+
+
+@contextmanager
+def _connect_guard(validate: TargetValidator, ydl: Any) -> Iterator[None]:
+    """Check every address ``ydl`` connects to with ``validate``, unless nothing needs it.
+
+    Skipped for the default floor (:func:`require_http_url` accepts any address).
+    Otherwise only request handlers that resolve in Python are kept (impersonation,
+    which needs curl_cffi, is then unavailable: a request that requires it fails
+    as a source error). Connections to the deployment's proxies pass: a proxy
+    resolves the target itself, so the egress rule for proxied requests belongs
+    there. Every direct connection, including one a ``no_proxy`` list sends
+    around the proxy, is checked.
+    """
+    if validate is require_http_url:
+        yield
+        return
+    _keep_checked_handlers(ydl)
+    with address_check(_address_rule(validate, trusted=_proxy_endpoints(ydl))):
+        yield
 
 
 def _check_deployment_opts(extra_opts: Mapping[str, Any]) -> dict[str, Any]:
@@ -307,10 +424,34 @@ def _typed_errors() -> Iterator[None]:
     try:
         yield
     except YoutubeDLError as exc:
-        cause = (getattr(exc, "exc_info", None) or (None, None))[1]
-        if isinstance(cause, (AudioTargetError, AudioLimitError)):
+        cause = _our_refusal(exc)
+        if cause is not None:
             raise cause from exc
         raise AudioSourceError(str(exc)) from exc
+
+
+def _our_refusal(exc: BaseException) -> BaseException | None:
+    """Our refusal inside a yt-dlp error, if any.
+
+    yt-dlp keeps the cause in ``exc_info`` (a hook's error) or chains it (a request
+    handler wraps an error raised while connecting, such as the connect-time
+    address check's, in its own ``RequestError``).
+    """
+    seen: set[int] = set()
+    stack = [exc]
+    while stack:
+        e = stack.pop()
+        if e is None or id(e) in seen:
+            continue
+        seen.add(id(e))
+        if isinstance(e, (AudioTargetError, AudioLimitError)):
+            return e
+        stack += [
+            (getattr(e, "exc_info", None) or (None, None))[1],
+            e.__cause__,
+            e.__context__,
+        ]
+    return None
 
 
 def download_audio_bounded(
@@ -329,8 +470,9 @@ def download_audio_bounded(
 
     Order: ``validate_target`` on ``url`` (before any network); one yt-dlp
     session whose every request (page, embedded page, manifest, media, fragment)
-    passes ``validate_target`` first, and whose final URL after redirects does
-    too; a metadata pass that refuses playlists, live streams and over-long
+    passes ``validate_target`` first, whose every connection (each redirect hop
+    included) goes only to an address ``validate_target`` accepts, and whose
+    final URL after redirects passes it too; a metadata pass that refuses playlists, live streams and over-long
     sources before any media bytes; the download of those same formats (no
     second extraction), aborted past ``max_bytes`` or ``timeout_s`` even when
     the size is unknown; a size check on the extracted file. The mp3 is written
@@ -349,11 +491,16 @@ def download_audio_bounded(
             every received chunk (a stalled connection is bounded by yt-dlp's
             socket timeout).
         validate_target: Raises ``ValueError`` to refuse a URL; see
-            :func:`require_http_url`. Applied to every URL yt-dlp requests. Not
-            an egress sandbox: redirects are followed by the HTTP layer, so only
-            where a chain ends is checked (its content is then refused; the hops
-            in between are requested blind), and the check sees a URL, not the
-            address its host resolves to.
+            :func:`require_http_url`. Applied to every URL yt-dlp requests, and
+            to every address it connects to, as an IP-literal URL
+            (``http://10.0.0.1:443/``; see :mod:`yb.download.egress`), so a
+            validator that refuses internal addresses also stops DNS rebinding
+            and redirect hops into them before they connect. With a validator
+            other than the default, impersonation (curl_cffi) is not used, since
+            libcurl resolves out of the check's reach. A connection to the
+            deployment's proxy (``extra_opts["proxy"]`` or the ``*_PROXY``
+            environment) passes: the proxy connects to the target, so the egress
+            rule for proxied requests belongs there.
         extra_opts: Deployment yt-dlp options, restricted to
             :data:`DEPLOYMENT_OPT_KEYS` (credentials, cookies, proxy); anything
             else raises, so no option can widen a cap or redirect the output.
@@ -393,6 +540,7 @@ def download_audio_bounded(
                 cookies_file=cookies_file,
                 ydl_cls=ydl_cls,
             ) as ydl,
+            _connect_guard(validate_target, ydl),
             _typed_errors(),
             explain_rate_limit(),
         ):
