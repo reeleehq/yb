@@ -94,11 +94,21 @@ how to install it. The first download in a process runs it and warns.
 |----------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------|
 | [`AudioSourceError`](#yb.download.AudioSourceError)                            | yt-dlp could not get audio from the link (unsupported, unavailable, ...).                                                      |
 | [`AudioTargetError`](#yb.download.AudioTargetError)                            | `validate_target` refused a URL: the link, or one yt-dlp was about to fetch.                                                   |
+| [`AddressRefusedError`](#yb.download.AddressRefusedError)                         | `validate_target` refused the address a connection was about to use.                                                           |
 | [`PlaylistSubtitleError`](#yb.download.PlaylistSubtitleError)(results, failures)    | Some playlist items' subtitles failed (`on_subtitle_error="raise"`).                                                           |
 | [`PlaylistRateLimitedError`](#yb.download.PlaylistRateLimitedError)(results, failures) | A [`PlaylistSubtitleError`](#yb.download.PlaylistSubtitleError) where YouTube refused (429 / bot check) the captions. |
 | [`AudioConversionError`](#yb.download.AudioConversionError)                        | Raised when audio could not be converted to the requested format.                                                              |
 | [`DownloadRequirementWarning`](#yb.download.DownloadRequirementWarning)                  | A download prerequisite (JS runtime, solver scripts) looks missing.                                                            |
 | [`RateLimitedError`](#yb.download.RateLimitedError)                            | YouTube refused the request (HTTP 429 or a "confirm you're not a bot" wall).                                                   |
+
+### *exception* yb.download.AddressRefusedError
+
+Bases: [`AudioTargetError`](yb.download.bounded.html.md#yb.download.bounded.AudioTargetError), [`OSError`](https://docs.python.org/3/builtins/exceptions.html#OSError)
+
+`validate_target` refused the address a connection was about to use.
+
+Also an `OSError`, so the HTTP layer treats it as a failed connection (no
+retry on another request handler) and yt-dlp wraps it as a transport error.
 
 ### *exception* yb.download.AudioConversionError
 
@@ -484,8 +494,9 @@ Download the audio of one video link as mp3, refusing what exceeds the caps.
 
 Order: `validate_target` on `url` (before any network); one yt-dlp
 session whose every request (page, embedded page, manifest, media, fragment)
-passes `validate_target` first, and whose final URL after redirects does
-too; a metadata pass that refuses playlists, live streams and over-long
+passes `validate_target` first, whose every connection (each redirect hop
+included) goes only to an address `validate_target` accepts, and whose
+final URL after redirects passes it too; a metadata pass that refuses playlists, live streams and over-long
 sources before any media bytes; the download of those same formats (no
 second extraction), aborted past `max_bytes` or `timeout_s` even when
 the size is unknown; a size check on the extracted file. The mp3 is written
@@ -504,11 +515,16 @@ never collide); on any failure that directory is removed.
     every received chunk (a stalled connection is bounded by yt-dlp’s
     socket timeout).
   * **validate_target** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – Raises `ValueError` to refuse a URL; see
-    [`require_http_url()`](#yb.download.require_http_url). Applied to every URL yt-dlp requests. Not
-    an egress sandbox: redirects are followed by the HTTP layer, so only
-    where a chain ends is checked (its content is then refused; the hops
-    in between are requested blind), and the check sees a URL, not the
-    address its host resolves to.
+    [`require_http_url()`](#yb.download.require_http_url). Applied to every URL yt-dlp requests, and
+    to every address it connects to, as an IP-literal URL
+    (`http://10.0.0.1:443/`; see [`yb.download.egress`](yb.download.egress.html.md#module-yb.download.egress)), so a
+    validator that refuses internal addresses also stops DNS rebinding
+    and redirect hops into them before they connect. With a validator
+    other than the default, impersonation (curl_cffi) is not used, since
+    libcurl resolves out of the check’s reach. A connection to the
+    deployment’s proxy (`extra_opts["proxy"]` or the `*_PROXY`
+    environment) passes: the proxy connects to the target, so the egress
+    rule for proxied requests belongs there.
   * **extra_opts** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Deployment yt-dlp options, restricted to
     `DEPLOYMENT_OPT_KEYS` (credentials, cookies, proxy); anything
     else raises, so no option can widen a cap or redirect the output.
@@ -995,6 +1011,7 @@ the title/duration/chapters before deciding to download.
 
 | [`bounded`](yb.download.bounded.html.md#module-yb.download.bounded)           | Link-to-audio with the safety policy applied once: [`download_audio_bounded()`](#yb.download.download_audio_bounded).   |
 |-----------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
+| [`egress`](yb.download.egress.html.md#module-yb.download.egress)             | Connect-time address checks: the address a request connects to is the one checked.                                              |
 | [`pacing`](yb.download.pacing.html.md#module-yb.download.pacing)             | Polite pacing for yt-dlp downloads, and a useful message when YouTube pushes back.                                              |
 | [`probe`](yb.download.probe.html.md#module-yb.download.probe)               | Online checks for servers: do the configured cookies still get past YouTube?                                                    |
 | [`ranges`](yb.download.ranges.html.md#module-yb.download.ranges)             | Download just a time range of a video: parse start/end, build yt-dlp's options.                                                 |

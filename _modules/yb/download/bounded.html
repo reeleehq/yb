@@ -207,6 +207,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../../../_autosummary/yb.content.html">yb.content</a></li>
 <li class="toctree-l3 has-children"><a class="reference internal" href="../../../_autosummary/yb.download.html">yb.download</a><input aria-label="Toggle navigation of yb.download" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.bounded.html">yb.download.bounded</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.egress.html">yb.download.egress</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.pacing.html">yb.download.pacing</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.probe.html">yb.download.probe</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../_autosummary/yb.download.ranges.html">yb.download.ranges</a></li>
@@ -278,7 +279,8 @@
 
 <span class="sd">A service that turns a user-supplied link into an audio file (an MCP tool, an</span>
 <span class="sd">ingest endpoint) needs the same guard rails every time: refuse bad targets before</span>
-<span class="sd">touching the network, check every URL yt-dlp then requests (not only the first),</span>
+<span class="sd">touching the network, check every URL yt-dlp then requests (not only the first)</span>
+<span class="sd">and every address it connects to (each redirect hop, after each name lookup),</span>
 <span class="sd">refuse over-long sources before fetching a byte, cap the bytes and the wall-clock</span>
 <span class="sd">time even when the size is unknown, always produce mp3, send no ambient cookies,</span>
 <span class="sd">and carry a copyright notice with the file. That policy lives here so a second</span>
@@ -296,6 +298,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">socket</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
@@ -306,6 +309,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">yb.download.egress</span><span class="w"> </span><span class="kn">import</span> <span class="n">address_check</span><span class="p">,</span> <span class="n">no_address_check</span><span class="p">,</span> <span class="n">url_of_address</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">yb.download.pacing</span><span class="w"> </span><span class="kn">import</span> <span class="n">explain_rate_limit</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">yb.download.youtube</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">CookiesFile</span><span class="p">,</span>
@@ -388,6 +392,23 @@
 <span class="k">class</span><span class="w"> </span><span class="nc">AudioTargetError</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""``validate_target`` refused a URL: the link, or one yt-dlp was about to fetch."""</span></div>
 
+
+
+<div class="viewcode-block" id="AddressRefusedError">
+<a class="viewcode-back" href="../../../_autosummary/yb.download.bounded.html#yb.download.AddressRefusedError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">AddressRefusedError</span><span class="p">(</span><span class="n">AudioTargetError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""``validate_target`` refused the address a connection was about to use.</span>
+
+<span class="sd">    Also an ``OSError``, so the HTTP layer treats it as a failed connection (no</span>
+<span class="sd">    retry on another request handler) and yt-dlp wraps it as a transport error.</span>
+<span class="sd">    """</span></div>
+
+
+
+<span class="c1">#: Request handlers whose every connection resolves through ``socket.getaddrinfo``</span>
+<span class="c1">#: in the calling thread, where the connect-time check sits. Others (curl_cffi's,</span>
+<span class="c1">#: whose libcurl resolves and follows redirects in C) are removed while it runs.</span>
+<span class="n">CHECKED_REQUEST_HANDLERS</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s2">"Urllib"</span><span class="p">,</span> <span class="s2">"Requests"</span><span class="p">,</span> <span class="s2">"Websockets"</span><span class="p">})</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_validated</span><span class="p">(</span><span class="n">validate</span><span class="p">:</span> <span class="n">TargetValidator</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -498,6 +519,8 @@
         <span class="s2">"external_downloader_args"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"ffmpeg_i"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"-protocol_whitelist"</span><span class="p">,</span> <span class="s2">"file"</span><span class="p">]},</span>
         <span class="s2">"noplaylist"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
         <span class="s2">"playlist_items"</span><span class="p">:</span> <span class="s2">"1"</span><span class="p">,</span>
+        <span class="c1"># The connect-time address check is per thread: fragments stay on this one.</span>
+        <span class="s2">"concurrent_fragment_downloads"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
         <span class="s2">"keepvideo"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
         <span class="s2">"postprocessor_args"</span><span class="p">:</span> <span class="n">_conversion_args</span><span class="p">(</span><span class="n">max_bytes</span><span class="p">,</span> <span class="n">deadline</span><span class="p">),</span>
         <span class="s2">"postprocessors"</span><span class="p">:</span> <span class="p">[</span>
@@ -536,26 +559,124 @@
 <span class="sd">    Extractors and yt-dlp's own downloaders all go through ``ydl.urlopen``, so</span>
 <span class="sd">    wrapping it covers every hop, not only the link the caller passed. The URL a</span>
 <span class="sd">    response ends at (after redirects, which the HTTP layer follows itself) is</span>
-<span class="sd">    checked too, so a redirect into a refused host never yields its content</span>
-<span class="sd">    (the HTTP layer follows redirects itself, so the hops before the last are</span>
-<span class="sd">    requested unchecked: a blind request, never a returned body).</span>
+<span class="sd">    checked too, so a redirect into a refused host never yields its content.</span>
+<span class="sd">    The HTTP layer follows redirects itself, so the hops before the last never</span>
+<span class="sd">    pass through here: :func:`_connect_guard` checks the address each of them</span>
+<span class="sd">    connects to instead.</span>
 <span class="sd">    """</span>
     <span class="n">urlopen</span> <span class="o">=</span> <span class="n">ydl</span><span class="o">.</span><span class="n">urlopen</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">guarded</span><span class="p">(</span><span class="n">req</span><span class="p">):</span>
         <span class="n">_check_deadline</span><span class="p">(</span><span class="n">deadline</span><span class="p">)</span>
-        <span class="n">_validated</span><span class="p">(</span><span class="n">validate</span><span class="p">,</span> <span class="n">req</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">req</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="n">req</span><span class="o">.</span><span class="n">url</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">no_address_check</span><span class="p">():</span>  <span class="c1"># the URL check's own lookups are not connections</span>
+            <span class="n">_validated</span><span class="p">(</span><span class="n">validate</span><span class="p">,</span> <span class="n">req</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">req</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="n">req</span><span class="o">.</span><span class="n">url</span><span class="p">)</span>
         <span class="n">response</span> <span class="o">=</span> <span class="n">urlopen</span><span class="p">(</span><span class="n">req</span><span class="p">)</span>
         <span class="n">final</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">response</span><span class="p">,</span> <span class="s2">"url"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">final</span><span class="p">:</span>
             <span class="k">try</span><span class="p">:</span>
-                <span class="n">_validated</span><span class="p">(</span><span class="n">validate</span><span class="p">,</span> <span class="n">final</span><span class="p">)</span>
+                <span class="k">with</span> <span class="n">no_address_check</span><span class="p">():</span>
+                    <span class="n">_validated</span><span class="p">(</span><span class="n">validate</span><span class="p">,</span> <span class="n">final</span><span class="p">)</span>
             <span class="k">except</span> <span class="ne">BaseException</span><span class="p">:</span>
                 <span class="n">response</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
                 <span class="k">raise</span>
         <span class="k">return</span> <span class="n">response</span>
 
     <span class="n">ydl</span><span class="o">.</span><span class="n">urlopen</span> <span class="o">=</span> <span class="n">guarded</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_address_rule</span><span class="p">(</span>
+    <span class="n">validate</span><span class="p">:</span> <span class="n">TargetValidator</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">trusted</span><span class="p">:</span> <span class="nb">frozenset</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">()</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">],</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""``validate`` applied to the address a connection is about to use.</span>
+
+<span class="sd">    The address goes in as an IP-literal URL (``http://10.0.0.1:443/``), so a</span>
+<span class="sd">    validator that refuses internal addresses judges the address itself, with no</span>
+<span class="sd">    second lookup to rebind: the address checked is the address connected to.</span>
+<span class="sd">    ``trusted`` holds ``(ip, port)`` pairs that pass unchecked: the deployment's</span>
+<span class="sd">    proxies, which the operator configured. Known residual: a direct (unproxied)</span>
+<span class="sd">    connection to a proxy's own address and port passes too; a forward proxy</span>
+<span class="sd">    answers such a request with an error, not content.</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">check</span><span class="p">(</span><span class="n">ip</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">port</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">port</span> <span class="ow">or</span> <span class="p">(</span><span class="n">ip</span><span class="p">,</span> <span class="n">port</span><span class="p">)</span> <span class="ow">in</span> <span class="n">trusted</span><span class="p">:</span>
+            <span class="c1"># No port: a lookup, not a connection (every connect passes its port;</span>
+            <span class="c1"># yt-dlp's socks4/socks5 resolve the target with none, for the proxy).</span>
+            <span class="k">return</span>
+        <span class="n">address</span> <span class="o">=</span> <span class="n">url_of_address</span><span class="p">(</span><span class="n">ip</span><span class="p">,</span> <span class="n">port</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">validate</span><span class="p">(</span><span class="n">address</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>  <span class="c1"># a validator's bug refuses too (fail closed)</span>
+            <span class="k">raise</span> <span class="n">AddressRefusedError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"refused to connect to </span><span class="si">{</span><span class="n">address</span><span class="si">}</span><span class="s2"> (an address a requested host "</span>
+                <span class="sa">f</span><span class="s2">"resolved to): </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+
+    <span class="k">return</span> <span class="n">check</span>
+
+
+<span class="n">_PROXY_DEFAULT_PORTS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"http"</span><span class="p">:</span> <span class="mi">80</span><span class="p">,</span>
+    <span class="s2">"https"</span><span class="p">:</span> <span class="mi">443</span><span class="p">,</span>
+    <span class="s2">"socks4"</span><span class="p">:</span> <span class="mi">1080</span><span class="p">,</span>
+    <span class="s2">"socks4a"</span><span class="p">:</span> <span class="mi">1080</span><span class="p">,</span>
+    <span class="s2">"socks5"</span><span class="p">:</span> <span class="mi">1080</span><span class="p">,</span>
+    <span class="s2">"socks5h"</span><span class="p">:</span> <span class="mi">1080</span><span class="p">,</span>
+<span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_proxy_endpoints</span><span class="p">(</span><span class="n">ydl</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">frozenset</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""``(ip, port)`` of every proxy ``ydl`` may send requests through.</span>
+
+<span class="sd">    From its ``proxy`` option or the ``*_PROXY`` environment (yt-dlp's ``proxies``</span>
+<span class="sd">    map; its ``no`` entry is a bypass list, not a proxy). Connections to these</span>
+<span class="sd">    pass the address check; connections that bypass a proxy are checked.</span>
+<span class="sd">    """</span>
+    <span class="n">proxies</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">ydl</span><span class="p">,</span> <span class="s2">"proxies"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">proxies</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">"no"</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">value</span> <span class="ow">or</span> <span class="n">value</span> <span class="o">==</span> <span class="s2">"__noproxy__"</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">parts</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">urlparse</span><span class="p">(</span><span class="n">value</span> <span class="k">if</span> <span class="s2">"://"</span> <span class="ow">in</span> <span class="n">value</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">"http://</span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">parts</span><span class="o">.</span><span class="n">hostname</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">port</span> <span class="o">=</span> <span class="n">parts</span><span class="o">.</span><span class="n">port</span> <span class="ow">or</span> <span class="n">_PROXY_DEFAULT_PORTS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">parts</span><span class="o">.</span><span class="n">scheme</span><span class="p">,</span> <span class="mi">80</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>  <span class="c1"># no check is active yet: this resolves directly</span>
+            <span class="n">infos</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">getaddrinfo</span><span class="p">(</span><span class="n">parts</span><span class="o">.</span><span class="n">hostname</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_STREAM</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+            <span class="k">continue</span>  <span class="c1"># unresolvable now: its connection is checked (and refused)</span>
+        <span class="n">out</span><span class="o">.</span><span class="n">update</span><span class="p">((</span><span class="n">info</span><span class="p">[</span><span class="mi">4</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">port</span><span class="p">)</span> <span class="k">for</span> <span class="n">info</span> <span class="ow">in</span> <span class="n">infos</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">frozenset</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_keep_checked_handlers</span><span class="p">(</span><span class="n">ydl</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Remove the request handlers the connect-time check cannot see."""</span>
+    <span class="n">director</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">ydl</span><span class="p">,</span> <span class="s2">"_request_director"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">director</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># a stand-in YoutubeDL (tests)</span>
+        <span class="k">return</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">director</span><span class="o">.</span><span class="n">handlers</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">CHECKED_REQUEST_HANDLERS</span><span class="p">:</span>
+            <span class="n">director</span><span class="o">.</span><span class="n">handlers</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">key</span><span class="p">)</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+
+<span class="nd">@contextmanager</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_connect_guard</span><span class="p">(</span><span class="n">validate</span><span class="p">:</span> <span class="n">TargetValidator</span><span class="p">,</span> <span class="n">ydl</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="kc">None</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Check every address ``ydl`` connects to with ``validate``, unless nothing needs it.</span>
+
+<span class="sd">    Skipped for the default floor (:func:`require_http_url` accepts any address).</span>
+<span class="sd">    Otherwise only request handlers that resolve in Python are kept (impersonation,</span>
+<span class="sd">    which needs curl_cffi, is then unavailable: a request that requires it fails</span>
+<span class="sd">    as a source error). Connections to the deployment's proxies pass: a proxy</span>
+<span class="sd">    resolves the target itself, so the egress rule for proxied requests belongs</span>
+<span class="sd">    there. Every direct connection, including one a ``no_proxy`` list sends</span>
+<span class="sd">    around the proxy, is checked.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">validate</span> <span class="ow">is</span> <span class="n">require_http_url</span><span class="p">:</span>
+        <span class="k">yield</span>
+        <span class="k">return</span>
+    <span class="n">_keep_checked_handlers</span><span class="p">(</span><span class="n">ydl</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">address_check</span><span class="p">(</span><span class="n">_address_rule</span><span class="p">(</span><span class="n">validate</span><span class="p">,</span> <span class="n">trusted</span><span class="o">=</span><span class="n">_proxy_endpoints</span><span class="p">(</span><span class="n">ydl</span><span class="p">))):</span>
+        <span class="k">yield</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_check_deployment_opts</span><span class="p">(</span><span class="n">extra_opts</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
@@ -598,10 +719,34 @@
     <span class="k">try</span><span class="p">:</span>
         <span class="k">yield</span>
     <span class="k">except</span> <span class="n">YoutubeDLError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-        <span class="n">cause</span> <span class="o">=</span> <span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">exc</span><span class="p">,</span> <span class="s2">"exc_info"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">))[</span><span class="mi">1</span><span class="p">]</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cause</span><span class="p">,</span> <span class="p">(</span><span class="n">AudioTargetError</span><span class="p">,</span> <span class="n">AudioLimitError</span><span class="p">)):</span>
+        <span class="n">cause</span> <span class="o">=</span> <span class="n">_our_refusal</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">cause</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">cause</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
         <span class="k">raise</span> <span class="n">AudioSourceError</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">))</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_our_refusal</span><span class="p">(</span><span class="n">exc</span><span class="p">:</span> <span class="ne">BaseException</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="ne">BaseException</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Our refusal inside a yt-dlp error, if any.</span>
+
+<span class="sd">    yt-dlp keeps the cause in ``exc_info`` (a hook's error) or chains it (a request</span>
+<span class="sd">    handler wraps an error raised while connecting, such as the connect-time</span>
+<span class="sd">    address check's, in its own ``RequestError``).</span>
+<span class="sd">    """</span>
+    <span class="n">seen</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="n">stack</span> <span class="o">=</span> <span class="p">[</span><span class="n">exc</span><span class="p">]</span>
+    <span class="k">while</span> <span class="n">stack</span><span class="p">:</span>
+        <span class="n">e</span> <span class="o">=</span> <span class="n">stack</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">e</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">id</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="ow">in</span> <span class="n">seen</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">seen</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="nb">id</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="p">(</span><span class="n">AudioTargetError</span><span class="p">,</span> <span class="n">AudioLimitError</span><span class="p">)):</span>
+            <span class="k">return</span> <span class="n">e</span>
+        <span class="n">stack</span> <span class="o">+=</span> <span class="p">[</span>
+            <span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="s2">"exc_info"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">))[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="n">e</span><span class="o">.</span><span class="n">__cause__</span><span class="p">,</span>
+            <span class="n">e</span><span class="o">.</span><span class="n">__context__</span><span class="p">,</span>
+        <span class="p">]</span>
+    <span class="k">return</span> <span class="kc">None</span>
 
 
 <div class="viewcode-block" id="download_audio_bounded">
@@ -622,8 +767,9 @@
 
 <span class="sd">    Order: ``validate_target`` on ``url`` (before any network); one yt-dlp</span>
 <span class="sd">    session whose every request (page, embedded page, manifest, media, fragment)</span>
-<span class="sd">    passes ``validate_target`` first, and whose final URL after redirects does</span>
-<span class="sd">    too; a metadata pass that refuses playlists, live streams and over-long</span>
+<span class="sd">    passes ``validate_target`` first, whose every connection (each redirect hop</span>
+<span class="sd">    included) goes only to an address ``validate_target`` accepts, and whose</span>
+<span class="sd">    final URL after redirects passes it too; a metadata pass that refuses playlists, live streams and over-long</span>
 <span class="sd">    sources before any media bytes; the download of those same formats (no</span>
 <span class="sd">    second extraction), aborted past ``max_bytes`` or ``timeout_s`` even when</span>
 <span class="sd">    the size is unknown; a size check on the extracted file. The mp3 is written</span>
@@ -642,11 +788,16 @@
 <span class="sd">            every received chunk (a stalled connection is bounded by yt-dlp's</span>
 <span class="sd">            socket timeout).</span>
 <span class="sd">        validate_target: Raises ``ValueError`` to refuse a URL; see</span>
-<span class="sd">            :func:`require_http_url`. Applied to every URL yt-dlp requests. Not</span>
-<span class="sd">            an egress sandbox: redirects are followed by the HTTP layer, so only</span>
-<span class="sd">            where a chain ends is checked (its content is then refused; the hops</span>
-<span class="sd">            in between are requested blind), and the check sees a URL, not the</span>
-<span class="sd">            address its host resolves to.</span>
+<span class="sd">            :func:`require_http_url`. Applied to every URL yt-dlp requests, and</span>
+<span class="sd">            to every address it connects to, as an IP-literal URL</span>
+<span class="sd">            (``http://10.0.0.1:443/``; see :mod:`yb.download.egress`), so a</span>
+<span class="sd">            validator that refuses internal addresses also stops DNS rebinding</span>
+<span class="sd">            and redirect hops into them before they connect. With a validator</span>
+<span class="sd">            other than the default, impersonation (curl_cffi) is not used, since</span>
+<span class="sd">            libcurl resolves out of the check's reach. A connection to the</span>
+<span class="sd">            deployment's proxy (``extra_opts["proxy"]`` or the ``*_PROXY``</span>
+<span class="sd">            environment) passes: the proxy connects to the target, so the egress</span>
+<span class="sd">            rule for proxied requests belongs there.</span>
 <span class="sd">        extra_opts: Deployment yt-dlp options, restricted to</span>
 <span class="sd">            :data:`DEPLOYMENT_OPT_KEYS` (credentials, cookies, proxy); anything</span>
 <span class="sd">            else raises, so no option can widen a cap or redirect the output.</span>
@@ -686,6 +837,7 @@
                 <span class="n">cookies_file</span><span class="o">=</span><span class="n">cookies_file</span><span class="p">,</span>
                 <span class="n">ydl_cls</span><span class="o">=</span><span class="n">ydl_cls</span><span class="p">,</span>
             <span class="p">)</span> <span class="k">as</span> <span class="n">ydl</span><span class="p">,</span>
+            <span class="n">_connect_guard</span><span class="p">(</span><span class="n">validate_target</span><span class="p">,</span> <span class="n">ydl</span><span class="p">),</span>
             <span class="n">_typed_errors</span><span class="p">(),</span>
             <span class="n">explain_rate_limit</span><span class="p">(),</span>
         <span class="p">):</span>
@@ -741,7 +893,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=28305784"></script>
+</div><script src="../../../_static/documentation_options.js?v=817023e2"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

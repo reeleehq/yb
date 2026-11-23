@@ -1,4 +1,4 @@
-> built 2026-11-23 07:40 UTC from 093708d (main) · yb 0.1.48. Details: build_info.json
+> built 2026-11-23 10:57 UTC from 2298c30 (main) · yb 0.1.49. Details: build_info.json
 
 # index.html.md
 
@@ -871,7 +871,8 @@ Link-to-audio with the safety policy applied once: [`download_audio_bounded()`](
 
 A service that turns a user-supplied link into an audio file (an MCP tool, an
 ingest endpoint) needs the same guard rails every time: refuse bad targets before
-touching the network, check every URL yt-dlp then requests (not only the first),
+touching the network, check every URL yt-dlp then requests (not only the first)
+and every address it connects to (each redirect hop, after each name lookup),
 refuse over-long sources before fetching a byte, cap the bytes and the wall-clock
 time even when the size is unknown, always produce mp3, send no ambient cookies,
 and carry a copyright notice with the file. That policy lives here so a second
@@ -889,15 +890,16 @@ can never widen them.
 
 ### Module Attributes
 
-| [`DEFAULT_MAX_BYTES`](_autosummary/yb.download.bounded.html.md#yb.download.bounded.DEFAULT_MAX_BYTES)      | Default byte cap.                                                                                |
-|-------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------|
-| [`DEFAULT_MAX_DURATION_S`](_autosummary/yb.download.bounded.html.md#yb.download.bounded.DEFAULT_MAX_DURATION_S) | Default duration cap, in seconds (refuses livestream-length and multi-hour sources).             |
-| [`DEFAULT_TIMEOUT_S`](_autosummary/yb.download.bounded.html.md#yb.download.bounded.DEFAULT_TIMEOUT_S)      | Default wall-clock budget for the whole call (metadata, download, conversion start), in seconds. |
-| [`GUARDED_PROTOCOLS`](_autosummary/yb.download.bounded.html.md#yb.download.bounded.GUARDED_PROTOCOLS)      | Media protocols whose bytes yt-dlp fetches itself (through the request guard).                   |
-| [`AUDIO_CODEC`](_autosummary/yb.download.bounded.html.md#yb.download.bounded.AUDIO_CODEC)            | Output codec and quality handed to yt-dlp's audio extractor.                                     |
-| [`COPYRIGHT_NOTICE`](_autosummary/yb.download.bounded.html.md#yb.download.bounded.COPYRIGHT_NOTICE)       | Travels with every download (store it next to the file).                                         |
-| [`DEPLOYMENT_OPT_KEYS`](_autosummary/yb.download.bounded.html.md#yb.download.bounded.DEPLOYMENT_OPT_KEYS)    | how to reach and authenticate to the source, nothing about what is fetched or where it goes.     |
-| [`TargetValidator`](_autosummary/yb.download.bounded.html.md#yb.download.bounded.TargetValidator)        | raises `ValueError` to refuse `url`.                                                             |
+| [`DEFAULT_MAX_BYTES`](_autosummary/yb.download.bounded.html.md#yb.download.bounded.DEFAULT_MAX_BYTES)        | Default byte cap.                                                                                                                       |
+|---------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|
+| [`DEFAULT_MAX_DURATION_S`](_autosummary/yb.download.bounded.html.md#yb.download.bounded.DEFAULT_MAX_DURATION_S)   | Default duration cap, in seconds (refuses livestream-length and multi-hour sources).                                                    |
+| [`DEFAULT_TIMEOUT_S`](_autosummary/yb.download.bounded.html.md#yb.download.bounded.DEFAULT_TIMEOUT_S)        | Default wall-clock budget for the whole call (metadata, download, conversion start), in seconds.                                        |
+| [`GUARDED_PROTOCOLS`](_autosummary/yb.download.bounded.html.md#yb.download.bounded.GUARDED_PROTOCOLS)        | Media protocols whose bytes yt-dlp fetches itself (through the request guard).                                                          |
+| [`AUDIO_CODEC`](_autosummary/yb.download.bounded.html.md#yb.download.bounded.AUDIO_CODEC)              | Output codec and quality handed to yt-dlp's audio extractor.                                                                            |
+| [`COPYRIGHT_NOTICE`](_autosummary/yb.download.bounded.html.md#yb.download.bounded.COPYRIGHT_NOTICE)         | Travels with every download (store it next to the file).                                                                                |
+| [`DEPLOYMENT_OPT_KEYS`](_autosummary/yb.download.bounded.html.md#yb.download.bounded.DEPLOYMENT_OPT_KEYS)      | how to reach and authenticate to the source, nothing about what is fetched or where it goes.                                            |
+| [`TargetValidator`](_autosummary/yb.download.bounded.html.md#yb.download.bounded.TargetValidator)          | raises `ValueError` to refuse `url`.                                                                                                    |
+| [`CHECKED_REQUEST_HANDLERS`](_autosummary/yb.download.bounded.html.md#yb.download.bounded.CHECKED_REQUEST_HANDLERS) | Request handlers whose every connection resolves through `socket.getaddrinfo` in the calling thread, where the connect-time check sits. |
 
 ### Functions
 
@@ -912,14 +914,24 @@ can never widen them.
 
 ### Exceptions
 
-| [`AudioLimitError`](_autosummary/yb.download.bounded.html.md#yb.download.bounded.AudioLimitError)   | The source exceeds a cap (duration, size or time); nothing is left on disk.   |
-|--------------------------------------------------------------------|-------------------------------------------------------------------------------|
-| [`AudioSourceError`](_autosummary/yb.download.bounded.html.md#yb.download.bounded.AudioSourceError)  | yt-dlp could not get audio from the link (unsupported, unavailable, ...).     |
-| [`AudioTargetError`](_autosummary/yb.download.bounded.html.md#yb.download.bounded.AudioTargetError)  | `validate_target` refused a URL: the link, or one yt-dlp was about to fetch.  |
+| [`AddressRefusedError`](_autosummary/yb.download.bounded.html.md#yb.download.bounded.AddressRefusedError)   | `validate_target` refused the address a connection was about to use.         |
+|------------------------------------------------------------------------|------------------------------------------------------------------------------|
+| [`AudioLimitError`](_autosummary/yb.download.bounded.html.md#yb.download.bounded.AudioLimitError)       | The source exceeds a cap (duration, size or time); nothing is left on disk.  |
+| [`AudioSourceError`](_autosummary/yb.download.bounded.html.md#yb.download.bounded.AudioSourceError)      | yt-dlp could not get audio from the link (unsupported, unavailable, ...).    |
+| [`AudioTargetError`](_autosummary/yb.download.bounded.html.md#yb.download.bounded.AudioTargetError)      | `validate_target` refused a URL: the link, or one yt-dlp was about to fetch. |
 
 ### yb.download.bounded.AUDIO_CODEC *= 'mp3'*
 
 Output codec and quality handed to yt-dlp’s audio extractor.
+
+### *exception* yb.download.bounded.AddressRefusedError
+
+Bases: [`AudioTargetError`](_autosummary/yb.download.bounded.html.md#yb.download.bounded.AudioTargetError), [`OSError`](https://docs.python.org/3/builtins/exceptions.html#OSError)
+
+`validate_target` refused the address a connection was about to use.
+
+Also an `OSError`, so the HTTP layer treats it as a failed connection (no
+retry on another request handler) and yt-dlp wraps it as a transport error.
 
 ### *class* yb.download.bounded.AudioDownload(path, title, duration_s, notice, info)
 
@@ -981,6 +993,12 @@ Bases: [`ValueError`](https://docs.python.org/3/builtins/exceptions.html#ValueEr
 
 `validate_target` refused a URL: the link, or one yt-dlp was about to fetch.
 
+### yb.download.bounded.CHECKED_REQUEST_HANDLERS *= frozenset({'Requests', 'Urllib', 'Websockets'})*
+
+Request handlers whose every connection resolves through `socket.getaddrinfo`
+in the calling thread, where the connect-time check sits. Others (curl_cffi’s,
+whose libcurl resolves and follows redirects in C) are removed while it runs.
+
 ### yb.download.bounded.COPYRIGHT_NOTICE *= "Downloaded from a user-supplied link — respect the source's copyright and terms of service; you are responsible for having the right to use it."*
 
 Travels with every download (store it next to the file).
@@ -1028,8 +1046,9 @@ Download the audio of one video link as mp3, refusing what exceeds the caps.
 
 Order: `validate_target` on `url` (before any network); one yt-dlp
 session whose every request (page, embedded page, manifest, media, fragment)
-passes `validate_target` first, and whose final URL after redirects does
-too; a metadata pass that refuses playlists, live streams and over-long
+passes `validate_target` first, whose every connection (each redirect hop
+included) goes only to an address `validate_target` accepts, and whose
+final URL after redirects passes it too; a metadata pass that refuses playlists, live streams and over-long
 sources before any media bytes; the download of those same formats (no
 second extraction), aborted past `max_bytes` or `timeout_s` even when
 the size is unknown; a size check on the extracted file. The mp3 is written
@@ -1048,11 +1067,16 @@ never collide); on any failure that directory is removed.
     every received chunk (a stalled connection is bounded by yt-dlp’s
     socket timeout).
   * **validate_target** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – Raises `ValueError` to refuse a URL; see
-    [`require_http_url()`](_autosummary/yb.download.bounded.html.md#yb.download.bounded.require_http_url). Applied to every URL yt-dlp requests. Not
-    an egress sandbox: redirects are followed by the HTTP layer, so only
-    where a chain ends is checked (its content is then refused; the hops
-    in between are requested blind), and the check sees a URL, not the
-    address its host resolves to.
+    [`require_http_url()`](_autosummary/yb.download.bounded.html.md#yb.download.bounded.require_http_url). Applied to every URL yt-dlp requests, and
+    to every address it connects to, as an IP-literal URL
+    (`http://10.0.0.1:443/`; see [`yb.download.egress`](_autosummary/yb.download.egress.html.md#module-yb.download.egress)), so a
+    validator that refuses internal addresses also stops DNS rebinding
+    and redirect hops into them before they connect. With a validator
+    other than the default, impersonation (curl_cffi) is not used, since
+    libcurl resolves out of the check’s reach. A connection to the
+    deployment’s proxy (`extra_opts["proxy"]` or the `*_PROXY`
+    environment) passes: the proxy connects to the target, so the egress
+    rule for proxied requests belongs there.
   * **extra_opts** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Deployment yt-dlp options, restricted to
     [`DEPLOYMENT_OPT_KEYS`](_autosummary/yb.download.bounded.html.md#yb.download.bounded.DEPLOYMENT_OPT_KEYS) (credentials, cookies, proxy); anything
     else raises, so no option can widen a cap or redirect the output.
@@ -1084,6 +1108,100 @@ link-local and cloud-metadata hosts.
 
 * **Return type:**
   [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+
+# _autosummary/yb.download.egress.html.md
+
+# yb.download.egress
+
+Connect-time address checks: the address a request connects to is the one checked.
+
+A URL check (`validate_target`) resolves a host name, and the HTTP layer then
+resolves it again to connect. Between the two, a name with a zero TTL can answer
+a public address and then an internal one (DNS rebinding). And the HTTP layer
+follows redirects itself, so a URL check sees where a chain ends, while every hop
+before it has already been requested.
+
+[`address_check()`](_autosummary/yb.download.egress.html.md#yb.download.egress.address_check) closes both at the one place every connection passes
+through: name resolution. While it is active (in this thread or task), every
+`socket.getaddrinfo` answer is handed to a check before anything connects, so
+the address checked is the address connected to, for the link, each redirect hop,
+each manifest and each fragment alike.
+
+```pycon
+>>> import socket
+>>> def no_loopback(ip, port):
+...     if ip.startswith("127."):
+...         raise ValueError(f"refused {ip}")
+>>> with address_check(no_loopback):
+...     socket.getaddrinfo("localhost", 80)
+Traceback (most recent call last):
+    ...
+ValueError: refused 127.0.0.1
+```
+
+Outside an active check, resolution is untouched. The patch is (re)installed on
+entry to each check, over whatever `socket.getaddrinfo` is then (another
+library’s resolver keeps working underneath), and passes straight through when no
+check is active, so code in other threads is unaffected. The check itself runs
+with no check active, so a check that resolves names does not recurse. Work a library hands to a thread pool does not see
+the check (a new thread starts with no context), so the caller must keep its
+requests on the calling thread (yb pins `concurrent_fragment_downloads` to 1).
+
+### Module Attributes
+
+| [`AddressCheck`](_autosummary/yb.download.egress.html.md#yb.download.egress.AddressCheck)   | raises `ValueError` to refuse connecting to `ip` on `port`.   |
+|-----------------------------------------------------------------|---------------------------------------------------------------|
+
+### Functions
+
+| [`address_check`](_autosummary/yb.download.egress.html.md#yb.download.egress.address_check)(check)     | Run `check(ip, port)` on every address resolved in this context, before any connect.                                |
+|---------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
+| [`no_address_check`](_autosummary/yb.download.egress.html.md#yb.download.egress.no_address_check)()       | Suspend an active [`address_check()`](_autosummary/yb.download.egress.html.md#yb.download.egress.address_check) (for a URL check's own lookups). |
+| [`url_of_address`](_autosummary/yb.download.egress.html.md#yb.download.egress.url_of_address)(ip, port) | An `http` URL whose host is the address itself, for a URL-level target check.                                       |
+
+### yb.download.egress.AddressCheck
+
+raises `ValueError` to refuse connecting to `ip` on `port`.
+
+* **Type:**
+  An address check
+
+alias of [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), int | None], [`None`](https://docs.python.org/3/builtins/constants.html#None)]
+
+### yb.download.egress.address_check(check)
+
+Run `check(ip, port)` on every address resolved in this context, before any connect.
+
+Every address a name resolves to is checked, not only the first: a name with
+one public and one internal record is refused, since the connection may use
+either. `check` raises (a `ValueError`) to refuse; the error propagates out
+of the resolution, so nothing connects.
+
+* **Return type:**
+  [`Iterator`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterator)[[`None`](https://docs.python.org/3/builtins/constants.html#None)]
+
+### yb.download.egress.no_address_check()
+
+Suspend an active [`address_check()`](_autosummary/yb.download.egress.html.md#yb.download.egress.address_check) (for a URL check’s own lookups).
+
+* **Return type:**
+  [`Iterator`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterator)[[`None`](https://docs.python.org/3/builtins/constants.html#None)]
+
+### yb.download.egress.url_of_address(ip, port)
+
+An `http` URL whose host is the address itself, for a URL-level target check.
+
+It lets a URL check (one that resolves names and refuses internal addresses)
+judge an address with no second lookup: an IP literal resolves to itself.
+
+```pycon
+>>> url_of_address("10.0.0.1", 443), url_of_address("::1", 80), url_of_address("1.2.3.4", None)
+('http://10.0.0.1:443/', 'http://[::1]:80/', 'http://1.2.3.4/')
+```
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 
 # _autosummary/yb.download.html.md
@@ -1184,11 +1302,21 @@ how to install it. The first download in a process runs it and warns.
 |----------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------|
 | [`AudioSourceError`](_autosummary/yb.download.html.md#yb.download.AudioSourceError)                            | yt-dlp could not get audio from the link (unsupported, unavailable, ...).                                                      |
 | [`AudioTargetError`](_autosummary/yb.download.html.md#yb.download.AudioTargetError)                            | `validate_target` refused a URL: the link, or one yt-dlp was about to fetch.                                                   |
+| [`AddressRefusedError`](_autosummary/yb.download.html.md#yb.download.AddressRefusedError)                         | `validate_target` refused the address a connection was about to use.                                                           |
 | [`PlaylistSubtitleError`](_autosummary/yb.download.html.md#yb.download.PlaylistSubtitleError)(results, failures)    | Some playlist items' subtitles failed (`on_subtitle_error="raise"`).                                                           |
 | [`PlaylistRateLimitedError`](_autosummary/yb.download.html.md#yb.download.PlaylistRateLimitedError)(results, failures) | A [`PlaylistSubtitleError`](_autosummary/yb.download.html.md#yb.download.PlaylistSubtitleError) where YouTube refused (429 / bot check) the captions. |
 | [`AudioConversionError`](_autosummary/yb.download.html.md#yb.download.AudioConversionError)                        | Raised when audio could not be converted to the requested format.                                                              |
 | [`DownloadRequirementWarning`](_autosummary/yb.download.html.md#yb.download.DownloadRequirementWarning)                  | A download prerequisite (JS runtime, solver scripts) looks missing.                                                            |
 | [`RateLimitedError`](_autosummary/yb.download.html.md#yb.download.RateLimitedError)                            | YouTube refused the request (HTTP 429 or a "confirm you're not a bot" wall).                                                   |
+
+### *exception* yb.download.AddressRefusedError
+
+Bases: [`AudioTargetError`](_autosummary/yb.download.bounded.html.md#yb.download.bounded.AudioTargetError), [`OSError`](https://docs.python.org/3/builtins/exceptions.html#OSError)
+
+`validate_target` refused the address a connection was about to use.
+
+Also an `OSError`, so the HTTP layer treats it as a failed connection (no
+retry on another request handler) and yt-dlp wraps it as a transport error.
 
 ### *exception* yb.download.AudioConversionError
 
@@ -1574,8 +1702,9 @@ Download the audio of one video link as mp3, refusing what exceeds the caps.
 
 Order: `validate_target` on `url` (before any network); one yt-dlp
 session whose every request (page, embedded page, manifest, media, fragment)
-passes `validate_target` first, and whose final URL after redirects does
-too; a metadata pass that refuses playlists, live streams and over-long
+passes `validate_target` first, whose every connection (each redirect hop
+included) goes only to an address `validate_target` accepts, and whose
+final URL after redirects passes it too; a metadata pass that refuses playlists, live streams and over-long
 sources before any media bytes; the download of those same formats (no
 second extraction), aborted past `max_bytes` or `timeout_s` even when
 the size is unknown; a size check on the extracted file. The mp3 is written
@@ -1594,11 +1723,16 @@ never collide); on any failure that directory is removed.
     every received chunk (a stalled connection is bounded by yt-dlp’s
     socket timeout).
   * **validate_target** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – Raises `ValueError` to refuse a URL; see
-    [`require_http_url()`](_autosummary/yb.download.html.md#yb.download.require_http_url). Applied to every URL yt-dlp requests. Not
-    an egress sandbox: redirects are followed by the HTTP layer, so only
-    where a chain ends is checked (its content is then refused; the hops
-    in between are requested blind), and the check sees a URL, not the
-    address its host resolves to.
+    [`require_http_url()`](_autosummary/yb.download.html.md#yb.download.require_http_url). Applied to every URL yt-dlp requests, and
+    to every address it connects to, as an IP-literal URL
+    (`http://10.0.0.1:443/`; see [`yb.download.egress`](_autosummary/yb.download.egress.html.md#module-yb.download.egress)), so a
+    validator that refuses internal addresses also stops DNS rebinding
+    and redirect hops into them before they connect. With a validator
+    other than the default, impersonation (curl_cffi) is not used, since
+    libcurl resolves out of the check’s reach. A connection to the
+    deployment’s proxy (`extra_opts["proxy"]` or the `*_PROXY`
+    environment) passes: the proxy connects to the target, so the egress
+    rule for proxied requests belongs there.
   * **extra_opts** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Deployment yt-dlp options, restricted to
     `DEPLOYMENT_OPT_KEYS` (credentials, cookies, proxy); anything
     else raises, so no option can widen a cap or redirect the output.
@@ -2085,6 +2219,7 @@ the title/duration/chapters before deciding to download.
 
 | [`bounded`](_autosummary/yb.download.bounded.html.md#module-yb.download.bounded)           | Link-to-audio with the safety policy applied once: [`download_audio_bounded()`](_autosummary/yb.download.html.md#yb.download.download_audio_bounded).   |
 |-----------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
+| [`egress`](_autosummary/yb.download.egress.html.md#module-yb.download.egress)             | Connect-time address checks: the address a request connects to is the one checked.                                              |
 | [`pacing`](_autosummary/yb.download.pacing.html.md#module-yb.download.pacing)             | Polite pacing for yt-dlp downloads, and a useful message when YouTube pushes back.                                              |
 | [`probe`](_autosummary/yb.download.probe.html.md#module-yb.download.probe)               | Online checks for servers: do the configured cookies still get past YouTube?                                                    |
 | [`ranges`](_autosummary/yb.download.ranges.html.md#module-yb.download.ranges)             | Download just a time range of a video: parse start/end, build yt-dlp's options.                                                 |
@@ -6701,18 +6836,18 @@ Fetch a video’s live metadata & engagement numbers.
 
 # About this build
 
-This documentation was built on **2026-11-23 07:40 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/093708d7f8964f8229022d8c64213924740f39af"><code>093708d</code></a> on branch <code>main</code>, for **yb 0.1.48** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-23 10:57 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/2298c303913090361b7675acad34c7dc465db576"><code>2298c30</code></a> on branch <code>main</code>, for **yb 0.1.49** (from <code>pyproject.toml</code>).
 
 #### WARNING
 The documentation and the package may be misaligned:
 
-- The documented version (0.1.48) is behind the latest release on PyPI (0.1.49): `pip install yb` gives newer code than these docs describe.
+- The documented version (0.1.49) is behind the latest release on PyPI (0.1.50): `pip install yb` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                    |
 |---------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/yb/commit/093708d7f8964f8229022d8c64213924740f39af"><code>093708d7f8964f8229022d8c64213924740f39af</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/yb/commit/2298c303913090361b7675acad34c7dc465db576"><code>2298c303913090361b7675acad34c7dc465db576</code></a> |
 | Branch              | <code>main</code>                                                                                                                                  |
 | Tags at this commit | none                                                                                                                                               |
 | Working tree        | clean                                                                                                                                              |
@@ -6723,15 +6858,15 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/yb</code>                                                                   |
-| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/45132676547">45132676547</a>          |
+| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/45160494316">45160494316</a>          |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>093708d7f8964f8229022d8c64213924740f39af</code> (in the history of the built commit) |
+| Event commit | <code>2298c303913090361b7675acad34c7dc465db576</code> (in the history of the built commit) |
 
 ## Tools
 
 |          |         |
 |----------|---------|
-| epythet  | 0.2.24  |
+| epythet  | 0.2.25  |
 | Sphinx   | 9.1.1   |
 | docutils | 0.22.4  |
 | Python   | 3.12.16 |
@@ -6750,14 +6885,14 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/yb/0.1.49/">0.1.49</a>, newer than the documented version (0.1.48).
+Latest release: <a href="https://pypi.org/project/yb/0.1.50/">0.1.50</a>, newer than the documented version (0.1.49).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/yb && cd yb
-git checkout 093708d7f8964f8229022d8c64213924740f39af
-pip install "epythet==0.2.24"
+git checkout 2298c303913090361b7675acad34c7dc465db576
+pip install "epythet==0.2.25"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```
 

@@ -49,6 +49,7 @@ yb.download
       AudioLimitError
       AudioSourceError
       AudioTargetError
+      AddressRefusedError
       PlaylistSubtitleError
       PlaylistRateLimitedError
       AudioConversionError
@@ -62,6 +63,7 @@ yb.download
    :recursive:
 
    bounded
+   egress
    pacing
    probe
    ranges

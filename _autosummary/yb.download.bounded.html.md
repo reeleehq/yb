@@ -4,7 +4,8 @@ Link-to-audio with the safety policy applied once: [`download_audio_bounded()`](
 
 A service that turns a user-supplied link into an audio file (an MCP tool, an
 ingest endpoint) needs the same guard rails every time: refuse bad targets before
-touching the network, check every URL yt-dlp then requests (not only the first),
+touching the network, check every URL yt-dlp then requests (not only the first)
+and every address it connects to (each redirect hop, after each name lookup),
 refuse over-long sources before fetching a byte, cap the bytes and the wall-clock
 time even when the size is unknown, always produce mp3, send no ambient cookies,
 and carry a copyright notice with the file. That policy lives here so a second
@@ -22,15 +23,16 @@ can never widen them.
 
 ### Module Attributes
 
-| [`DEFAULT_MAX_BYTES`](#yb.download.bounded.DEFAULT_MAX_BYTES)      | Default byte cap.                                                                                |
-|-------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------|
-| [`DEFAULT_MAX_DURATION_S`](#yb.download.bounded.DEFAULT_MAX_DURATION_S) | Default duration cap, in seconds (refuses livestream-length and multi-hour sources).             |
-| [`DEFAULT_TIMEOUT_S`](#yb.download.bounded.DEFAULT_TIMEOUT_S)      | Default wall-clock budget for the whole call (metadata, download, conversion start), in seconds. |
-| [`GUARDED_PROTOCOLS`](#yb.download.bounded.GUARDED_PROTOCOLS)      | Media protocols whose bytes yt-dlp fetches itself (through the request guard).                   |
-| [`AUDIO_CODEC`](#yb.download.bounded.AUDIO_CODEC)            | Output codec and quality handed to yt-dlp's audio extractor.                                     |
-| [`COPYRIGHT_NOTICE`](#yb.download.bounded.COPYRIGHT_NOTICE)       | Travels with every download (store it next to the file).                                         |
-| [`DEPLOYMENT_OPT_KEYS`](#yb.download.bounded.DEPLOYMENT_OPT_KEYS)    | how to reach and authenticate to the source, nothing about what is fetched or where it goes.     |
-| [`TargetValidator`](#yb.download.bounded.TargetValidator)        | raises `ValueError` to refuse `url`.                                                             |
+| [`DEFAULT_MAX_BYTES`](#yb.download.bounded.DEFAULT_MAX_BYTES)        | Default byte cap.                                                                                                                       |
+|---------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|
+| [`DEFAULT_MAX_DURATION_S`](#yb.download.bounded.DEFAULT_MAX_DURATION_S)   | Default duration cap, in seconds (refuses livestream-length and multi-hour sources).                                                    |
+| [`DEFAULT_TIMEOUT_S`](#yb.download.bounded.DEFAULT_TIMEOUT_S)        | Default wall-clock budget for the whole call (metadata, download, conversion start), in seconds.                                        |
+| [`GUARDED_PROTOCOLS`](#yb.download.bounded.GUARDED_PROTOCOLS)        | Media protocols whose bytes yt-dlp fetches itself (through the request guard).                                                          |
+| [`AUDIO_CODEC`](#yb.download.bounded.AUDIO_CODEC)              | Output codec and quality handed to yt-dlp's audio extractor.                                                                            |
+| [`COPYRIGHT_NOTICE`](#yb.download.bounded.COPYRIGHT_NOTICE)         | Travels with every download (store it next to the file).                                                                                |
+| [`DEPLOYMENT_OPT_KEYS`](#yb.download.bounded.DEPLOYMENT_OPT_KEYS)      | how to reach and authenticate to the source, nothing about what is fetched or where it goes.                                            |
+| [`TargetValidator`](#yb.download.bounded.TargetValidator)          | raises `ValueError` to refuse `url`.                                                                                                    |
+| [`CHECKED_REQUEST_HANDLERS`](#yb.download.bounded.CHECKED_REQUEST_HANDLERS) | Request handlers whose every connection resolves through `socket.getaddrinfo` in the calling thread, where the connect-time check sits. |
 
 ### Functions
 
@@ -45,14 +47,24 @@ can never widen them.
 
 ### Exceptions
 
-| [`AudioLimitError`](#yb.download.bounded.AudioLimitError)   | The source exceeds a cap (duration, size or time); nothing is left on disk.   |
-|--------------------------------------------------------------------|-------------------------------------------------------------------------------|
-| [`AudioSourceError`](#yb.download.bounded.AudioSourceError)  | yt-dlp could not get audio from the link (unsupported, unavailable, ...).     |
-| [`AudioTargetError`](#yb.download.bounded.AudioTargetError)  | `validate_target` refused a URL: the link, or one yt-dlp was about to fetch.  |
+| [`AddressRefusedError`](#yb.download.bounded.AddressRefusedError)   | `validate_target` refused the address a connection was about to use.         |
+|------------------------------------------------------------------------|------------------------------------------------------------------------------|
+| [`AudioLimitError`](#yb.download.bounded.AudioLimitError)       | The source exceeds a cap (duration, size or time); nothing is left on disk.  |
+| [`AudioSourceError`](#yb.download.bounded.AudioSourceError)      | yt-dlp could not get audio from the link (unsupported, unavailable, ...).    |
+| [`AudioTargetError`](#yb.download.bounded.AudioTargetError)      | `validate_target` refused a URL: the link, or one yt-dlp was about to fetch. |
 
 ### yb.download.bounded.AUDIO_CODEC *= 'mp3'*
 
 Output codec and quality handed to yt-dlp’s audio extractor.
+
+### *exception* yb.download.bounded.AddressRefusedError
+
+Bases: [`AudioTargetError`](#yb.download.bounded.AudioTargetError), [`OSError`](https://docs.python.org/3/builtins/exceptions.html#OSError)
+
+`validate_target` refused the address a connection was about to use.
+
+Also an `OSError`, so the HTTP layer treats it as a failed connection (no
+retry on another request handler) and yt-dlp wraps it as a transport error.
 
 ### *class* yb.download.bounded.AudioDownload(path, title, duration_s, notice, info)
 
@@ -114,6 +126,12 @@ Bases: [`ValueError`](https://docs.python.org/3/builtins/exceptions.html#ValueEr
 
 `validate_target` refused a URL: the link, or one yt-dlp was about to fetch.
 
+### yb.download.bounded.CHECKED_REQUEST_HANDLERS *= frozenset({'Requests', 'Urllib', 'Websockets'})*
+
+Request handlers whose every connection resolves through `socket.getaddrinfo`
+in the calling thread, where the connect-time check sits. Others (curl_cffi’s,
+whose libcurl resolves and follows redirects in C) are removed while it runs.
+
 ### yb.download.bounded.COPYRIGHT_NOTICE *= "Downloaded from a user-supplied link — respect the source's copyright and terms of service; you are responsible for having the right to use it."*
 
 Travels with every download (store it next to the file).
@@ -161,8 +179,9 @@ Download the audio of one video link as mp3, refusing what exceeds the caps.
 
 Order: `validate_target` on `url` (before any network); one yt-dlp
 session whose every request (page, embedded page, manifest, media, fragment)
-passes `validate_target` first, and whose final URL after redirects does
-too; a metadata pass that refuses playlists, live streams and over-long
+passes `validate_target` first, whose every connection (each redirect hop
+included) goes only to an address `validate_target` accepts, and whose
+final URL after redirects passes it too; a metadata pass that refuses playlists, live streams and over-long
 sources before any media bytes; the download of those same formats (no
 second extraction), aborted past `max_bytes` or `timeout_s` even when
 the size is unknown; a size check on the extracted file. The mp3 is written
@@ -181,11 +200,16 @@ never collide); on any failure that directory is removed.
     every received chunk (a stalled connection is bounded by yt-dlp’s
     socket timeout).
   * **validate_target** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`None`](https://docs.python.org/3/builtins/constants.html#None)]) – Raises `ValueError` to refuse a URL; see
-    [`require_http_url()`](#yb.download.bounded.require_http_url). Applied to every URL yt-dlp requests. Not
-    an egress sandbox: redirects are followed by the HTTP layer, so only
-    where a chain ends is checked (its content is then refused; the hops
-    in between are requested blind), and the check sees a URL, not the
-    address its host resolves to.
+    [`require_http_url()`](#yb.download.bounded.require_http_url). Applied to every URL yt-dlp requests, and
+    to every address it connects to, as an IP-literal URL
+    (`http://10.0.0.1:443/`; see [`yb.download.egress`](yb.download.egress.html.md#module-yb.download.egress)), so a
+    validator that refuses internal addresses also stops DNS rebinding
+    and redirect hops into them before they connect. With a validator
+    other than the default, impersonation (curl_cffi) is not used, since
+    libcurl resolves out of the check’s reach. A connection to the
+    deployment’s proxy (`extra_opts["proxy"]` or the `*_PROXY`
+    environment) passes: the proxy connects to the target, so the egress
+    rule for proxied requests belongs there.
   * **extra_opts** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Deployment yt-dlp options, restricted to
     [`DEPLOYMENT_OPT_KEYS`](#yb.download.bounded.DEPLOYMENT_OPT_KEYS) (credentials, cookies, proxy); anything
     else raises, so no option can widen a cap or redirect the output.
