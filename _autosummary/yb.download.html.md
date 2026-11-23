@@ -322,7 +322,7 @@ YouTube’s results page usually shows only “3 weeks ago”, which yt-dlp does
 not turn into a date, so expect `None` often; `youtube_video_info` has
 the exact date.
 
-### *class* yb.download.Storyboard(video_id, url, title, duration, license, format_id, width, height, rows, columns, sheets=())
+### *class* yb.download.Storyboard(video_id, url, title, duration, license, format_id, width, height, rows, columns, sheets=(), uploader=None, channel=None, channel_url=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -352,6 +352,11 @@ skipped.
 
 * **Return type:**
   [`Iterator`](https://docs.python.org/3/library/typing.html#typing.Iterator)[[`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`float`](https://docs.python.org/3/builtins/functions.html#float), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]]
+
+#### uploader *: [str](https://docs.python.org/3/builtins/stdtypes.html#str) | [None](https://docs.python.org/3/builtins/constants.html#None)* *= None*
+
+Who published the video, for attribution (yt-dlp’s `uploader`,
+`channel` and `channel_url`); `None` when YouTube does not say.
 
 ### *class* yb.download.StoryboardSheet(start, duration, image_bytes)
 

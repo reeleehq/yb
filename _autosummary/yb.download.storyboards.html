@@ -303,7 +303,8 @@ time is the start of that stretch, and can lag the moment shown by about a
 second, so grab a few candidates around a hit when you cut the real frame with
 <a class="reference internal" href="yb.download.html#yb.download.download_youtube_video" title="yb.download.download_youtube_video"><code class="xref py py-func docutils literal notranslate"><span class="pre">download_youtube_video()</span></code></a>’s <code class="docutils literal notranslate"><span class="pre">start</span></code>/<code class="docutils literal notranslate"><span class="pre">end</span></code>); and 320x180
 finds scenes, not small props.</p>
-<p>The frames are the video owner’s: a storyboard carries the video’s licence
+<p>The frames are the video owner’s: a storyboard carries who published it
+(<code class="docutils literal notranslate"><span class="pre">uploader</span></code>, <code class="docutils literal notranslate"><span class="pre">channel</span></code>, <code class="docutils literal notranslate"><span class="pre">channel_url</span></code>, for attribution) and the video’s licence
 (<code class="docutils literal notranslate"><span class="pre">Storyboard.license</span></code>, YouTube’s <code class="docutils literal notranslate"><span class="pre">&quot;Creative</span> <span class="pre">Commons</span> <span class="pre">Attribution</span> <span class="pre">license</span>
 <span class="pre">(reuse</span> <span class="pre">allowed)&quot;</span></code> or nothing, which means the standard YouTube licence: all
 rights reserved).</p>
@@ -352,7 +353,7 @@ smaller (160x90 down to 48x27).</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="yb.download.storyboards.Storyboard">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">yb.download.storyboards.</span></span><span class="sig-name descname"><span class="pre">Storyboard</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">video_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">duration</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">license</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">format_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">width</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">height</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rows</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">columns</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sheets</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/download/storyboards.html#Storyboard"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.download.storyboards.Storyboard" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">yb.download.storyboards.</span></span><span class="sig-name descname"><span class="pre">Storyboard</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">video_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">duration</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">license</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">format_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">width</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">height</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rows</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">columns</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sheets</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uploader</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel_url</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/yb/download/storyboards.html#Storyboard"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#yb.download.storyboards.Storyboard" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#object" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <p>A video’s storyboard: its sheets, their tiling, and the video’s identity and licence.</p>
 <dl class="field-list simple">
@@ -386,6 +387,13 @@ skipped.</p>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Iterator</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code></a>]]</span></p>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="yb.download.storyboards.Storyboard.uploader">
+<span class="sig-name descname"><span class="pre">uploader</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#yb.download.storyboards.Storyboard.uploader" title="Link to this definition">¶</a></dt>
+<dd><p>Who published the video, for attribution (yt-dlp’s <code class="docutils literal notranslate"><span class="pre">uploader</span></code>,
+<code class="docutils literal notranslate"><span class="pre">channel</span></code> and <code class="docutils literal notranslate"><span class="pre">channel_url</span></code>); <code class="docutils literal notranslate"><span class="pre">None</span></code> when YouTube does not say.</p>
 </dd></dl>
 
 </dd></dl>
@@ -498,6 +506,7 @@ skipped.</p>
 <li><a class="reference internal" href="#yb.download.storyboards.Storyboard"><code class="docutils literal notranslate"><span class="pre">Storyboard</span></code></a><ul>
 <li><a class="reference internal" href="#yb.download.storyboards.Storyboard.frame_times"><code class="docutils literal notranslate"><span class="pre">Storyboard.frame_times()</span></code></a></li>
 <li><a class="reference internal" href="#yb.download.storyboards.Storyboard.frames"><code class="docutils literal notranslate"><span class="pre">Storyboard.frames()</span></code></a></li>
+<li><a class="reference internal" href="#yb.download.storyboards.Storyboard.uploader"><code class="docutils literal notranslate"><span class="pre">Storyboard.uploader</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#yb.download.storyboards.StoryboardSheet"><code class="docutils literal notranslate"><span class="pre">StoryboardSheet</span></code></a></li>
@@ -514,7 +523,7 @@ skipped.</p>
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=2307d2a5"></script>
+</div><script src="../_static/documentation_options.js?v=8a47a6c3"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>

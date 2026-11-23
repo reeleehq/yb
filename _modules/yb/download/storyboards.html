@@ -295,7 +295,8 @@
 <span class="sd">:func:`~yb.download.download_youtube_video`'s ``start``/``end``); and 320x180</span>
 <span class="sd">finds scenes, not small props.</span>
 
-<span class="sd">The frames are the video owner's: a storyboard carries the video's licence</span>
+<span class="sd">The frames are the video owner's: a storyboard carries who published it</span>
+<span class="sd">(``uploader``, ``channel``, ``channel_url``, for attribution) and the video's licence</span>
 <span class="sd">(``Storyboard.license``, YouTube's ``"Creative Commons Attribution license</span>
 <span class="sd">(reuse allowed)"`` or nothing, which means the standard YouTube licence: all</span>
 <span class="sd">rights reserved).</span>
@@ -348,6 +349,11 @@
     <span class="n">rows</span><span class="p">:</span> <span class="nb">int</span>
     <span class="n">columns</span><span class="p">:</span> <span class="nb">int</span>
     <span class="n">sheets</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">StoryboardSheet</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="p">())</span>
+    <span class="c1">#: Who published the video, for attribution (yt-dlp's ``uploader``,</span>
+    <span class="c1">#: ``channel`` and ``channel_url``); ``None`` when YouTube does not say.</span>
+    <span class="n">uploader</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">channel</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">channel_url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 
 <div class="viewcode-block" id="Storyboard.frame_times">
 <a class="viewcode-back" href="../../../_autosummary/yb.download.storyboards.html#yb.download.Storyboard.frame_times">[docs]</a>
@@ -418,7 +424,8 @@
     <span class="n">found</span> <span class="o">=</span> <span class="p">[</span>
         <span class="n">f</span>
         <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"formats"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">()</span>
-        <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"format_note"</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"storyboard"</span> <span class="ow">or</span> <span class="nb">str</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"format_id"</span><span class="p">,</span> <span class="s2">""</span><span class="p">))</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"sb"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"format_note"</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"storyboard"</span>
+        <span class="ow">or</span> <span class="nb">str</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"format_id"</span><span class="p">,</span> <span class="s2">""</span><span class="p">))</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"sb"</span><span class="p">)</span>
     <span class="p">]</span>
     <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">found</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">f</span><span class="p">:</span> <span class="o">-</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"width"</span><span class="p">)</span> <span class="ow">or</span> <span class="mi">0</span><span class="p">))</span></div>
 
@@ -468,7 +475,9 @@
             <span class="n">duration</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">fragment</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"duration"</span><span class="p">)</span> <span class="ow">or</span> <span class="mf">0.0</span><span class="p">)</span>
             <span class="k">with</span> <span class="n">ydl</span><span class="o">.</span><span class="n">urlopen</span><span class="p">(</span><span class="n">frag_url</span><span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
                 <span class="n">data</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
-            <span class="n">sheets</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">StoryboardSheet</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">,</span> <span class="n">duration</span><span class="o">=</span><span class="n">duration</span><span class="p">,</span> <span class="n">image_bytes</span><span class="o">=</span><span class="n">data</span><span class="p">))</span>
+            <span class="n">sheets</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="n">StoryboardSheet</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">,</span> <span class="n">duration</span><span class="o">=</span><span class="n">duration</span><span class="p">,</span> <span class="n">image_bytes</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
+            <span class="p">)</span>
             <span class="n">start</span> <span class="o">+=</span> <span class="n">duration</span>
     <span class="n">duration</span> <span class="o">=</span> <span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"duration"</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">Storyboard</span><span class="p">(</span>
@@ -483,6 +492,9 @@
         <span class="n">rows</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">fmt</span><span class="p">[</span><span class="s2">"rows"</span><span class="p">]),</span>
         <span class="n">columns</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">fmt</span><span class="p">[</span><span class="s2">"columns"</span><span class="p">]),</span>
         <span class="n">sheets</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">sheets</span><span class="p">),</span>
+        <span class="n">uploader</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"uploader"</span><span class="p">),</span>
+        <span class="n">channel</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"channel"</span><span class="p">),</span>
+        <span class="n">channel_url</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"channel_url"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"uploader_url"</span><span class="p">),</span>
     <span class="p">)</span></div>
 
 </pre></div>
@@ -513,7 +525,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=2307d2a5"></script>
+</div><script src="../../../_static/documentation_options.js?v=8a47a6c3"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

@@ -23,7 +23,8 @@ second, so grab a few candidates around a hit when you cut the real frame with
 [`download_youtube_video()`](yb.download.html.md#yb.download.download_youtube_video)’s `start`/`end`); and 320x180
 finds scenes, not small props.
 
-The frames are the video owner’s: a storyboard carries the video’s licence
+The frames are the video owner’s: a storyboard carries who published it
+(`uploader`, `channel`, `channel_url`, for attribution) and the video’s licence
 (`Storyboard.license`, YouTube’s `"Creative Commons Attribution license
 (reuse allowed)"` or nothing, which means the standard YouTube licence: all
 rights reserved).
@@ -50,7 +51,7 @@ rights reserved).
 The largest storyboard YouTube serves (320x180 frames). `sb1` .. `sb3` are
 smaller (160x90 down to 48x27).
 
-### *class* yb.download.storyboards.Storyboard(video_id, url, title, duration, license, format_id, width, height, rows, columns, sheets=())
+### *class* yb.download.storyboards.Storyboard(video_id, url, title, duration, license, format_id, width, height, rows, columns, sheets=(), uploader=None, channel=None, channel_url=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -80,6 +81,11 @@ skipped.
 
 * **Return type:**
   [`Iterator`](https://docs.python.org/3/library/typing.html#typing.Iterator)[[`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`float`](https://docs.python.org/3/builtins/functions.html#float), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]]
+
+#### uploader *: [str](https://docs.python.org/3/builtins/stdtypes.html#str) | [None](https://docs.python.org/3/builtins/constants.html#None)* *= None*
+
+Who published the video, for attribution (yt-dlp’s `uploader`,
+`channel` and `channel_url`); `None` when YouTube does not say.
 
 ### *class* yb.download.storyboards.StoryboardSheet(start, duration, image_bytes)
 

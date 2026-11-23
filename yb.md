@@ -1,4 +1,4 @@
-> built 2026-11-23 04:25 UTC from 7c39394 (main) · yb 0.1.46. Details: build_info.json
+> built 2026-11-23 04:58 UTC from e34ff50 (main) · yb 0.1.47. Details: build_info.json
 
 # index.html.md
 
@@ -1412,7 +1412,7 @@ YouTube’s results page usually shows only “3 weeks ago”, which yt-dlp does
 not turn into a date, so expect `None` often; `youtube_video_info` has
 the exact date.
 
-### *class* yb.download.Storyboard(video_id, url, title, duration, license, format_id, width, height, rows, columns, sheets=())
+### *class* yb.download.Storyboard(video_id, url, title, duration, license, format_id, width, height, rows, columns, sheets=(), uploader=None, channel=None, channel_url=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -1442,6 +1442,11 @@ skipped.
 
 * **Return type:**
   [`Iterator`](https://docs.python.org/3/library/typing.html#typing.Iterator)[[`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`float`](https://docs.python.org/3/builtins/functions.html#float), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]]
+
+#### uploader *: [str](https://docs.python.org/3/builtins/stdtypes.html#str) | [None](https://docs.python.org/3/builtins/constants.html#None)* *= None*
+
+Who published the video, for attribution (yt-dlp’s `uploader`,
+`channel` and `channel_url`); `None` when YouTube does not say.
 
 ### *class* yb.download.StoryboardSheet(start, duration, image_bytes)
 
@@ -2791,7 +2796,8 @@ second, so grab a few candidates around a hit when you cut the real frame with
 [`download_youtube_video()`](_autosummary/yb.download.html.md#yb.download.download_youtube_video)’s `start`/`end`); and 320x180
 finds scenes, not small props.
 
-The frames are the video owner’s: a storyboard carries the video’s licence
+The frames are the video owner’s: a storyboard carries who published it
+(`uploader`, `channel`, `channel_url`, for attribution) and the video’s licence
 (`Storyboard.license`, YouTube’s `"Creative Commons Attribution license
 (reuse allowed)"` or nothing, which means the standard YouTube licence: all
 rights reserved).
@@ -2818,7 +2824,7 @@ rights reserved).
 The largest storyboard YouTube serves (320x180 frames). `sb1` .. `sb3` are
 smaller (160x90 down to 48x27).
 
-### *class* yb.download.storyboards.Storyboard(video_id, url, title, duration, license, format_id, width, height, rows, columns, sheets=())
+### *class* yb.download.storyboards.Storyboard(video_id, url, title, duration, license, format_id, width, height, rows, columns, sheets=(), uploader=None, channel=None, channel_url=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -2848,6 +2854,11 @@ skipped.
 
 * **Return type:**
   [`Iterator`](https://docs.python.org/3/library/typing.html#typing.Iterator)[[`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`float`](https://docs.python.org/3/builtins/functions.html#float), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]]
+
+#### uploader *: [str](https://docs.python.org/3/builtins/stdtypes.html#str) | [None](https://docs.python.org/3/builtins/constants.html#None)* *= None*
+
+Who published the video, for attribution (yt-dlp’s `uploader`,
+`channel` and `channel_url`); `None` when YouTube does not say.
 
 ### *class* yb.download.storyboards.StoryboardSheet(start, duration, image_bytes)
 
@@ -6690,18 +6701,18 @@ Fetch a video’s live metadata & engagement numbers.
 
 # About this build
 
-This documentation was built on **2026-11-23 04:25 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/7c39394109faa26ea57d6d264a01f0bb4f73d95b"><code>7c39394</code></a> on branch <code>main</code>, for **yb 0.1.46** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-23 04:58 UTC** from commit <a href="https://github.com/reeleehq/yb/commit/e34ff502b29daa5b0eaa616b4d8a6ceba2e52a11"><code>e34ff50</code></a> on branch <code>main</code>, for **yb 0.1.47** (from <code>pyproject.toml</code>).
 
 #### WARNING
 The documentation and the package may be misaligned:
 
-- The documented version (0.1.46) is behind the latest release on PyPI (0.1.47): `pip install yb` gives newer code than these docs describe.
+- The documented version (0.1.47) is behind the latest release on PyPI (0.1.48): `pip install yb` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                    |
 |---------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/yb/commit/7c39394109faa26ea57d6d264a01f0bb4f73d95b"><code>7c39394109faa26ea57d6d264a01f0bb4f73d95b</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/yb/commit/e34ff502b29daa5b0eaa616b4d8a6ceba2e52a11"><code>e34ff502b29daa5b0eaa616b4d8a6ceba2e52a11</code></a> |
 | Branch              | <code>main</code>                                                                                                                                  |
 | Tags at this commit | none                                                                                                                                               |
 | Working tree        | clean                                                                                                                                              |
@@ -6712,9 +6723,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/yb</code>                                                                   |
-| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/45111540704">45111540704</a>          |
+| Run          | <a href="https://github.com/reeleehq/yb/actions/runs/45114798945">45114798945</a>          |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>7c39394109faa26ea57d6d264a01f0bb4f73d95b</code> (in the history of the built commit) |
+| Event commit | <code>e34ff502b29daa5b0eaa616b4d8a6ceba2e52a11</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -6739,13 +6750,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/yb/0.1.47/">0.1.47</a>, newer than the documented version (0.1.46).
+Latest release: <a href="https://pypi.org/project/yb/0.1.48/">0.1.48</a>, newer than the documented version (0.1.47).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/yb && cd yb
-git checkout 7c39394109faa26ea57d6d264a01f0bb4f73d95b
+git checkout e34ff502b29daa5b0eaa616b4d8a6ceba2e52a11
 pip install "epythet==0.2.23"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```
