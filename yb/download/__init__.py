@@ -20,6 +20,12 @@ ffmpeg, see :mod:`yb.download.ranges`). The span is recorded in
 
     >>> clip = download_youtube_audio(url, start="0:07.9", end="0:08.75")  # doctest: +SKIP
 
+To find *where* in a video something is without downloading it, fetch its
+storyboard (the seek-bar thumbnails, :mod:`yb.download.storyboards`):
+
+    >>> board = youtube_storyboard(url)  # doctest: +SKIP
+    >>> for t, image in board.frames(): ...  # doctest: +SKIP
+
 To go from a name to a download, search first (:func:`search_youtube`):
 
     >>> from yb.download import search_youtube  # doctest: +SKIP
@@ -67,6 +73,12 @@ from yb.download.bounded import (
     DEPLOYMENT_OPT_KEYS,
 )
 from yb.download.ranges import TimeRange, parse_timestamp
+from yb.download.storyboards import (
+    Storyboard,
+    StoryboardSheet,
+    youtube_storyboard,
+    storyboard_formats,
+)
 from yb.download.probe import check_cookies, check_po_token_server
 from yb.download.requirements import (
     check_requirements,
@@ -76,6 +88,10 @@ from yb.download.requirements import (
 )
 
 __all__ = [
+    "youtube_storyboard",
+    "Storyboard",
+    "StoryboardSheet",
+    "storyboard_formats",
     "download_youtube_video",
     "download_youtube_audio",
     "download_youtube_subtitles",
