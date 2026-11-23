@@ -64,6 +64,9 @@ INFO = {
     "duration": 7.5,
     "webpage_url": "https://www.youtube.com/watch?v=vid1",
     "license": "Creative Commons Attribution license (reuse allowed)",
+    "uploader": "A Studio",
+    "channel": "A Studio",
+    "channel_url": "https://www.youtube.com/channel/UC123",
     "formats": [
         {"format_id": "18"},
         {
@@ -90,6 +93,7 @@ def test_frames_are_cut_from_the_sheets_at_their_times():
     board = youtube_storyboard("u", ydl_cls=_fake(INFO, PAYLOADS))
     assert (board.video_id, board.title, board.duration) == ("vid1", "A film", 7.5)
     assert board.license.startswith("Creative Commons")
+    assert (board.uploader, board.channel_url) == ("A Studio", "https://www.youtube.com/channel/UC123")
     frames = list(board.frames())
     # 8 tiles, but the video ends at 7.5 s: the tiles at 0..7 s are kept
     assert [t for t, _ in frames] == [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]
