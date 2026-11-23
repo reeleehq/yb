@@ -19,7 +19,8 @@ second, so grab a few candidates around a hit when you cut the real frame with
 :func:`~yb.download.download_youtube_video`'s ``start``/``end``); and 320x180
 finds scenes, not small props.
 
-The frames are the video owner's: a storyboard carries the video's licence
+The frames are the video owner's: a storyboard carries who published it
+(``uploader``, ``channel``, ``channel_url``, for attribution) and the video's licence
 (``Storyboard.license``, YouTube's ``"Creative Commons Attribution license
 (reuse allowed)"`` or nothing, which means the standard YouTube licence: all
 rights reserved).
@@ -67,6 +68,11 @@ class Storyboard:
     rows: int
     columns: int
     sheets: tuple[StoryboardSheet, ...] = field(default=())
+    #: Who published the video, for attribution (yt-dlp's ``uploader``,
+    #: ``channel`` and ``channel_url``); ``None`` when YouTube does not say.
+    uploader: str | None = None
+    channel: str | None = None
+    channel_url: str | None = None
 
     def frame_times(self) -> list[float]:
         """The start time of every frame, in order (what :meth:`frames` yields).
@@ -193,4 +199,7 @@ def youtube_storyboard(
         rows=int(fmt["rows"]),
         columns=int(fmt["columns"]),
         sheets=tuple(sheets),
+        uploader=info.get("uploader"),
+        channel=info.get("channel"),
+        channel_url=info.get("channel_url") or info.get("uploader_url"),
     )
