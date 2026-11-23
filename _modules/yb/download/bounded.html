@@ -297,6 +297,7 @@
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">urllib.parse</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Iterator</span><span class="p">,</span> <span class="n">Mapping</span>
@@ -456,6 +457,29 @@
     <span class="k">return</span> <span class="sa">f</span><span class="s2">"bestaudio</span><span class="si">{</span><span class="n">only</span><span class="si">}</span><span class="s2">/best</span><span class="si">{</span><span class="n">only</span><span class="si">}</span><span class="s2">"</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_conversion_args</span><span class="p">(</span><span class="n">max_bytes</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">deadline</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""ffmpeg arguments that bound the mp3 conversion as the download is bounded.</span>
+
+<span class="sd">    The byte cap bounds the download, but a small, highly compressible source (an</span>
+<span class="sd">    hour of near-silent FLAC is a few hundred KB) decodes to far more mp3 than that,</span>
+<span class="sd">    and a direct link reports no duration to refuse it by. So the conversion itself</span>
+<span class="sd">    stops writing past ``max_bytes`` (``-fs``: the file ends just over the cap, which</span>
+<span class="sd">    the size check then refuses), stops after the time left to the call in CPU</span>
+<span class="sd">    seconds (``-timelimit``), and reads local files only (``-protocol_whitelist``:</span>
+<span class="sd">    a downloaded playlist must not make ffmpeg fetch its segments).</span>
+<span class="sd">    """</span>
+    <span class="n">seconds_left</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">deadline</span> <span class="o">-</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()))</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">"extractaudio+ffmpeg_i"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"-protocol_whitelist"</span><span class="p">,</span> <span class="s2">"file"</span><span class="p">],</span>
+        <span class="s2">"extractaudio+ffmpeg_o"</span><span class="p">:</span> <span class="p">[</span>
+            <span class="s2">"-fs"</span><span class="p">,</span>
+            <span class="nb">str</span><span class="p">(</span><span class="n">max_bytes</span><span class="p">),</span>
+            <span class="s2">"-timelimit"</span><span class="p">,</span>
+            <span class="nb">str</span><span class="p">(</span><span class="n">seconds_left</span><span class="p">),</span>
+        <span class="p">],</span>
+    <span class="p">}</span>
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">_pinned_opts</span><span class="p">(</span><span class="n">work</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">max_bytes</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">deadline</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""Everything that makes this one bounded, single, non-live mp3 download."""</span>
     <span class="k">return</span> <span class="p">{</span>
@@ -475,6 +499,7 @@
         <span class="s2">"noplaylist"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
         <span class="s2">"playlist_items"</span><span class="p">:</span> <span class="s2">"1"</span><span class="p">,</span>
         <span class="s2">"keepvideo"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="s2">"postprocessor_args"</span><span class="p">:</span> <span class="n">_conversion_args</span><span class="p">(</span><span class="n">max_bytes</span><span class="p">,</span> <span class="n">deadline</span><span class="p">),</span>
         <span class="s2">"postprocessors"</span><span class="p">:</span> <span class="p">[</span>
             <span class="p">{</span>
                 <span class="s2">"key"</span><span class="p">:</span> <span class="s2">"FFmpegExtractAudio"</span><span class="p">,</span>
@@ -716,7 +741,7 @@
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=8a47a6c3"></script>
+</div><script src="../../../_static/documentation_options.js?v=28305784"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>

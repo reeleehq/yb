@@ -1,36 +1,36 @@
 {
   "schema_version": 1,
-  "built_at": "2026-11-23T04:58:45Z",
+  "built_at": "2026-11-23T07:40:58Z",
   "package": {
     "name": "yb",
-    "version": "0.1.47",
+    "version": "0.1.48",
     "display_name": "yb",
     "source": "pyproject.toml"
   },
   "git": {
     "available": true,
-    "commit": "e34ff502b29daa5b0eaa616b4d8a6ceba2e52a11",
-    "short_commit": "e34ff50",
+    "commit": "093708d7f8964f8229022d8c64213924740f39af",
+    "short_commit": "093708d",
     "branch": "main",
     "tags": [],
     "dirty": false,
     "remote_url": "https://github.com/reeleehq/yb",
-    "commit_url": "https://github.com/reeleehq/yb/commit/e34ff502b29daa5b0eaa616b4d8a6ceba2e52a11",
+    "commit_url": "https://github.com/reeleehq/yb/commit/093708d7f8964f8229022d8c64213924740f39af",
     "error": null
   },
   "ci": {
     "provider": "github",
     "repository": "reeleehq/yb",
-    "sha": "e34ff502b29daa5b0eaa616b4d8a6ceba2e52a11",
+    "sha": "093708d7f8964f8229022d8c64213924740f39af",
     "sha_in_history": true,
     "ref": "refs/heads/main",
     "ref_name": "main",
-    "run_id": "45114798945",
-    "run_url": "https://github.com/reeleehq/yb/actions/runs/45114798945",
+    "run_id": "45132676547",
+    "run_url": "https://github.com/reeleehq/yb/actions/runs/45132676547",
     "server_url": "https://github.com"
   },
   "tools": {
-    "epythet": "0.2.23",
+    "epythet": "0.2.24",
     "sphinx": "9.1.1",
     "docutils": "0.22.4",
     "python": "3.12.16"
@@ -60,16 +60,16 @@
   },
   "pypi": {
     "checked": true,
-    "latest": "0.1.48",
+    "latest": "0.1.49",
     "relation": "behind",
     "error": null
   },
-  "reproduce": "git clone https://github.com/reeleehq/yb && cd yb\ngit checkout e34ff502b29daa5b0eaa616b4d8a6ceba2e52a11\npip install \"epythet==0.2.23\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
+  "reproduce": "git clone https://github.com/reeleehq/yb && cd yb\ngit checkout 093708d7f8964f8229022d8c64213924740f39af\npip install \"epythet==0.2.24\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
   "warnings": [],
   "alignment": {
     "aligned": false,
     "notes": [
-      "The documented version (0.1.47) is behind the latest release on PyPI (0.1.48): `pip install yb` gives newer code than these docs describe."
+      "The documented version (0.1.48) is behind the latest release on PyPI (0.1.49): `pip install yb` gives newer code than these docs describe."
     ]
   }
 }
